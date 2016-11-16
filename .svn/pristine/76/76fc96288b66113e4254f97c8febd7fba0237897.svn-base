@@ -1,0 +1,5 @@
+#服务器ip(图片上传)
+fileUploadServerip=10.43.50.1
+#服务器登录用户名及密码，用于FileUpload软件上传图片文件时使用
+serverUserName=GEAINT
+serverPassword=GEAINT

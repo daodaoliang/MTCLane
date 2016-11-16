@@ -1,0 +1,102 @@
+package com.hgits.service;
+
+import com.hgits.control.FunctionControl;
+import com.hgits.hardware.CpuCardReader;
+import com.hgits.hardware.IcReaderWriter;
+import com.hgits.vo.Card;
+
+/**
+ * M1卡控制类
+ *
+ * @author Wang Guodong
+ */
+public class M1CardService {
+
+    private final IcReaderWriter m1Reader;//m1卡读写器
+    private final CpuCardReader etcReader;//ETC卡读写器
+
+    public M1CardService(IcReaderWriter m1Reader, CpuCardReader etcReader) {
+        this.m1Reader = m1Reader;
+        this.etcReader = etcReader;
+    }
+
+    /**
+     * 获取身份卡
+     *
+     * @return 身份卡
+     */
+    public Card getIdCard() {
+        Card m1Card = null;
+        if (m1Reader != null) {//判断m1读写器是否正常
+            m1Card = m1Reader.getReadedCard();//获取m1读写器上的卡
+        }
+        if (m1Card == null //m1读写器未能获取M1卡
+                && etcReader != null) {//判断etc读写器是否正常
+//            m1Card = etcReader.getM1Card();//获取etc读写器上的卡
+        }
+        if (m1Card != null) {
+            return new Card(m1Card);
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * 获取通行卡
+     *
+     * @return m1卡
+     */
+    public Card getTscCard() {
+        Card m1Card = null;
+        if (m1Reader != null) {//判断m1读写器是否正常
+            m1Card = m1Reader.getReadedCard();//获取m1读写器上的卡
+        }
+        if (FunctionControl.isEtcTscFunActive()//是否启用etc读写器读写通行卡功能 
+                && m1Card == null //m1读写器未能获取M1卡
+                && etcReader != null) {//判断etc读写器是否正常
+//            m1Card = etcReader.getM1Card();//获取etc读写器上的卡
+        }
+        if (m1Card != null) {
+            return new Card(m1Card);
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * M1卡通行卡写卡
+     *
+     * @param card m1卡通行卡
+     * @param sec5Flag 05区写卡标识
+     * @param sec6Flag 06区写卡标识
+     * @param sec8Flag 08区写卡标识
+     * @param sec9Flag 09区写卡标识
+     * @return 0写卡成功 非0写卡失败
+     */
+    public int writeTscCard(Card card, boolean sec5Flag, boolean sec6Flag, boolean sec8Flag, boolean sec9Flag) {
+        if (card == null || card.getCardSerial() == null) {//卡为空或者卡序列号为空
+            return -1;
+        }
+        String serial = card.getCardSerial();
+        if (m1Reader != null) {
+            Card card1 = m1Reader.getReadedCard();
+            if (card1 != null) {//判断m1读写器上是否有卡
+                if (serial.equalsIgnoreCase(card1.getCardSerial())) {//判断m1读写器上的卡与要求写的卡是否为同一张卡
+                    Card tempCard = new Card(card);
+                    return m1Reader.write(tempCard, sec5Flag, sec6Flag, sec8Flag, sec9Flag);
+                }
+            }
+        }
+//        if (FunctionControl.isEtcTscFunActive() && etcReader != null) {
+//            Card card1 = etcReader.getM1Card();
+//            if (card1 != null) {//判断etc读写器上是否有卡
+//                if (serial.equalsIgnoreCase(card1.getCardSerial())) {//判断etc读写器上的卡与要求写的卡是否为同一张卡
+//                    Card tempCard = new Card(card);
+//                    return etcReader.writeM1Card(tempCard, sec5Flag, sec6Flag, sec8Flag, sec9Flag);
+//                }
+//            }
+//        }
+        return -1;
+    }
+
+}

@@ -1,0 +1,66 @@
+package com.hgits.control;
+
+import com.hgits.task.MyTask;
+import com.hgits.util.IntegerUtils;
+import com.hgits.util.MyPropertiesUtils;
+import com.hgits.vo.Constant;
+import org.apache.log4j.Logger;
+
+/**
+ * 垃圾回收
+ *
+ * @author Wang Guodong
+ */
+public class GcControl extends MyTask {
+
+    private final String threadName;
+
+    public GcControl(String threadName) {
+        this.threadName = threadName;
+    }
+
+    private static final Logger logger = Logger.getLogger(GcControl.class.getName());
+
+    @Override
+    public void run() {
+        Thread.currentThread().setName(threadName);
+        String str = MyPropertiesUtils.getProperties(Constant.PROP_MTCLANE_CONSTANT, "memoryInterval", "5");
+        int interval = IntegerUtils.parseInteger(str);
+        if (interval == 0) {
+            interval = 5;
+        }
+        int i = 0;
+        long start = System.currentTimeMillis();
+        while (true) {
+            try {
+                Thread.sleep(interval * 1000);//每秒记录一次内存
+                long m1 = Runtime.getRuntime().maxMemory();
+                long m2 = Runtime.getRuntime().totalMemory();
+                long m3 = Runtime.getRuntime().freeMemory();
+                logger.debug("memory=" + m1 + ":" + m2 + ":" + m3);
+                long now = System.currentTimeMillis();
+                if (now < start) {
+                    start = now;
+                }
+                if (now - start > 10 * 60 * 1000) {
+                    System.gc(); //每10分钟执行一次垃圾回收
+                    start = now;
+                }
+            } catch (Exception ex) {
+                LogControl.logInfo("垃圾回收时出现异常", ex);
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ex1) {
+                }
+                if (i++ >= 10) {
+                    i = 0;
+                    try {
+                        //连续10次出现异常,休眠1分钟
+                        Thread.sleep(60 * 1000);
+                    } catch (InterruptedException ex1) {
+                    }
+                }
+            }
+        }
+    }
+}

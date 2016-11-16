@@ -1,0 +1,818 @@
+package com.hgits.hardware.impl.tfi;
+
+import MyComm.MyComm;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.math.BigDecimal;
+import java.util.Arrays;
+import com.hgits.common.log.MTCLog;
+import com.hgits.control.ThreadPoolControl;
+import com.hgits.hardware.TFI;
+import com.hgits.task.MyTask;
+import com.hgits.util.DoubleUtils;
+import com.hgits.util.HexUtils;
+import com.hgits.util.IntegerUtils;
+import com.hgits.util.SetCOMs;
+import com.hgits.util.StringUtils;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * 江苏安防费显硬件接口实现类
+ *
+ * @author zengzb
+ *
+ */
+public class AnFangTFI implements TFI {
+
+    /**
+     * 显示位图01"欢迎使用湖南高速公路"
+     */
+    private static final String SHOW_BITMAP_HUNAN = "FF DC 07 50 FF 01 8A";
+    /**
+     * 查询命令
+     */
+    private static final String QUERY_ORDER = "FF DC 05 5A 7C";
+    /**
+     * 全屏显示(车型)
+     */
+    private static final String FULL_SCREEN_CLASS = "FF DC 47 44 FF 00 B3 B5 20 20 D0 CD A3 BA 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20";
+    /**
+     * 全屏显示(车型+费额)
+     */
+    private static final String FULL_SCREEN_CLASS_MONEY = "FF DC 47 44 FF 00 B3 B5 20 20 D0 CD A3 BA 20 20 20 20 31 20 20 20 BD F0 20 20 B6 EE A3 BA 20 20 20 20 20 20 D4 AA 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20";
+    /**
+     * 清屏
+     */
+    private static final String CLEAR_SCREEN = "FF DC 05 43 65";
+    /**
+     * 清屏回应
+     */
+    private static final String CLEAR_SCREEN_RETURN = "FF DC 05 43 65";
+    /**
+     * 加载位图回应
+     */
+    private static final String LOAD_BITMAP_HUNAN_2_RETURN = "FE DB 00 07 42 01 61";
+
+    public boolean running = false;//运行状态
+    private String errorMsg;//串口通讯异常信息
+    private byte[] buffer1 = createEmpytBuff();//费显第一行显示内容
+    private byte[] buffer2 = createEmpytBuff();//费显第二行显示内容
+    private byte[] buffer3 = createEmpytBuff();//费显第三行显示内容
+    private byte[] buffer4 = createEmpytBuff();//费显第四行显示内容
+//    private final ConcurrentLinkedDeque<byte[]> orderQue = new ConcurrentLinkedDeque<>();//需要向硬件发送指令的队列（先进先出）
+    private final String deviceName = "TFI";//设备名称
+    private final String COLON = ":";//冒号（英文输入法）
+    private static TFI tfi;
+    private MyComm myComm;//串口
+
+    private AnFangTFI() {
+    }
+
+    /**
+     * 获得费显唯一实例
+     *
+     * @return 唯一实例
+     */
+    public static TFI getInstance() {
+        if (tfi == null) {
+            tfi = new AnFangTFI();
+        }
+        return tfi;
+    }
+
+    /**
+     * 关闭设备
+     *
+     * @return 0 关闭成功 其他 关闭失败
+     */
+    public int closeDevice() {
+        running = false;
+        if (myComm != null) {
+            myComm.closeComm();
+        }
+        return 0;
+    }
+
+    /**
+     * 向费显发送指令并且等待费显正确答复
+     *
+     * @param order 向费显发送的指令
+     */
+    private void loadOrder(final String order) {
+        try {
+            final String str = order.replaceAll(" ", "");
+            byte[] buffer = HexUtils.decode(str);
+            write(buffer);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+
+    }
+
+    /**
+     * 根据位图路径及位图号加载位图
+     *
+     * @param path 所加载位图的地址
+     * @param bmpNo 位图编号
+     * @throws Exception
+     */
+    private void loadBMP(String path, String bmpNo) throws Exception {
+        FileInputStream fis = null;
+        try {
+            fis = new FileInputStream(path);
+            byte[] buffer = new byte[fis.available()];
+            fis.read(buffer);//将图片信息写入buffer数组
+            StringBuilder sb = new StringBuilder();
+            //将指令加上位图图号,全部位图文件组合成指令
+            sb.append("FEDB044542").append(bmpNo).append(HexUtils.encode(buffer));
+            //将得到指令的所有字节进行异或运算并加在最后得到最终的指令
+            String order = StringUtils.fillBCC(sb.toString(), 16);
+            byte[] bmpBuffer = HexUtils.decode(order);
+            write(bmpBuffer);
+//            loadOrder(order);
+            fis.close();
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        } finally {
+            if (fis != null) {
+                fis.close();
+            }
+        }
+    }
+
+    /**
+     * 费显初始化
+     *
+     * @throws Exception
+     */
+    private void init() throws Exception {
+        buffer1 = createEmpytBuff();//费显第一行显示内容
+        buffer2 = createEmpytBuff();//费显第二行显示内容
+        buffer3 = createEmpytBuff();//费显第三行显示内容
+        byte[] tempBuffer = HexUtils.decode(CLEAR_SCREEN.replaceAll(" ", ""));//初始化时发送清屏指令
+        write(tempBuffer);
+        Thread.sleep(250);
+        loadBMP("TFIImage/TFI.bmp", "00");
+        Thread.sleep(250);
+        loadBMP("TFIImage/TFI_1.bmp", "01");
+        Thread.sleep(250);
+    }
+
+    /**
+     * 清屏
+     *
+     */
+    public void clearScreen() {
+        buffer1 = createEmpytBuff();//费显第一行显示内容
+        buffer2 = createEmpytBuff();//费显第二行显示内容
+        buffer3 = createEmpytBuff();//费显第三行显示内容
+        buffer4 = createEmpytBuff();//费显第四行显示内容
+        loadOrder(CLEAR_SCREEN);
+    }
+
+    /**
+     * 显示"欢迎使用湖南高速公路系统"
+     *
+     */
+    public void showWelcome() {
+        clearScreen();
+        loadOrder(SHOW_BITMAP_HUNAN);//先清屏,然后发送显示位图指令
+    }
+
+    /**
+     * 向费显发送指令的线程，所有向费显发送的指令都由该线程发送
+     */
+    @Override
+    public void run() {
+        try {
+            //获取串口的属性
+            String info = SetCOMs.getTFI();
+            if (info != null) {
+                String[] infos = info.split(",");
+                String portName = infos[0];
+                int baudRate = IntegerUtils.parseString(infos[1]);
+                int dataBits = IntegerUtils.parseString(infos[2]);
+                int stopBits = IntegerUtils.parseString(infos[3]);
+                int parity = IntegerUtils.parseString(infos[4]);
+                int logLevel = IntegerUtils.parseString(infos[6]);
+                myComm = new MyComm();
+                int i = myComm.openComm(portName, baudRate, dataBits, stopBits, parity, logLevel);
+                if (i != 0) {
+                    running = false;
+                    errorMsg = "11";
+                    MTCLog.log(deviceName + "打开串口" + portName + "失败");
+                    return;
+                }
+                running = true;
+                errorMsg = "";
+                SendTask sendTask = new SendTask();
+                ThreadPoolControl.getThreadPoolInstance().execute(sendTask);
+                ParseTask parseTask = new ParseTask();
+                ThreadPoolControl.getThreadPoolInstance().execute(parseTask);
+                List<MyTask> list = new ArrayList();
+                list.add(sendTask);
+                list.add(parseTask);
+                MonitorTask monitorTask = new MonitorTask(list);
+                ThreadPoolControl.getThreadPoolInstance().execute(monitorTask);
+            } else {
+                MTCLog.log(deviceName + "未启用");
+            }
+        } catch (Exception e) {
+            MTCLog.log(deviceName + "异常", e);
+            errorMsg = "11";
+        }
+    }
+
+    /**
+     * 显示车型 (20150410增加用于代替原有显示车型命令)
+     *
+     * @param vehClass 车型1,2,3,4,5,6,7,8,9
+     */
+    public void showVehClass(String vehClass) {
+        try {
+            if (vehClass == null) {
+                return;
+            }
+            StringBuilder info = new StringBuilder("车  型");
+            info.append(COLON).append(" ");
+            switch (vehClass) {
+                case "1":
+                    info.append("一型");
+                    break;
+                case "2":
+                    info.append("二型");
+                    break;
+                case "3":
+                    info.append("三型");
+                    break;
+                case "4":
+                    info.append("四型");
+                    break;
+                case "5":
+                    info.append("五型");
+                    break;
+                case "6":
+                    info.append("六型");
+                    break;
+                case "7":
+                    info.append("  货");
+                    break;
+                case "8":
+                    info.append("绿通");
+                    break;
+                case "9":
+                    info.append("绿通");
+                    break;
+                default:
+                    info.append("未知");
+                    break;
+            }
+            info.append("  车");
+            buffer1 = info.toString().getBytes("gbk");//车型在费显第一行显示
+            showAll();
+        } catch (Exception ex) {
+            MTCLog.log(deviceName + "费显异常", ex);
+        }
+    }
+
+    /**
+     * 显示收费额
+     *
+     * @param fare 收费额
+     */
+    public void showFare(double fare) {
+        try {
+            if (fare % 1 == 0) {//收费额为整数
+                showFare((int) fare + "");
+            } else {//收费额有小数位
+                showFare(fare + "");
+            }
+        } catch (Exception ex) {
+            MTCLog.log(deviceName + "费显异常", ex);
+        }
+    }
+
+    /**
+     * 显示收费额
+     *
+     * @param fare 收费额
+     */
+    public void showFare(String fare) {
+        try {
+            if (fare == null) {
+                return;
+            }
+            StringBuilder sb = new StringBuilder("金  额");
+            sb.append(COLON).append(" ");
+            while (fare.length() != 6) {
+                if (fare.length() > 6) {
+                    fare = fare.substring(0, 6);
+                } else if (fare.length() < 6) {
+                    fare = " " + fare;
+                }
+            }
+            sb.append(fare);
+            sb.append("元");
+            buffer2 = sb.toString().getBytes("gbk");//收费额在费显第二行显示
+            showAll();
+        } catch (Exception ex) {
+            MTCLog.log(deviceName + "费显异常", ex);
+        }
+    }
+
+    /**
+     * 显示支付金额以及找零金额
+     *
+     * @param total 支付金额
+     * @param change 找零金额
+     */
+    public void showTotalAndChange(String total, String change) {
+        byte[] line3 = new byte[16];
+        byte[] line4 = new byte[16];
+        try {
+            if (total != null && !total.isEmpty()) {
+                double d = Double.valueOf(total);//将10.0转换为10
+                String fare = String.valueOf((int) d);
+                StringBuilder sb = new StringBuilder("支  付");
+                sb.append(COLON).append(" ");
+                while (fare.length() != 6) {
+                    if (fare.length() > 6) {
+                        fare = fare.substring(0, 6);
+                    } else if (fare.length() < 6) {
+                        fare = " " + fare;
+                    }
+                }
+                sb.append(fare);
+                sb.append("元");
+                line3 = sb.toString().getBytes("gbk");//支付总金额在费显第三行显示
+            }
+        } catch (Exception ex) {
+            MTCLog.log(deviceName + "费显异常", ex);
+        }
+        try {
+            if (change != null && !change.isEmpty()) {
+                double d = Double.valueOf(change);//将10.0转换为10
+                String fare = String.valueOf((int) d);
+                StringBuilder sb = new StringBuilder("找  零");
+                sb.append(COLON).append(" ");
+                while (fare.length() != 6) {
+                    if (fare.length() > 6) {
+                        fare = fare.substring(0, 6);
+                    } else if (fare.length() < 6) {
+                        fare = " " + fare;
+                    }
+                }
+                sb.append(fare);
+                sb.append("元");
+                line4 = sb.toString().getBytes("gbk");//找零金额在费显第四行显示
+            }
+        } catch (Exception ex) {
+            MTCLog.log(deviceName + "费显异常", ex);
+        }
+        try {
+            boolean flag = !(Arrays.equals(this.buffer3, line3) && Arrays.equals(this.buffer4, line4)); //所需显示的内容与当前显示的内容一致，不需要更新
+            if (flag) {
+                System.arraycopy(line3, 0, this.buffer3, 0, line3.length);
+                System.arraycopy(line4, 0, this.buffer4, 0, line4.length);
+                showAll();
+            }
+        } catch (Exception ex) {
+            MTCLog.log(deviceName + "费显异常", ex);
+        }
+    }
+
+    /**
+     * 显示总轴重及限重
+     *
+     * @param totalWeight 总轴重
+     * @param limitWeight 限重
+     */
+    public void showTotalWeightAndLimitWeight(double totalWeight, double limitWeight) {
+        byte[] line3 = new byte[16];
+        byte[] line4 = new byte[16];
+        try {
+            if (totalWeight == 0) {//重量为0时不显示
+                for (int i = 0; i < 16; i++) {
+                    line3[i] = 32;
+                }
+            } else {
+                totalWeight = DoubleUtils.round(totalWeight, 2, BigDecimal.ROUND_HALF_UP);//重量信息保留至小数点后两位有效数字
+                StringBuilder sb = new StringBuilder("总轴重");
+                sb.append(COLON).append(" ");
+                String str = String.valueOf(totalWeight);
+                while (str.length() != 6) {
+                    if (str.length() > 6) {
+                        str = str.substring(0, 6);
+                    } else {
+                        str = " " + str;
+                    }
+                }
+                sb.append(str);
+                sb.append("吨");
+                line3 = sb.toString().getBytes("gbk");//总轴重在第三行显示
+            }
+        } catch (Exception ex) {
+            MTCLog.log(deviceName + "费显异常", ex);
+        }
+        try {
+            if (limitWeight == 0) {//重量为0时不显示
+                line4 = new byte[16];//费显第三行显示内容
+                for (int i = 0; i < 16; i++) {
+                    line4[i] = 32;
+                }
+            } else {
+                limitWeight = DoubleUtils.round(limitWeight, 2, BigDecimal.ROUND_HALF_UP);//重量信息保留至小数点后两位有效数字
+                StringBuilder sb = new StringBuilder("总限重");
+                sb.append(COLON).append(" ");
+                String str = String.valueOf(limitWeight);
+                while (str.length() != 6) {
+                    if (str.length() > 6) {
+                        str = str.substring(0, 6);
+                    } else {
+                        str = " " + str;
+                    }
+                }
+                sb.append(str);
+                sb.append("吨");
+                line4 = sb.toString().getBytes("gbk");//总限重在第四行显示
+            }
+        } catch (Exception ex) {
+            MTCLog.log(deviceName + "费显异常", ex);
+        }
+        try {
+            boolean flag = !(Arrays.equals(this.buffer3, line3) && Arrays.equals(this.buffer4, line4)); //所需显示的内容与当前显示的内容一致，不需要更新
+            if (flag) {
+                System.arraycopy(line3, 0, this.buffer3, 0, line3.length);
+                System.arraycopy(line4, 0, this.buffer4, 0, line4.length);
+                showAll();
+            }
+        } catch (Exception ex) {
+            MTCLog.log(deviceName + "费显异常", ex);
+        }
+    }
+
+    /**
+     * 第三行清空，第四行显示代收信息（如“含代收: 999999元”）
+     *
+     * @param collectFee 代收费用
+     */
+    public void showCollectFee(int collectFee) {
+        byte[] line3 = createEmpytBuff();
+        byte[] line4 = createEmpytBuff();
+        StringBuilder sb = new StringBuilder("含代收");
+        sb.append(COLON).append(" ");
+        try {
+            String str = String.valueOf(collectFee);
+            while (str.length() != 6) {
+                if (str.length() > 6) {
+                    str = str.substring(0, 6);
+                } else {
+                    str = " " + str;
+                }
+            }
+            sb.append(str).append("元");
+            line4 = sb.toString().getBytes("gbk");
+        } catch (Exception ex) {
+            MTCLog.log(deviceName + "费显异常", ex);
+        }
+        try {
+            boolean flag = !(Arrays.equals(this.buffer3, line3) && Arrays.equals(this.buffer4, line4)); //所需显示的内容与当前显示的内容一致，不需要更新
+            if (flag) {
+                System.arraycopy(line3, 0, this.buffer3, 0, line3.length);
+                System.arraycopy(line4, 0, this.buffer4, 0, line4.length);
+                showAll();
+            }
+        } catch (Exception ex) {
+            MTCLog.log(deviceName + "费显异常", ex);
+        }
+    }
+
+    /**
+     * 第二行显示通行费，第三行清空，第四行显示代收信息（如“含代收: 999999元”）
+     *
+     * @param tollFare 总费用
+     * @param collectFee 代收费用
+     */
+    public void showFareAndCollectFee(double tollFare, int collectFee) {
+        try {
+            String fare;
+            if (tollFare % 1 == 0) {//整数
+                fare = String.valueOf((int) tollFare);
+            } else {//非整数
+                fare = String.valueOf(tollFare);
+            }
+            StringBuilder sb = new StringBuilder("金  额");
+            sb.append(COLON).append(" ");
+            while (fare.length() != 6) {
+                if (fare.length() > 6) {
+                    fare = fare.substring(0, 6);
+                } else if (fare.length() < 6) {
+                    fare = " " + fare;
+                }
+            }
+            sb.append(fare);
+            sb.append("元");
+            buffer2 = sb.toString().getBytes("gbk");//收费额在费显第二行显示
+        } catch (Exception ex) {
+            MTCLog.log(deviceName + "费显异常", ex);
+        }
+        byte[] line3 = createEmpytBuff();
+        byte[] line4 = createEmpytBuff();
+        StringBuilder sb = new StringBuilder("含代收");
+        sb.append(COLON).append(" ");
+        try {
+            String str = String.valueOf(collectFee);
+            while (str.length() != 6) {
+                if (str.length() > 6) {
+                    str = str.substring(0, 6);
+                } else {
+                    str = " " + str;
+                }
+            }
+            sb.append(str).append("元");
+            line4 = sb.toString().getBytes("gbk");
+        } catch (Exception ex) {
+            MTCLog.log(deviceName + "费显异常", ex);
+        }
+        try {
+            boolean flag = !(Arrays.equals(this.buffer3, line3) && Arrays.equals(this.buffer4, line4)); //所需显示的内容与当前显示的内容一致，不需要更新
+            if (flag) {
+                System.arraycopy(line3, 0, this.buffer3, 0, line3.length);
+                System.arraycopy(line4, 0, this.buffer4, 0, line4.length);
+                showAll();
+            }
+        } catch (Exception ex) {
+            MTCLog.log(deviceName + "费显异常", ex);
+        }
+    }
+
+    /**
+     * 费显按行显示，其他行信息不受影响
+     *
+     * @param info 需要显示的信息(8个汉字或16个数字)
+     * @param lineNum 行号(1,2,3,4)
+     */
+    public void showLine(String info, int lineNum) {
+        try {
+            MTCLog.log(deviceName + "费显第" + lineNum + "行显示: " + info);
+            byte[] buff = new byte[23];
+            for (int i = 6; i < 22; i++) {
+                buff[i] = 32;
+            }
+            buff[0] = (byte) 0xFF;
+            buff[1] = (byte) 0xDC;
+            buff[2] = 23;
+            buff[3] = 'D';
+            buff[4] = (byte) 255;
+            buff[5] = (byte) lineNum;
+            byte[] buffer = info.getBytes("gbk");
+            int len = buffer.length;
+            if (len > 16) {
+                len = 16;//此16个字节为显示内容
+            }
+            System.arraycopy(buffer, 0, buff, 6, len);
+            byte temp = 0;
+            for (byte b : buff) {//获取异或运算结果
+                temp = (byte) (temp ^ b);
+            }
+            buff[22] = temp;
+            write(buff);
+        } catch (UnsupportedEncodingException ex) {
+            MTCLog.log(deviceName + "费显指令" + info + "异常", ex);
+        }
+    }
+
+    /**
+     * 向费显发送指令的根方法，所有向费显发送指令的方法都必须使用该方法
+     *
+     * @param buffer 指令byte数组
+     * @throws IOException
+     */
+    private synchronized void write(byte[] buffer) {
+        if (myComm != null && myComm.isRunning()) {
+            myComm.write(buffer);
+        }
+    }
+
+    /**
+     * 针对江苏安防费显只能单行显示的问题，编写此方法
+     */
+    private void showAll() {
+    	byte[] buff = null;
+    	byte[] tempBuffer = null;//用于临时保存需要显示的字节数据
+    	try {
+    		for(int row = 1; row <= 4; row++){
+    			buff = new byte[16];
+    			switch(row){
+    				case 1 : 
+    					tempBuffer = buffer1;break;
+    				case 2 : 
+    					tempBuffer = buffer2;break;
+    				case 3 : 
+    					tempBuffer = buffer3;break;
+    				case 4 : 
+    					tempBuffer = buffer4;break;    					
+    			}
+    			
+    			System.arraycopy(tempBuffer, 0, buff, 0, 16);
+    			showLine(new String(buff,"gbk"), row);
+    			
+    			buff = null;//销毁对象
+    		}			
+		} catch (UnsupportedEncodingException e) {
+			MTCLog.log(deviceName + "费显异常", e);
+		}
+    }
+    
+    /**
+     * 全屏显示
+     */
+    @Deprecated
+    private void showAll2() {
+        byte[] buff = new byte[71];
+        buff[0] = (byte) 0xFF;
+        buff[1] = (byte) 0xDC;
+        buff[2] = 71;
+        buff[3] = 'D';
+        buff[4] = (byte) 255;
+        buff[5] = (byte) 0;
+        byte temp = 0;
+        System.arraycopy(buffer1, 0, buff, 6, 16);
+        System.arraycopy(buffer2, 0, buff, 22, 16);
+        System.arraycopy(buffer3, 0, buff, 38, 16);
+        System.arraycopy(buffer4, 0, buff, 54, 16);
+        for (int i = 0; i < 70; i++) {//进行异或运算
+            byte b = buff[i];
+            temp = (byte) (temp ^ b);
+        }
+        buff[70] = temp;
+        write(buff);
+    }
+
+    /**
+     * 全屏显示四行内容,每行最多8个汉字或16个数字
+     *
+     * @param line1 第一行内容
+     * @param line2 第二行内容
+     * @param line3 第三行内容
+     * @param line4 第四行内容
+     */
+    public void showFourLines(String line1, String line2, String line3, String line4) {
+        try {
+            byte[] buff1 = createEmpytBuff();
+            byte[] buff2 = createEmpytBuff();
+            byte[] buff3 = createEmpytBuff();
+            byte[] buff4 = createEmpytBuff();
+            byte[] line1Buff = line1.getBytes("gbk");
+            byte[] line2Buff = line2.getBytes("gbk");
+            byte[] line3Buff = line3.getBytes("gbk");
+            byte[] line4Buff = line4.getBytes("gbk");
+            int len1 = line1Buff.length > 16 ? 16 : line1Buff.length;
+            int len2 = line2Buff.length > 16 ? 16 : line2Buff.length;
+            int len3 = line3Buff.length > 16 ? 16 : line3Buff.length;
+            int len4 = line4Buff.length > 16 ? 16 : line4Buff.length;
+            System.arraycopy(line1Buff, 0, buff1, 0, len1);
+            System.arraycopy(line2Buff, 0, buff2, 0, len2);
+            System.arraycopy(line3Buff, 0, buff3, 0, len3);
+            System.arraycopy(line4Buff, 0, buff4, 0, len4);
+            boolean flag = Arrays.equals(this.buffer1, buff1)
+                    && Arrays.equals(this.buffer2, buff2)
+                    && Arrays.equals(this.buffer3, buff3)
+                    && Arrays.equals(this.buffer4, buff4); //所需显示的内容与当前显示的内容一致，不需要更新
+            if (!flag) {
+                System.arraycopy(buff1, 0, this.buffer1, 0, buff1.length);
+                System.arraycopy(buff2, 0, this.buffer2, 0, buff2.length);
+                System.arraycopy(buff3, 0, this.buffer3, 0, buff3.length);
+                System.arraycopy(buff4, 0, this.buffer4, 0, buff4.length);
+                showAll();
+            }
+        } catch (Exception ex) {
+            MTCLog.log(deviceName + "费显异常", ex);
+        }
+    }
+
+    /**
+     * 返回费显通讯状态
+     *
+     * @return 异常信息
+     */
+    public String getErrorMsg() {
+        return errorMsg;
+    }
+
+    /**
+     * 退出
+     */
+    public void exit() {
+        MTCLog.log(deviceName + "费显退出");
+        running = false;
+        closeDevice();
+    }
+
+    /**
+     * 创建一个byte数组，长度为16，内容全为32（在费显上显示为空格）
+     *
+     * @return 所创建的byte数组
+     */
+    private byte[] createEmpytBuff() {
+        byte[] buffer = new byte[16];
+        for (int i = 0; i < 16; i++) {
+            buffer[i] = 32;
+        }
+        return buffer;
+    }
+
+    class SendTask extends MyTask {
+
+        @Override
+        public void run() {
+            try {
+                setAlive(true);
+                init();//费显初始化
+                byte[] queryBuffer = HexUtils.decode(QUERY_ORDER.replaceAll(" ", ""));//查询指令
+                long start = System.currentTimeMillis();
+                while (running) {
+                    long now = System.currentTimeMillis();
+                    if (now < start) {//当前时间小于开始时间，重新开始计时
+                        start = now;
+                    }
+                    if (now - start > 4000) {
+                        start = now;
+                        write(queryBuffer);//查询指令,用来监测设备状态
+                    }
+                    Thread.sleep(100);
+                }
+                String str = CLEAR_SCREEN.replaceAll(" ", "");
+                byte[] buffer = HexUtils.decode(str);
+                write(buffer);//结束时清屏
+            } catch (Throwable ex) {
+                MTCLog.log(deviceName + "费显控制程序异常", ex);
+            }
+            setAlive(false);
+        }
+    }
+
+    class ParseTask extends MyTask {
+
+        @Override
+        public void run() {
+            try {
+                setAlive(true);
+                long start = System.currentTimeMillis();
+                while (running) {
+                    Thread.sleep(10);
+                    long now = System.currentTimeMillis();
+                    if (now < start) {//当前时间小于开始时间，重新开始计时
+                        start = now;
+                    } else if (now - start > 6000) {
+                        errorMsg = "11";
+                    }
+                    if (myComm == null) {
+                        continue;
+                    }
+                    byte[] buffer = myComm.readByteArray();
+                    if (buffer != null) {
+                        errorMsg = null;
+                        start = now;
+                    }
+                }
+            } catch (Throwable t) {
+                MTCLog.log(t, t);
+            } finally {
+                setAlive(false);
+            }
+
+        }
+    }
+
+    /**
+     * 监控任务
+     */
+    class MonitorTask implements Runnable {
+
+        private final List<MyTask> taskList;//需要监控的任务集合
+
+        public MonitorTask(List<MyTask> taskList) {
+            this.taskList = taskList;
+        }
+
+        @Override
+        public void run() {
+            while (running) {
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException ex) {
+                }
+                for (MyTask task : taskList) {
+                    if (!task.isAlive()) {//监控任务
+                        task.setAlive(running);
+                        ThreadPoolControl.getThreadPoolInstance().execute(task);
+                    }
+                }
+            }
+        }
+    }
+
+}

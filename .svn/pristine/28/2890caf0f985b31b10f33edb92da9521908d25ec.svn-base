@@ -1,0 +1,284 @@
+package com.hgits.service;
+
+import java.io.UnsupportedEncodingException;
+import java.util.HashMap;
+import java.util.Map;
+
+import ui.ExtJFrame;
+
+import com.hgits.control.FlowControl;
+import com.hgits.control.LogControl;
+import com.hgits.hardware.Keyboard;
+import com.hgits.util.IntegerUtils;
+import com.hgits.util.MyPropertiesUtils;
+import com.hgits.vo.Constant;
+
+/**
+ * 全车牌键盘服务类
+ *
+ * @author 王国栋
+ */
+public class FullKeyboardService {
+
+    private final Map<String, String> colorMap = new HashMap<>();
+    private final Map<String, String> plateMap = new HashMap<>();
+    private FlowControl fc;
+
+    public void setFc(FlowControl fc) {
+        this.fc = fc;
+    }
+
+    public FullKeyboardService() {
+        colorMap.put("1", "U");
+        colorMap.put("2", "Y");
+        colorMap.put("3", "W");
+        colorMap.put("4", "G");
+        colorMap.put("5", "R");
+        colorMap.put("6", "B");
+        colorMap.put("0", "");
+        colorMap.put("00", null);
+        for (int i = 0; i < 10; i++) {
+            String str = MyPropertiesUtils.getProperties(Constant.PROP_MTCLANE, "plate" + i, "0,0,0,0,0,0,0,0,0,0");
+            String[] buffer = str.split(",");
+            for (int j = 0; j < 10; j++) {
+                plateMap.put(i + "" + j, buffer[j]);
+            }
+        }
+    }
+
+    /**
+     * 根据提供的数字获得其对应的车牌颜色
+     *
+     * @param num 数字
+     * @return 车牌颜色
+     */
+    public String getPlateColor(String num) {
+        return colorMap.get(num);
+    }
+
+    /**
+     * 根据提供的数字获得其对应的车牌号码
+     *
+     * @param num 数字
+     * @return 车牌号码
+     */
+    public String getPlateNum(String num) {
+        return plateMap.get(num);
+    }
+
+    /**
+     * 车牌颜色确认后一直到全车牌确认的流程，结束后返回收费员确认全车牌
+     *
+     * @author 王国栋 2014-8-25
+     * @param extJFrame 收费界面
+     * @param keyboard 收费键盘
+     * @param lprPlate//车牌识别获取车牌
+     * @param plate//收费员确认车牌
+     * @param order 收费员键入指令
+     * @param autoFlag 自助发卡人工确认车牌标识
+     * @return 全车牌
+     */
+    public String getFullPlate(ExtJFrame extJFrame, Keyboard keyboard, String lprPlate, String plate, String order, boolean autoFlag) {
+        StringBuilder sb = new StringBuilder();//用于记录收费员选择全车牌时键入的按键
+        StringBuffer plateNum; //用于记录收费员从全车牌界面选择的车牌号码
+        StringBuffer cursorBuffer;//对应游标
+        if (plate != null) {
+            plateNum = new StringBuffer(plate);
+            cursorBuffer = new StringBuffer(plate);
+        } else {
+            plateNum = new StringBuffer();
+            cursorBuffer = new StringBuffer();
+        }
+        String str;
+        long start = System.currentTimeMillis();
+        while (true) {
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException ex) {
+            }
+            try {
+                extJFrame.updateCursor(cursorBuffer.toString());                //更新游标
+            } catch (UnsupportedEncodingException ex) {
+                LogControl.logInfo("更新游标", ex);
+            }
+            extJFrame.updateKeyedPlate(plateNum.toString());                    //更新键入车牌
+            if (order == null) {
+//                str = keyboard.waitForOrder();
+                str = keyboard.getMessage();
+            } else {
+                str = order;
+                order = null;
+            }
+            long now = System.currentTimeMillis();
+            String inter = MyPropertiesUtils.getProperties(Constant.PROP_MTCLANE_CONSTANT, "autoPlateInterva11", "15");
+            int interval = IntegerUtils.parseString(inter);
+            interval = interval < 1 ? 1 : interval;//最少1秒的时间间隔
+            if (now < start) {//当前时间小于开始时间，重新开始计时
+                start = now;
+            } else if (now - start > interval * 1000 && autoFlag) {//自助发卡人工确认车牌时，若超过规定时间未进行人工输入，自动确认
+                start = now;
+                str = "确认";
+            }
+            if (str == null) {
+                continue;
+            } else {
+                start = now;
+            }
+            if (".".equals(str)) {                                              //全键盘输入过程中，仍然支持用户通过输入"."来复制车牌识别结果或者无车牌识别结果时直接输入"..."
+                if (sb.length() == 1) {
+                    keyboard.sendAlert();
+                } else {
+                    if (lprPlate == null || lprPlate.length() == 0) {           //无车牌识别时输入...为车牌
+                        if (plateNum.length() >= 8) {
+                            keyboard.sendAlert();
+                            continue;
+                        }
+                        plateNum.append(str);
+                        cursorBuffer.append(str);
+                    } else {                                                    //有车牌识别，此时复制视频识别车牌
+                        int len = cursorBuffer.length();
+                        int lprLen = lprPlate.length();
+                        int plateLen = plateNum.length();
+                        if (len > lprLen) {
+                            keyboard.sendAlert();
+                            continue;
+                        } else if (len == lprLen) {
+                            cursorBuffer.replace(len - 1, len, lprPlate.substring(len - 1, len));//复制识别车牌替换收费员确认车牌
+                            plateNum.replace(len - 1, len, lprPlate.substring(len - 1, len));
+                        } else if (len < lprLen) {
+                            if (len == plateLen) {
+                                cursorBuffer.append(lprPlate.substring(len, len + 1));
+                                plateNum.append(lprPlate.substring(len, len + 1));
+                            } else if (len > plateLen) {
+                            } else if (len < plateLen) {
+                                if (len > 0) {
+                                    cursorBuffer.replace(len, len + 1, lprPlate.substring(len, len + 1));//复制识别车牌替换收费员确认车牌
+                                    plateNum.replace(len, len + 1, lprPlate.substring(len, len + 1));
+                                } else if (len == 0) {
+                                    cursorBuffer.append(lprPlate.substring(0, 1));
+                                    plateNum.replace(0, 1, lprPlate.substring(0, 1));
+                                }
+
+                            }
+                        }
+                    }
+                }
+            } else if (str.matches("[0-9]")) {                                  //用户通过数字组合在全键盘图片中选择其对应汉字
+                sb.append(str);
+                if (sb.length() == 1) {                                         //用户键入数字组合的第一个数字
+                    extJFrame.updateFullPlateOption(str);
+                } else if (sb.length() == 2) {                                  //用户键入数字组合的第二个数字
+                    String temp = getPlateNum(sb.toString());
+                    if (switchPlateColor(temp) != null && sb.toString().startsWith("9")) {//全车牌输入时用户可以通过数字组合重新选择车牌颜色
+                        temp = switchPlateColor(temp);
+                        extJFrame.updateKeyedPlateCol(temp);
+                        fc.setVehKeyedPlateColor(temp);
+                        sb.delete(0, 2);
+                        extJFrame.reInitFullPlateOption();
+                        continue;
+                    }
+                    if (plateNum.length() >= 8) {//增加车牌长度限制，不超过8位
+                        keyboard.sendAlert();
+                        sb.delete(0, 2);
+                        extJFrame.reInitFullPlateOption();
+                        continue;
+                    }
+                    if (plateNum.length() == 0 || cursorBuffer.length() == plateNum.length()) {
+                        plateNum.append(temp);
+                    } else if (cursorBuffer.length() < plateNum.length()) {
+                        plateNum.replace(cursorBuffer.length(), cursorBuffer.length() + 1, temp);
+                    }
+                    cursorBuffer.append(temp);
+                    sb.delete(0, 2);
+                    extJFrame.reInitFullPlateOption();
+                }
+            } else if ("确认".equals(str)) {//收费员输入完毕确认全车牌
+//                if (sb.length() == 1 || plateNum.length() < 3) {//车牌号码最少三位（无车牌是收费员可输入“...”）
+                if (plateNum.length() < 3) {//车牌号码最少三位（无车牌是收费员可输入“...”）
+                    keyboard.sendAlert();
+                } else {
+                    extJFrame.reInitFullPlateOption();
+                    extJFrame.cleanCursor();
+                    break;
+                }
+            } else if ("取消".equals(str)) {                                    //收费员通过取消键删除游标所对应的车牌号码或者全键盘车牌的选择
+                int sblen = sb.length();
+                int plen = plateNum.length();
+                if (sblen == 1) {
+                    extJFrame.reInitFullPlateOption();
+                    sb.delete(0, 1);
+                } else if (sblen == 0 && plen == 0) {                           //退回车牌颜色选择界面
+                    return null;
+                } else if (sblen == 0 && plen > 0) {                            //不在全车牌号码选择过程中，并且所选择的全车牌号码不为空
+                    int len = cursorBuffer.length();
+                    if (len == plen) {
+                        plateNum.deleteCharAt(plen - 1);
+                        cursorBuffer.deleteCharAt(len - 1);
+                    } else if (len == 0) {
+                        plateNum.deleteCharAt(0);
+                    } else if (len < plen) {
+                        cursorBuffer.deleteCharAt(len - 1);
+                        plateNum.deleteCharAt(len);
+                    }
+                }
+            } else if (str.equals("上")) {                                      //通过上方向键移动光标向前
+                if (sb.length() == 0 && plateNum.length() > 1) {
+                    int len = cursorBuffer.length();
+                    if (len >= 1) {
+                        cursorBuffer.delete(len - 1, len);
+                    } else if (len == 0) {
+                        keyboard.sendAlert();
+                    }
+                } else {
+                    keyboard.sendAlert();
+                }
+            } else if (str.equals("下")) {                                      //通过下方向键移动光标向后
+                if (sb.length() == 0 && plateNum.length() >= 1) {
+                    int len = cursorBuffer.length();
+                    if (len < plateNum.length()) {
+                        cursorBuffer.append(plateNum.charAt(len));
+                    } else {
+                        cursorBuffer.delete(0, cursorBuffer.length());//游标移动到最后时继续向后可移动到首位
+                        keyboard.sendAlert();
+                    }
+                } else {
+                    keyboard.sendAlert();
+                }
+            } else if ("军警".equals(str)) {
+                fc.runMilitaryVeh();
+            } else {
+                keyboard.sendAlert();
+            }
+        }
+        return plateNum.toString();
+    }
+
+    /**
+     * 将车牌颜色从汉字转换为其相对应的英文字母如蓝->B
+     *
+     * @param plateColor 需要转换的车牌颜色汉字 如：黄
+     * @return 转换后的车牌颜色
+     */
+    public String switchPlateColor(String plateColor) {
+        if (plateColor == null) {
+            return null;
+        }
+        switch (plateColor) {
+            case "蓝":
+                return "U";
+            case "黄":
+                return "Y";
+            case "白":
+                return "W";
+            case "黑":
+                return "B";
+            case "绿":
+                return "G";
+            case "红":
+                return "R";
+            default:
+                return null;
+
+        }
+    }
+}

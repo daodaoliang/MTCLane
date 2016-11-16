@@ -1,0 +1,72 @@
+package com.hgits.control;
+
+import com.hgits.hardware.CpuCardReader;
+import com.hgits.hardware.IcReaderWriter;
+import com.hgits.vo.Card;
+
+/**
+ * m1卡控制
+ *
+ * @author Wang Guodong
+ */
+public class M1Control {
+
+    private final IcReaderWriter icReader;
+    private final CpuCardReader cpuReader;
+
+    public M1Control(IcReaderWriter icReader, CpuCardReader cpuReader) {
+        this.icReader = icReader;
+        this.cpuReader = cpuReader;
+    }
+
+    /**
+     * 获取M1卡（从m1读卡器及CPU读卡器获取）
+     *
+     * @return m1卡信息
+     */
+    public Card getReadedCard() {
+        Card card = icReader.getReadedCard();
+        if (card != null) {
+            return card;
+        }
+        if (FunctionControl.isEtcTscFunActive()) {//启用ETC读卡器读写通行卡功能
+            card = cpuReader.getM1Card();
+            if (card != null) {
+                return card;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * 将需要写入卡中的车辆信息载入并且将卡片状态更改为readyToWrite,是卡片进入写卡,直至写卡成功
+     *
+     * @param card 需要写入的卡片信息
+     * @param sec5Flag 05区写卡标识 true/写卡 false/不写卡
+     * @param sec6Flag 06区写卡标识 true/写卡 false/不写卡
+     * @param sec8Flag 08区写卡标识 true/写卡 false/不写卡
+     * @param sec9Flag 09区写卡标识 true/写卡 false/不写卡
+     * @return 写卡成功返回0，失败返回非0
+     */
+    public int write(Card card, boolean sec5Flag, boolean sec6Flag, boolean sec8Flag, boolean sec9Flag) {
+        Card tempCard1 = icReader.getReadedCard();
+        if (tempCard1 != null && card.getCardSerial().equalsIgnoreCase(tempCard1.getCardSerial())) {
+            return icReader.write(card, sec5Flag, sec6Flag, sec8Flag, sec9Flag);
+        }
+        if (FunctionControl.isEtcTscFunActive()) {//启用ETC读卡器读写通行卡功能
+            Card tempCard2 = cpuReader.getM1Card();
+            if (tempCard2 != null && card.getCardSerial().equalsIgnoreCase(tempCard2.getCardSerial())) {
+                return cpuReader.write(card, sec5Flag, sec6Flag, sec8Flag, sec9Flag);
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * 退出
+     */
+    public void exit() {
+        icReader.exit();
+    }
+}

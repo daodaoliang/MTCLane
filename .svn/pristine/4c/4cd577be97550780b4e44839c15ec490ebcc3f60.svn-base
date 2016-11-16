@@ -1,0 +1,51 @@
+/**
+ * 
+ */
+package com.hgits.hardware;
+
+import java.awt.Component;
+
+/**
+ * 视频采集卡
+ * @author Administrator
+ *
+ */
+public interface Video {
+	
+	public static final String VC4000 = "Vc400Video";
+	
+	/**
+	 * 初始化视频采集卡的方法
+	 */
+	public void init();
+	
+	/**
+	 * 启动摄像头的方法
+	 */
+	public void startCap(Component panel);
+	
+	/**
+	 * 停止摄像头的方法
+	 */
+	public void stopCap();
+	
+	/**
+	 * 抓拍图片的方法
+	 * @param filePath 文件保存路径
+	 */
+	public void saveJPG(String filePath);
+	
+	
+	/**
+	 * 视屏未先试试的抓拍方法
+	 */
+	public void grap() ;
+	
+	
+	/**
+	 * 获取具体实现的类名
+	 * @return
+	 */
+	public String getRealizeName();
+
+}

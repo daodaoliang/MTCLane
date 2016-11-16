@@ -1,0 +1,193 @@
+package com.hgits.control;
+
+import com.hgits.hardware.Keyboard;
+import com.hgits.util.IntegerUtils;
+import com.hgits.util.cache.ParamCacheQuery;
+import com.hgits.vo.Station;
+import org.apache.log4j.Logger;
+import ui.EntryJFrame;
+import ui.ExtJFrame;
+import ui.PaperCardJFrame;
+
+/**
+ * 纸券模式控制
+ *
+ * @author Wang Guodong
+ */
+public class PaperCardControl {
+    
+    private static PaperCardControl paperCardControl;//唯一实例化对象
+    private Keyboard keyboard;//收费键盘
+    private final Logger logger = Logger.getLogger(PaperCardControl.class);
+    private boolean running = true;
+    
+    public void setKeyboard(Keyboard keyboard) {
+        this.keyboard = keyboard;
+    }
+
+    /**
+     * 获取唯一实例化对象
+     *
+     * @return 唯一实例化对象
+     */
+    public static synchronized PaperCardControl getSingleInstance() {
+        if (paperCardControl == null) {
+            paperCardControl = new PaperCardControl();
+        }
+        return paperCardControl;
+    }
+    
+    private PaperCardControl() {
+    }
+
+    /**
+     * 选择纸券模式
+     *
+     * @param vehClass 车型
+     * @return true/false
+     */
+    public boolean runPaperCardControl(int vehClass) {
+        boolean flag = false;
+        if (!AutoMachineControl.getSingleInstance().isActivated()//非自助发卡车道
+                && FunctionControl.isPaperCardActive()//纸券模式已启用
+                && isAvailable(vehClass)) {//当前处于优惠期间
+//            PaperCardJFrame.getSingleInstance().setVisible(true);
+//            PaperCardJFrame.getSingleInstance().setLocationRelativeTo(null);
+//            PaperCardJFrame.getSingleInstance().setAlwaysOnTop(true);
+//            PaperCardJFrame.getSingleInstance().setAutoRequestFocus(false);
+//            ExtJFrame.getSingleInstance().setAlwaysOnTop(false);
+//            ExtJFrame.getSingleInstance().setAutoRequestFocus(true);
+//            ExtJFrame.getSingleInstance().requestFocus();
+            ExtJFrame.getSingleInstance().updateInfo("纸券模式", "请确认是否使用纸券模式\n按【确认】键确认\n或\n按【取消】键取消");
+            String str = null;
+            while (true) {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException ex) {
+                }
+                str = keyboard.getMessage();
+                if (str == null) {
+                    
+                } else if ("确认".equals(str)) {
+                    flag = true;
+                    break;
+                } else if ("取消".equals(str)) {
+                    flag = false;
+                    break;
+                } else {
+                    keyboard.sendAlert();
+                }
+            }
+//            PaperCardJFrame.getSingleInstance().setVisible(false);
+//            ExtJFrame.getSingleInstance().showOnTop();
+        }
+        return flag;
+    }
+
+    /**
+     * 输入入口信息
+     *
+     * @return 入口收费站
+     */
+    public String runInputEntry() {
+        try {
+            EntryJFrame.getSingleInstance().setVisible(true);
+            EntryJFrame.getSingleInstance().updateEntry(null);
+            EntryJFrame.getSingleInstance().setLocationRelativeTo(ExtJFrame.getSingleInstance());
+            EntryJFrame.getSingleInstance().setAlwaysOnTop(true);
+            ExtJFrame.getSingleInstance().setAlwaysOnTop(false);
+            ExtJFrame.getSingleInstance().requestFocus();
+            String str;
+            StringBuilder sb = new StringBuilder();
+            ExtJFrame.getSingleInstance().updateInfo("纸券模式", "请输入入口站");
+            while (running) {
+                try {
+                    Thread.sleep(50);
+                } catch (InterruptedException ex) {
+                }
+                str = keyboard.getMessage();
+                if (str == null) {
+                    continue;
+                } else if (str.matches("[0-9]")) {
+                    if (sb.length() >= 4) {
+                        keyboard.sendAlert();
+                    } else {
+                        ExtJFrame.getSingleInstance().updateInfo("纸券模式", "请输入入口站");
+                        sb.append(str);
+                    }
+                } else if (Keyboard.CANCEL.equals(str)) {
+                    if (sb.length() > 0) {
+                        ExtJFrame.getSingleInstance().updateInfo("纸券模式", "请输入入口站");
+                        sb.deleteCharAt(sb.length() - 1);
+                    } else {//取消纸券输入
+                        return null;
+                    }
+                } else if (Keyboard.CONFIRM.equals(str)) {
+                    if (sb.length() == 4) {//获取入口
+                        String roadid = sb.substring(0, 2);
+                        String stationid = sb.substring(2, 4);
+                        boolean flag = checkStation(roadid, stationid);
+                        if (!flag) {//入口站不存在
+                            ExtJFrame.getSingleInstance().updateInfo("入口站不存在", "入口站不存在，请重新输入");
+                        } else {
+                            break;
+                        }
+                    } else {
+                        keyboard.sendAlert();
+                    }
+                } else {
+                    keyboard.sendAlert();
+                }
+                EntryJFrame.getSingleInstance().updateEntry(sb.toString());
+            }
+            return sb.toString();
+        } finally {
+            EntryJFrame.getSingleInstance().dispose();
+            ExtJFrame.getSingleInstance().showOnTop();
+        }
+    }
+
+    /**
+     * 到达优惠时间
+     *
+     * @param vehClass 车型
+     * @return true/false
+     */
+    private boolean isAvailable(int vehClass) {
+        return true;//取消优惠期间的判断
+//        boolean flag = ParamCacheQuery.queryDiscountInfo(vehClass);
+//        return flag;
+    }
+
+    /**
+     * 纸券模式是否启用并且处于纸券时间内
+     *
+     * @param vehClass 车型
+     * @return true/false
+     */
+    public boolean isPaperCardAvailable(int vehClass) {
+        return FunctionControl.isPaperCardActive() && isAvailable(vehClass);
+    }
+
+    /**
+     * 退出
+     */
+    public void exit() {
+        running = false;
+    }
+
+    /**
+     * 检查收费站是否存在
+     *
+     * @param roadid 路段号
+     * @param stationid 收费站号
+     * @return true/false
+     */
+    private boolean checkStation(String roadid, String stationid) {
+        int intRoadid = IntegerUtils.parseString(roadid);
+        int intStationid = IntegerUtils.parseString(stationid);
+        Station sta = ParamCacheQuery.queryStation(intRoadid, intStationid);
+        return sta != null;
+    }
+    
+}

@@ -1,0 +1,329 @@
+package com.hgits.hardware.impl.videoinstruction;
+
+import MyComm.MyComm;
+import com.hgits.common.log.MTCLog;
+import com.hgits.control.ThreadPoolControl;
+import com.hgits.hardware.VideoInstruction;
+import com.hgits.task.MyTask;
+import com.hgits.util.IntegerUtils;
+import com.hgits.util.MyPropertiesUtils;
+import com.hgits.vo.Constant;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+/**
+ * 用于控制与字符叠加器通信的实体类
+ *
+ * @author 王国栋
+ */
+public class GeaVideoInstruction implements VideoInstruction {
+
+    private String errorMsg;//异常信息
+    private MyComm myComm;//串口
+
+    public String getErrorMsg() {
+        return errorMsg;
+    }
+
+    /**
+     * 字符叠加显示车道号
+     *
+     * @param lane 车道号
+     */
+    public void showLane(String lane) {
+        String info = "L" + lane;
+        sendOrder(info);
+    }
+
+    /**
+     * 隐藏车道号（接口未提供方法，灵活利用显示车道号方法实现）
+     */
+    public void hideLane() {
+        showLane("   ");
+    }
+
+    /**
+     * 更新当前日期yyyy-MM-DD 要求：每天至少在0：00时发1次日期更新。
+     */
+    public void showDate() {
+        Date date = new Date();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");//数据格式中无短线连接
+        String strDate = sdf.format(date);
+        sendOrder("D" + strDate);
+    }
+
+    /**
+     * 更新当前时间hh:mm:ss 要求：每1小时至少发1次时间更新。
+     */
+    public void showTime() {
+        Date date = new Date();
+        SimpleDateFormat sdf = new SimpleDateFormat("HHmmss");
+        String strTime = sdf.format(date);
+        sendOrder("T" + strTime);
+    }
+
+    /**
+     * 显示收费员ID号
+     *
+     * @param staffId 收费员ID号
+     */
+    public void showStaff(String staffId) {
+        String order = "N" + staffId;
+        sendOrder(order);
+    }
+
+    /**
+     * 清楚收费员ID号
+     */
+    public void hideStaff() {
+        String order = "b";
+        sendOrder(order);
+    }
+
+    /**
+     * 显示入口站名
+     *
+     * @param entry 入口收费站为4位数字，取值范围0000～9999，其他的数字无效
+     */
+    public void showEntry(String entry) {
+        String order = "E" + entry;
+        sendOrder(order);
+    }
+
+    /**
+     * 清楚入口收费站
+     */
+    public void hideEntry() {
+        String order = "E0000";
+        sendOrder(order);
+    }
+
+    /**
+     * 显示车型和费额
+     *
+     * @param vehClass 车型 2位数字，表示车型
+     * @param fare 费额 4位数字，表示费额
+     */
+    public void showVeh(String vehClass, String fare) {
+        if (vehClass == null) {
+            vehClass = "";
+        }
+        if (fare == null) {
+            fare = "";
+        }
+        while (vehClass.length() < 2) {
+            vehClass = "0" + vehClass;
+        }
+        int index = fare.indexOf(".");
+        if (index > 0) {
+            fare = fare.substring(0, index);
+        }
+        while (fare.length() < 4) {
+            fare = " " + fare;
+        }
+        if (fare.length() > 4) {
+            fare = fare.substring(0, 4);
+        }
+        String order = "F" + vehClass + fare;
+        sendOrder(order);
+    }
+
+    /**
+     * 清除车型和费额
+     */
+    public void hideVeh() {
+        String order = "B";
+        sendOrder(order);
+    }
+
+    /**
+     * 只显示车型
+     *
+     * @param vehClass 车型
+     */
+    public void showVehClass(String vehClass) {
+        showVeh(vehClass, "    ");
+    }
+
+    /**
+     * 显示车类（车种）
+     *
+     * @param vehType 车类（车种）
+     */
+    public void showVehType(String vehType) {
+        if (vehType == null) {
+            return;
+        }
+        while (vehType.length() < 2) {
+            vehType = "0" + vehType;
+        }
+        String order = "t" + vehType;
+        sendOrder(order);
+    }
+
+    /**
+     * 隐藏车类（车种）
+     */
+    public void hideVehType() {
+        String order = "C";
+        sendOrder(order);
+    }
+
+    /**
+     * 显示车牌号(3位0～9数字)
+     *
+     * @param plate 车牌号 3位0～9数字,若不是3位数字，需要对其进行提取，取其后三位数字，不足补0
+     */
+    public void showPlate(String plate) {
+        if (plate == null) {
+            plate = "000";
+        }
+        String tempPlate = plate.replaceAll("\\D", "");//删除车牌中的非数字
+        while (tempPlate.length() < 3) {//车牌补足三位
+            tempPlate = "0" + tempPlate;
+        }
+        tempPlate = tempPlate.substring(tempPlate.length() - 3);
+        String order = "P" + tempPlate;
+        sendOrder(order);
+    }
+
+    /**
+     * 清楚车牌号
+     */
+    public void hidePlate() {
+        String order = "p";
+        sendOrder(order);
+    }
+
+    /**
+     * 向字符叠加器发送指令，以<LF>10开头，<CR>13结尾
+     *
+     * @param order
+     */
+    private synchronized void sendOrder(String order) {
+        try {
+            if (myComm != null&&myComm.isRunning()) {
+                byte[] buffer = order.getBytes();
+                byte[] newBuffer = new byte[buffer.length + 2];
+                newBuffer[0] = 10;
+                newBuffer[newBuffer.length - 1] = 13;
+                System.arraycopy(buffer, 0, newBuffer, 1, buffer.length);
+                myComm.write(newBuffer);
+            }
+        } catch (Exception ex) {
+            MTCLog.log("向字符叠加器发送指令出现异常", ex);
+        }
+    }
+
+    /**
+     * 退出视频字符叠加控制
+     */
+    public void exit() {
+        try {
+            running = false;
+            if(myComm!=null){
+                myComm.closeComm();
+            }
+        } catch (Exception ex) {
+            MTCLog.log("关闭字符叠加出现异常", ex);
+        }
+    }
+    /**
+     * 运行标识符
+     */
+    private boolean running = false;
+
+    @Override
+    public void run() {
+        String info = MyPropertiesUtils.getProperties(Constant.PROP_MTCLANE_COMM, "vs", null);
+        if (info != null) {
+            MTCLog.log("启用字符叠加器：" + info);
+            String[] buffer = info.split(",");
+            String portName = buffer[0];
+            int baudRate = IntegerUtils.parseString(buffer[1]);
+            int dataBits = IntegerUtils.parseString(buffer[2]);
+            int stopBits = IntegerUtils.parseString(buffer[3]);
+            int parity = IntegerUtils.parseString(buffer[4]);
+            int logLevel = IntegerUtils.parseString(buffer[6]);
+            myComm = new MyComm();
+            int i = myComm.openComm(portName, baudRate, dataBits, stopBits, parity, logLevel);
+            if (i != 0) {
+                errorMsg = "字符叠加设备通信异常";
+                running = false;
+                return;
+            }
+            running = true;
+            errorMsg = "";
+            SendTask sendTask = new SendTask();
+            ThreadPoolControl.getThreadPoolInstance().execute(sendTask);
+            List<MyTask> taskList = new ArrayList();
+            taskList.add(sendTask);
+            MonitorTask monitorTask = new MonitorTask(taskList);
+            ThreadPoolControl.getThreadPoolInstance().execute(monitorTask);
+        } else {
+            MTCLog.log("未启用字符叠加器");
+            errorMsg = "";
+            running = false;
+        }
+    }
+
+    class SendTask extends MyTask {
+
+        @Override
+        public void run() {
+            setAlive(true);
+            try {
+                hideEntry();
+                hideLane();
+                hidePlate();
+                hideStaff();
+                hideVehType();
+                hideVeh();
+                long start = System.currentTimeMillis();
+                while (running) {
+                    Thread.sleep(25);
+                    long now = System.currentTimeMillis();
+                    if (now - start > 60 * 1000 || now < start) {//每分钟进行一次时间同步或当前时间小于开始时间
+                        showDate();
+                        showTime();
+                        start = now;
+                    }
+                }
+            } catch (Throwable t) {
+                MTCLog.log(t, t);
+            } finally {
+                setAlive(false);
+            }
+        }
+    }
+
+    /**
+     * 监控任务
+     */
+    class MonitorTask implements Runnable {
+
+        private final List<MyTask> taskList;//需要监控的任务集合
+
+        public MonitorTask(List<MyTask> taskList) {
+            this.taskList = taskList;
+        }
+
+        @Override
+        public void run() {
+            while (running) {
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException ex) {
+                }
+                for (MyTask task : taskList) {
+                    if (!task.isAlive()) {//监控任务
+                        task.setAlive(running);
+                        ThreadPoolControl.getThreadPoolInstance().execute(task);
+                    }
+                }
+            }
+        }
+    }
+}

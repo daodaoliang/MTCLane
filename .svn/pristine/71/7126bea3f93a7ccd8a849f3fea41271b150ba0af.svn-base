@@ -1,0 +1,7 @@
+##ETC\u8bfb\u5199\u5668\u52a8\u6001\u5e93\u540d\u79f0
+useDllKey = ETCDLL
+##ETC\u8bfb\u5199\u5668\u52a8\u6001\u5e93\u8def\u5f84
+ETCDLL=resource/dll/etcreader/IccReader_MingHua.dll
+
+##ETC\u8bfb\u5199\u5668\u52a8\u6001\u5e93\u8def\u5f84(\u610f\u4e30\u63d0\u4f9b\u4ec5\u7528\u4e8e\u8861\u9633\u4ee3\u6536\u7cfb\u7edf\u5bf9\u63a5)
+ETCDLL2=resource/dll/etcreader/IccReader_YiFeng.dll

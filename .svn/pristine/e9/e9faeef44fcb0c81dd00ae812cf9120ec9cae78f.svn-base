@@ -1,0 +1,421 @@
+package com.hgits.tool.socket;
+
+import com.hgits.control.ThreadPoolControl;
+import com.hgits.realTimePath.FormatTransferUtil;
+import com.hgits.task.MyTask;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.SocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import org.apache.log4j.Logger;
+
+/**
+ * 图片通信程序车道客户端
+ * 请求入口图片时需要以pw.println(order)的形式向服务器发送指令如getEnImage__4913_2015-03-01
+ * 23:58:19_E02 服务器获取到入口图片后首先返回请求指令getEnImage__4913_2015-03-01
+ * 23:58:19_E02（无换行符，40个字节），接下来4个字节表示所获取的图片的长度，后续字节为图片信息
+ *
+ * @author Wang Guodong
+ */
+public class ImgLaneSocketChannel implements Runnable {
+
+    Map<String, List<byte[]>> map = new ConcurrentHashMap<>();//用于存储入口图片的缓存，key请求入口图片指令，value入口图片byte数组（可能有多张图片）
+    private int getEntIMGInterval;//获取入口图片超时时间,从配置文件获取
+    private boolean requestingFlag = true;//是否记录入口图片标识符
+    private boolean running = true;//运行标识
+    ConcurrentLinkedQueue<String> sendQueue = new ConcurrentLinkedQueue<>();//发送信息队列
+    ConcurrentLinkedQueue<byte[]> recvQueue = new ConcurrentLinkedQueue<>();//接收信息队列
+    private final int maxQueueSize = 100;//消息队列最大数量
+    private final int maxMapSize = 20;//图片缓存最大数量
+    private String roadid;//路段号
+    private String stationid;//收费站号
+    private String laneid;//车道号
+    private SocketChannel socketChannel;
+    Logger logger = Logger.getLogger(ImgLaneSocketChannel.class);
+    private SocketAddress remoteAddress;
+    private static final long maxImgSize = 10 * 1024 * 1024L;//图片最大值
+    private final Object obj = new Object();
+
+    public boolean isRunning() {
+        return running;
+    }
+
+    /**
+     *
+     * @param roadid 当前路段
+     * @param stationid 当前收费站
+     * @param sc 远程端口
+     * @param laneid 当前车道
+     * @param interval 请求图片超时时间
+     */
+    public ImgLaneSocketChannel(String roadid, String stationid, String laneid, SocketChannel sc, int interval) {
+        this.roadid = roadid;
+        this.stationid = stationid;
+        this.laneid = laneid;
+        this.getEntIMGInterval = interval;
+        this.socketChannel = sc;
+        try {
+            sc.configureBlocking(false);
+            remoteAddress = this.socketChannel.getRemoteAddress();
+        } catch (IOException ex) {
+            logger.error(ex, ex);
+        }
+    }
+
+    @Override
+    public void run() {
+        //发送请求任务
+        SendTask sendTask = new SendTask();
+        ThreadPoolControl.getThreadPoolInstance().execute(sendTask);
+        //接收信息任务
+        RecvTask recvTask = new RecvTask();
+        ThreadPoolControl.getThreadPoolInstance().execute(recvTask);
+        ParseTask parseTask = new ParseTask();
+        ThreadPoolControl.getThreadPoolInstance().execute(parseTask);
+        //监控线程消息队列以及图片集合的线程
+        MonitorTask monitorTask = new MonitorTask(sendTask, recvTask, parseTask);
+        ThreadPoolControl.getThreadPoolInstance().execute(monitorTask);
+    }
+
+    /**
+     * 请求获取入口图片,返回图片对应字节数组集合（可为多个）
+     *
+     * @param date 入口图片时间（写卡时间）
+     * @param entRoadid 入口路段号
+     * @param entStationid 入口收费站号
+     * @param entLane 入口车道号
+     * @return 入口图片数组集合（可为多个）
+     */
+    public List<byte[]> requestEntryImg(Date date, String entRoadid, String entStationid, String entLane) {
+        requestingFlag = true;//开启请求入口图片，确认可以将入口图片放入缓存中
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String strDate = sdf.format(date);
+        StringBuilder sb = new StringBuilder();
+        sb.append("getEnImage__");
+        sb.append(entRoadid).append(entStationid);
+        sb.append("_");
+        sb.append(strDate);
+        sb.append("_");
+        sb.append(entLane);
+        String order = sb.toString();
+        map.remove(order);
+        send(order);
+        List<byte[]> list = null;
+        long start = System.currentTimeMillis();
+        while (running && requestingFlag) {
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException ex) {
+            }
+            if ((list = map.get(order)) != null) {
+                map.remove(order);//获取到入口图片后，将入口图片从缓存记录中删除
+                break;
+            }
+            long now = System.currentTimeMillis();
+            if (now < start) {//当前时间小于开始时间，重新开始计时
+                start = now;
+            } else if (now - start > getEntIMGInterval) {//超过指定时间仍未获取入口图片，自动退出
+                logger.warn("获取入口图片超时");
+                break;
+            }
+        }
+        logger.warn("获取入口图片用时：" + (System.currentTimeMillis() - start));
+        requestingFlag = false;//不再记录入口图片
+        map.remove(order);//无论是否获取到入口图片，都要将入口图片从缓存中删除（避免因为多线程原因导致缓存中仍然记录了入口图片）
+        return list;
+    }
+
+    /**
+     * 停止请求入口图片
+     */
+    public void stopRequestEntryImg() {
+        requestingFlag = false;
+    }
+
+    /**
+     * 发送指定信息
+     *
+     * @param order 需要发送的信息
+     */
+    private void send(String order) {
+        if (order != null && !order.isEmpty()) {
+            sendQueue.add(order);
+            synchronized (obj) {
+                obj.notify();
+            }
+        }
+
+    }
+
+    /**
+     * 获取入口图片
+     *
+     * @param order
+     * @return
+     */
+    public List<byte[]> getEntryImg(String order) {
+        return map.remove(order);
+    }
+
+    /**
+     * ASCII字符串转换成十六进制字符串
+     *
+     * @param str 待转换的ASCII字符串
+     * @return String 每个Byte之间空格分隔，如: [61 6C 6B]
+     */
+    private static String str2HexStr(String str) {
+        if (str == null) {
+            return null;
+        }
+        char[] chars = "0123456789ABCDEF".toCharArray();
+        StringBuilder sb = new StringBuilder("");
+        byte[] bs = null;
+        try {
+            bs = str.getBytes("gbk");
+        } catch (UnsupportedEncodingException ex) {
+        }
+        int bit;
+        if (bs == null) {
+            return null;
+        }
+        for (int i = 0; i < bs.length; i++) {
+            bit = (bs[i] & 0x0f0) >> 4;
+            sb.append(chars[bit]);
+            bit = bs[i] & 0x0f;
+            sb.append(chars[bit]);
+            sb.append(' ');
+        }
+        return sb.toString().replaceAll(" ", "");
+    }
+
+    /**
+     * 发送请求的任务
+     */
+    class SendTask extends MyTask {
+
+        @Override
+        public void run() {
+            logger.warn("向图片控制服务器" + remoteAddress + "发送信息线程启动");
+            setAlive(true);
+            try {
+                String msg = str2HexStr(roadid + "_" + stationid + "_" + laneid + "@" + socketChannel.getLocalAddress().toString());
+                send(msg);
+                while (running) {
+                    try {
+                        synchronized (obj) {
+                            if (sendQueue.isEmpty()) {
+                                obj.wait(1000);
+                            }
+                        }
+                    } catch (Exception ex) {
+                    }
+                    String order = sendQueue.poll();//消息队列，先进先出
+                    if (order == null) {
+                        continue;
+                    }
+                    logger.warn("向图片控制服务器" + remoteAddress + "发送消息：" + order);
+                    byte[] buffer = (order + "\r\n").getBytes();
+                    ByteBuffer bb = ByteBuffer.wrap(buffer);
+                    socketChannel.write(bb);
+                }
+            } catch (Throwable ex) {
+                logger.warn("向图片控制服务器" + remoteAddress + "发送信息异常", ex);
+            }
+            logger.warn("向图片控制服务器" + remoteAddress + "发送信息线程结束");
+            stop();
+            setAlive(false);
+        }
+    }
+
+    /**
+     * 接受服务器信息的任务
+     */
+    class RecvTask extends MyTask {
+
+        @Override
+        public void run() {
+            logger.warn("从图片控制服务器" + remoteAddress + "接收信息线程启动");
+            setAlive(true);
+            try {
+                byte[] buffer = new byte[44 + (int) maxImgSize];
+                ByteBuffer bb = ByteBuffer.wrap(buffer);
+                while (running) {
+                    Thread.sleep(1);
+                    int len = socketChannel.read(bb);
+                    if (len == -1) {
+                        logger.warn("图片控制服务器" + remoteAddress + "关闭");
+                        break;
+                    } else if (len == 0) {
+                    } else {
+                        byte[] tempBuffer = Arrays.copyOf(buffer, len);
+                        logger.warn("图片控制服务器" + remoteAddress + "recv:" + Arrays.toString(tempBuffer));
+                        recvQueue.add(tempBuffer);
+                        bb.clear();
+                    }
+                }
+            } catch (Throwable ex) {
+                logger.error("与服务器" + remoteAddress + "图片控制程序通信失败", ex);
+            } finally {
+                try {
+                    if (socketChannel != null) {
+                        socketChannel.close();
+                    }
+                } catch (Exception ex) {
+                    logger.error(ex, ex);
+                }
+            }
+            logger.warn("从图片控制服务器" + remoteAddress + "接收信息线程结束");
+            stop();
+            setAlive(false);
+        }
+    }
+
+    /**
+     * 解析接收信息的任务
+     */
+    class ParseTask extends MyTask {
+
+        @Override
+        public void run() {
+            logger.warn("解析图片控制服务器" + remoteAddress + "信息线程启动");
+            setAlive(true);
+            try {
+                byte[] buffer = new byte[44 + (int) maxImgSize];
+                int len1 = 0;
+                while (running) {
+                    Thread.sleep(1);
+                    if (recvQueue == null || recvQueue.isEmpty()) {
+                        continue;
+                    }
+                    byte[] buffer1 = recvQueue.poll();
+                    System.arraycopy(buffer1, 0, buffer, len1, buffer1.length);
+                    String str = new String(buffer);
+                    if (str.contains("CLOSE")) {
+                        logger.warn("收到图片控制服务器" + remoteAddress + "关闭信息");
+                        stop();
+                        break;
+                    }
+                    len1 += buffer1.length;
+                    if (len1 >= 44) {
+                        byte[] orderBuffer = Arrays.copyOfRange(buffer, 0, 40);//获取指令
+                        String order = new String(orderBuffer);
+                        logger.warn("收到图片控制服务器" + remoteAddress + "信息,请求图片指令" + order);
+                        byte[] buffer2 = Arrays.copyOfRange(buffer, 40, 44);//获取图片长度
+                        System.out.println(Arrays.toString(buffer2));
+                        int len = FormatTransferUtil.hBytesToInt(buffer2);
+                        logger.warn("收到图片控制服务器" + remoteAddress + "信息，请求图片长度：" + len);
+                        if (len == 0) {//服务器未找到入口图片
+                            buffer = new byte[44 + (int) maxImgSize];
+                            len1 = 0;
+                            requestingFlag = false;
+                            continue;
+                        } else if (len > maxImgSize) {
+                            requestingFlag = false;
+                            buffer = new byte[44 + (int) maxImgSize];
+                            len1 = 0;
+                            logger.warn("服务器图片长度异常，超过" + maxImgSize + "字节");
+                            continue;
+                        } else if (len1 >= 44 + len) {
+                            byte[] imgBuffer = Arrays.copyOfRange(buffer, 44, 44 + len);//获取图片
+                            List<byte[]> list = new ArrayList();
+                            list.add(imgBuffer);
+                            if (requestingFlag) {
+                                map.put(order, list);//将图片记录入缓存中
+                            }
+                            buffer = new byte[44 + (int) maxImgSize];
+                            len1 = 0;
+                        }
+                    }
+                }
+            } catch (Throwable ex) {
+                logger.error(ex, ex);
+            }
+            setAlive(false);
+            logger.warn("解析图片控制服务器" + remoteAddress + "信息线程结束");
+        }
+    }
+
+    /**
+     * 监控线程消息队列以及图片集合的线程
+     */
+    class MonitorTask extends MyTask {
+
+        private final SendTask sendTask;//发送任务
+        private final RecvTask recvTask;//接收任务
+        private final ParseTask parseTask;//解析任务
+
+        public MonitorTask(SendTask sendTask, RecvTask recvTask, ParseTask parseTask) {
+            this.sendTask = sendTask;
+            this.recvTask = recvTask;
+            this.parseTask = parseTask;
+        }
+
+        @Override
+        public void run() {
+            logger.warn("监控图片控制服务器" + remoteAddress + "信息线程启动");
+            setAlive(running);
+            while (running) {
+                if (!sendTask.isAlive()) {
+                    sendTask.setAlive(true);
+                    ThreadPoolControl.getThreadPoolInstance().execute(sendTask);
+                }
+                if (!recvTask.isAlive()) {
+                    recvTask.setAlive(true);
+                    ThreadPoolControl.getThreadPoolInstance().execute(recvTask);
+                }
+                if (!parseTask.isAlive()) {
+                    parseTask.setAlive(true);
+                    ThreadPoolControl.getThreadPoolInstance().execute(parseTask);
+                }
+                if (sendQueue.size() > maxQueueSize) {//消息队列超过了最大限制
+                    sendQueue.poll();
+                }
+                if (map.size() > maxMapSize) {//图片集合超过了最大限制
+                    map.clear();
+                }
+//                if (!map.isEmpty()) {
+//                    logger.debug("入口图片map：" + map);
+//                }
+                try {
+                    Thread.sleep(1000);//每秒钟检测一次
+                } catch (InterruptedException ex) {
+                }
+            }
+            setAlive(false);
+            logger.warn("监控图片控制服务器" + remoteAddress + "信息线程结束");
+        }
+    }
+
+    /**
+     * 退出运行
+     */
+    public void stop() {
+        running = false;
+        if (socketChannel != null && socketChannel.isOpen()) {
+            try {
+                socketChannel.close();
+            } catch (IOException ex) {
+                logger.error(ex, ex);
+            }
+        }
+    }
+
+    /**
+     * 获取远程连接地址
+     *
+     * @return 远程连接地址
+     */
+    public SocketAddress getRemoteAddress() {
+        return remoteAddress;
+    }
+
+}

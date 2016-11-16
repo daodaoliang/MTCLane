@@ -1,0 +1,267 @@
+package MyComm;
+
+import com.hgits.control.ThreadPoolControl;
+import com.hgits.task.MyTask;
+import com.hgits.util.HexUtils;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.TooManyListenersException;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import javax.comm.CommPortIdentifier;
+import javax.comm.NoSuchPortException;
+import javax.comm.PortInUseException;
+import javax.comm.SerialPort;
+import javax.comm.SerialPortEvent;
+import javax.comm.SerialPortEventListener;
+import javax.comm.UnsupportedCommOperationException;
+import org.apache.log4j.Logger;
+
+/**
+ * 串口通信类
+ *
+ * @author Wang Guodong
+ */
+public class MyComm implements SerialPortEventListener {
+
+    private final ConcurrentLinkedQueue<byte[]> sendQueue = new ConcurrentLinkedQueue<byte[]>();
+    private final ConcurrentLinkedQueue<Byte> recvQueue = new ConcurrentLinkedQueue<Byte>();
+    private boolean running;//运行标识
+    private InputStream input;//输入流
+    private OutputStream output;//输出流
+    private SerialPort port;//串口
+    private int logLevel;//日志级别
+    private String errorMsg;//异常信息
+    private final Logger logger = Logger.getLogger(MyComm.class);
+    private final int maxQueueSize = 1024;//队列最大值
+    private final Object obj = new Object();
+
+    public boolean isRunning() {
+        return running;
+    }
+
+    /**
+     * 关闭串口
+     */
+    public synchronized void closeComm() {
+        logger.debug(port.getName() + " CLOSE");
+        running = false;
+        if (port != null) {
+            port.removeEventListener();
+            port.close();
+        }
+        if (input != null) {
+            try {
+                input.close();
+            } catch (IOException ex) {
+                logger.error(ex, ex);
+            }
+        }
+        if (output != null) {
+            try {
+                output.close();
+            } catch (IOException ex) {
+                logger.error(ex, ex);
+            }
+        }
+    }
+
+    /**
+     * 打开串口
+     *
+     * @param portName 串口号
+     * @param baudRate 波特率
+     * @param dataBits 数据位
+     * @param stopBits 停止位
+     * @param parity 校验位
+     * @param logLevel 日志级别
+     * @return 0 打开成功 -1 打开失败
+     */
+    public synchronized int openComm(String portName, int baudRate, int dataBits, int stopBits, int parity, int logLevel) {
+        int i = 0;
+        try {
+            this.logLevel = logLevel;
+            logger.debug("打开串口" + portName + "：baudRate=" + baudRate + ",dataBits=" + dataBits + ",stopBits=" + stopBits + ",parity=" + parity + ",logLevel=" + logLevel);
+            port = (SerialPort) CommPortIdentifier.getPortIdentifier(portName).open(portName, 2000);
+            port.setDTR(true);
+            port.setRTS(true);
+            port.notifyOnDataAvailable(true);
+            port.setSerialPortParams(baudRate, dataBits, stopBits, parity);
+            port.addEventListener(this);
+            input = port.getInputStream();                    //将串口的输入流赋值
+            output = port.getOutputStream();                  //将串口的输出流赋值
+            running = true;
+            SendTask sendTask = new SendTask();
+            ThreadPoolControl.getThreadPoolInstance().execute(sendTask);
+            List<MyTask> taskList = new ArrayList();
+            taskList.add(sendTask);
+            MonitorTask monitorTask = new MonitorTask(taskList);
+            ThreadPoolControl.getThreadPoolInstance().execute(monitorTask);
+            errorMsg = null;
+        } catch (NoSuchPortException | UnsupportedCommOperationException | TooManyListenersException | PortInUseException | IOException ex) {
+            i = -1;
+            errorMsg = "打开串口" + portName + "失败";
+            running = false;
+            logger.error(ex, ex);
+        }
+        return i;
+    }
+
+    /**
+     * 发送信息
+     *
+     * @param buffer 发送的信息
+     */
+    public void write(byte[] buffer) {
+        if (buffer != null) {
+            sendQueue.add(buffer);
+        }
+        synchronized (obj) {
+            obj.notify();
+        }
+    }
+
+    /**
+     * 获取异常信息
+     *
+     * @return 异常信息
+     */
+    public String getErrorMsg() {
+        return errorMsg;
+    }
+
+    /**
+     * 读到的字节信息
+     *
+     * @return 读到的信息，无信息时返回null
+     */
+    public synchronized Byte readByte() {
+        Byte b = recvQueue.poll();
+        return b;
+    }
+
+    /**
+     * 读到的字节数组信息
+     *
+     * @return 读到的字节数组
+     */
+    public synchronized byte[] readByteArray() {
+        if (recvQueue.isEmpty()) {
+            return null;
+        }
+        byte[] buffer = new byte[recvQueue.size()];
+        for (int i = 0; i < buffer.length; i++) {
+            Byte b = recvQueue.poll();
+            if (b == null) {
+                break;
+            } else {
+                buffer[i] = b;
+            }
+        }
+        return buffer;
+    }
+
+    @Override
+    public void serialEvent(SerialPortEvent spe) {
+        switch (spe.getEventType()) {
+            case SerialPortEvent.BI://通讯中断
+            case SerialPortEvent.OE://溢位错误
+            case SerialPortEvent.FE://帧错误
+            case SerialPortEvent.PE://奇偶校验错误
+            case SerialPortEvent.CD://载波检测
+            case SerialPortEvent.CTS://清除发送
+            case SerialPortEvent.DSR://数据设备准备好
+            case SerialPortEvent.RI://振铃指示
+            case SerialPortEvent.OUTPUT_BUFFER_EMPTY://输出缓冲区已清空
+                break;
+            case SerialPortEvent.DATA_AVAILABLE://发现数据
+                try {
+                    byte[] buffer = new byte[1024];
+                    int len = input.read(buffer);
+                    if (len <= 0) {
+                        break;
+                    }
+                    byte[] tempBuffer = Arrays.copyOfRange(buffer, 0, len);
+                    if (logLevel > 1) {
+                        logger.debug(port.getName() + " recv:" + HexUtils.encode(tempBuffer));
+                    }
+                    for (int i = 0; i < len; i++) {
+                        recvQueue.add(buffer[i]);
+                    }
+                } catch (IOException ex) {
+                    logger.error(ex, ex);
+                }
+                break;
+        }
+    }
+
+    class SendTask extends MyTask {
+
+        @Override
+        public void run() {
+            setAlive(true);
+            try {
+                while (running) {
+                    byte[] buffer = sendQueue.poll();
+                    if (buffer != null) {
+                        if (logLevel > 1) {
+                            logger.debug(port.getName() + " send:" + HexUtils.encode(buffer));
+                        }
+                        output.write(buffer);
+                        output.flush();
+                    }
+                    errorMsg = "";
+                    try {
+                        synchronized (obj) {
+                            if (sendQueue.isEmpty()) {//此处解决多线程情况下在进入synchronized块之前出现sendQueue写入内容的情况
+                                obj.wait(1000);;
+                            }
+                        }
+                    } catch (Exception ex) {
+                    }
+                }
+            } catch (Throwable t) {
+                errorMsg = "通讯异常";
+                logger.error(t, t);
+            }
+            setAlive(false);
+        }
+    }
+
+    class MonitorTask extends MyTask {
+
+        private final List<MyTask> taskList;
+
+        public MonitorTask(List<MyTask> taskList) {
+            this.taskList = taskList;
+        }
+
+        public void run() {
+            while (running) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ex) {
+                }
+                if (taskList == null || taskList.isEmpty()) {
+                    continue;
+                }
+                for (MyTask myTask : taskList) {
+                    if (!myTask.isAlive()) {
+                        ThreadPoolControl.getThreadPoolInstance().execute(myTask);
+                    }
+                }
+                if (recvQueue.size() > maxQueueSize) {//监控接收队列
+                    recvQueue.poll();
+                }
+                if (sendQueue.size() > maxQueueSize) {//监控发送队列
+                    sendQueue.poll();
+                }
+
+            }
+        }
+    }
+
+}

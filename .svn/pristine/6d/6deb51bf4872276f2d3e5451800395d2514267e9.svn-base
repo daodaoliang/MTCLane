@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<hardware>
+	<TFI>
+		<!-- gea -->
+		<decive version="GeaTFI"
+			className="com.hgits.hardware.impl.tfi.GeaTFI" />
+			
+		<!-- anFang -->
+		<decive version="AnFangTFI"
+			className="com.hgits.hardware.impl.tfi.AnFangTFI" />			
+	</TFI>
+	<CICM>
+		<!-- gea -->
+		<decive version="GeaCICM"
+			className="com.hgits.hardware.impl.cicm.GeaCICM"/>
+		
+		<!-- 西埃斯人工转自助发卡机 -->	
+		<decive version="XasCICM"
+			className="com.hgits.hardware.impl.cicm.XasCICM"/>				
+	</CICM>	
+	<CXP>
+		<!-- gea long order -->
+		<decive version="GeaCXP"
+			className="com.hgits.hardware.impl.cxp.GeaCXP"/>
+			
+		<!-- gea short order-->
+		<decive version="Gea2CXP"
+			className="com.hgits.hardware.impl.cxp.Gea2CXP"/>
+						
+		<!-- yanhua -->
+		<decive version="YhIOCTRL"
+			className="com.hgits.hardware.impl.cxp.YhIOCTRL"/>
+			
+		<!-- yifeng -->	
+		<device version="YiFengCXP"
+			className="com.hgits.hardware.impl.cxp.YiFengCXP"/>			
+	</CXP>
+	<Keyboard>
+		<!-- gea -->
+		<decive version="GeaKeyboard"
+			className="com.hgits.hardware.impl.keyboard.GeaKeyboard"/>	
+	</Keyboard>
+	<IcReaderWriter>
+		<!-- gea -->
+		<decive version="GeaIcReaderWriter"
+			className="com.hgits.hardware.impl.icreaderwriter.GeaIcReaderWriter"/>	
+                <!-- Mifare014 -->
+		<decive version="Mifare014"
+			className="com.hgits.hardware.impl.icreaderwriter.Mifare014"/>	
+	</IcReaderWriter>
+	<Printer>
+		<!-- gea -->
+		<decive version="GeaPrinter"
+			className="com.hgits.hardware.impl.printer.GeaPrinter"/>	
+	</Printer>
+	<WeighSystem>
+		<!-- gea -->
+		<decive version="GeaWeighSystem"
+			className="com.hgits.hardware.impl.weighsystem.GeaWeighSystem"/>	
+	</WeighSystem>
+	<LprService>
+		<!-- gea -->
+		<decive version="GeaLprService"
+			className="com.hgits.hardware.impl.lprservice.GeaLprService"/>	
+	</LprService>
+	<CpuCardReader>
+		<!-- gea -->
+		<decive version="GeaCpuCardReader"
+			className="com.hgits.hardware.impl.cpucardreader.GeaCpuCardReader"/>	
+                <!-- my -->
+		<decive version="MyCpuCardReader"
+			className="com.hgits.hardware.impl.cpucardreader.MyCpuCardReader"/>	
+	</CpuCardReader>
+	<VideoInstruction>
+		<!-- gea -->
+		<decive version="GeaVideoInstruction"
+			className="com.hgits.hardware.impl.videoinstruction.GeaVideoInstruction"/>	
+	</VideoInstruction>
+	<Video>
+		<!-- gea -->
+		<decive version="GeaVideo"
+			className="com.hgits.hardware.impl.video.GeaVideo"/>
+		<!-- vc4000 -->
+		<decive version="Vc400Video"
+			className="com.hgits.hardware.impl.video.Vc400Video"/>
+	</Video>
+		
+</hardware>

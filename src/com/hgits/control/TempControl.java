@@ -1,0 +1,271 @@
+package com.hgits.control;
+
+import com.hgits.service.TempServiceInterface;
+import com.hgits.service.impl.TempServiceNew;
+import com.hgits.service.impl.TempServiceOld;
+import com.hgits.util.MyPropertiesUtils;
+import com.hgits.vo.CardBoxOpList;
+import com.hgits.vo.ColList;
+import com.hgits.vo.Constant;
+import com.hgits.vo.LaneEnList;
+import com.hgits.vo.LaneExList;
+import com.hgits.vo.LaneLogout;
+import com.hgits.vo.LaneShift;
+import java.io.File;
+import org.apache.log4j.Logger;
+
+/**
+ * 用于产生临时流水的服务类
+ *
+ * @author Wang Guodong
+ */
+public class TempControl {
+
+    private static final Logger logger = Logger.getLogger(TempControl.class.getName());
+
+    private TempServiceInterface tempSvc;
+    private static TempControl instance;//唯一实例化对象
+
+    /**
+     * 获取唯一实例化对象
+     *
+     * @return 唯一实例化对象
+     */
+    public static synchronized TempControl getSingleInstance() {
+        if (instance == null) {
+            instance = new TempControl();
+        }
+        return instance;
+    }
+
+    /**
+     * 初始化
+     */
+    private void init() {
+        File file = new File("temp");
+        if (!file.exists() || !file.isDirectory()) {
+            file.mkdirs();
+        }
+        String str = MyPropertiesUtils.getProperties(Constant.PROP_MTCLANE_FUNCTION, "tempFunction", "1");
+        if ("1".equals(str)) {
+            tempSvc = TempServiceNew.getSingleInstance();
+        } else {
+            tempSvc = TempServiceOld.getSingleInstance();
+        }
+    }
+
+    private TempControl() {
+        init();
+    }
+
+    /**
+     * 生成下班临时文件
+     *
+     * @param logout 下班记录
+     */
+    public void generateTempLogout(LaneLogout logout) {
+        tempSvc.generateTempLogout(logout);
+    }
+
+    /**
+     * 生成临时工班记录文件
+     *
+     * @param shift 工班记录
+     */
+    public void generateTempShift(LaneShift shift) {
+        tempSvc.generateTempShift(shift);
+    }
+
+    /**
+     * 生成临时出口流水记录文件
+     *
+     * @param list 出口流水记录
+     */
+    public void generateTempExList(LaneExList list) {
+        tempSvc.generateTempExList(list);
+    }
+
+    /**
+     * 生成临时入口流水记录文件
+     *
+     * @param list 入口流水记录
+     */
+    public void generateTempEnList(LaneEnList list) {
+        tempSvc.generateTempEnList(list);
+    }
+
+    /**
+     * 生成代收流水临时记录文件
+     *
+     * @param list 代收流水文件
+     */
+    public void generateTempColList(ColList list) {
+        tempSvc.generateTempColList(list);
+    }
+
+    /**
+     * 生成剩余离线倒计时时间文件
+     *
+     * @param str 剩余离线倒计时时间
+     */
+    public void generateTempOffLine(String str) {
+        tempSvc.generateTempOffLine(str);
+    }
+
+    /**
+     * 生成记录ETC卡信息的临时文件
+     *
+     * @param etcInfo
+     */
+    public void generateTempEtcInfo(String etcInfo) {
+        tempSvc.generateTempEtcInfo(etcInfo);
+    }
+
+    /**
+     * 产生临时卡箱流动单
+     *
+     * @param list 卡箱流动单
+     */
+    public void generateTempCardBoxoplist(CardBoxOpList list) {
+        tempSvc.generateTempCardBoxOpList(list);
+    }
+
+    /**
+     * 临时卡箱流动单
+     *
+     * @return 临时卡箱流动单
+     */
+    public CardBoxOpList parseTempCardBoxoplist() {
+        return tempSvc.parseTempCardBoxOpList();
+    }
+
+    /**
+     * 删除临时卡箱流动单
+     */
+    public void deleteTempCardBoxoplist() {
+        tempSvc.deleteTempCardBoxOpList();
+    }
+
+    /**
+     * 解析离线倒计时文件，获取剩余离线倒计时时间
+     *
+     * @return 剩余离线倒计时时间
+     */
+    public String parseTempOffLine() {
+        return tempSvc.parseTempOffLine();
+    }
+
+    /**
+     * 解析下班临时文件，获取下班信息
+     *
+     * @return 下班信息
+     */
+    public LaneLogout parseTempLogout() {
+        return tempSvc.parseTempLogout();
+    }
+
+    /**
+     * 解析工班临时文件，获取工班信息
+     *
+     * @return 工班信息
+     */
+    public LaneShift parseTempShift() {
+        return tempSvc.parseTempShift();
+    }
+
+    /**
+     * 解析出口流水临时文件，获取出口流水信息
+     *
+     * @return 出口流水信息
+     */
+    public LaneExList parseTempExList() {
+        return tempSvc.parseTempExList();
+    }
+
+    /**
+     * 解析入口流水临时文件，获取入口流水信息
+     *
+     * @return 入口流水信息
+     */
+    public LaneEnList parseTempEnList() {
+        return tempSvc.parseTempEnList();
+    }
+
+    /**
+     * 解析代收流水临时文件，获取代收流水信息
+     *
+     * @return 代收流水信息
+     */
+    public ColList parseTempColList() {
+        return tempSvc.parseTempColList();
+    }
+
+    /**
+     * 解析并获取ETC临时文件信息
+     *
+     * @return 解析后的信息
+     */
+    public String parseTempEtcInfo() {
+        return tempSvc.parseTempEtcInfo();
+    }
+
+    /**
+     * 清空临时下班流水文件
+     */
+    public void deleteTempLogout() {
+        tempSvc.deleteTempLogout();
+    }
+
+    /**
+     * 清空临时工班流水文件
+     */
+    public void deleteTempShift() {
+        tempSvc.deleteTempShift();
+    }
+
+    /**
+     * 清空临时出口流水文件
+     */
+    public void deleteTempExlist() {
+        tempSvc.deleteTempExlist();
+    }
+
+    /**
+     * 清空临时入口流水文件
+     */
+    public void deleteTempEnlist() {
+        tempSvc.deleteTempEnlist();
+    }
+
+    /**
+     * 清空临时代收流水文件
+     */
+    public void deleteTempCollist() {
+        tempSvc.deleteTempCollist();
+    }
+
+    /**
+     * 清空倒计时剩余时间文件
+     */
+    public void deleteTempOffLine() {
+        tempSvc.deleteTempOffLine();
+    }
+
+    /**
+     * 清空ETC临时文件
+     */
+    public void deleteTempEtcInfo() {
+        tempSvc.deleteTempEtcInfo();
+    }
+
+    /**
+     * 临时文件中记录版本号信息
+     *
+     * @param fileName 版本号文件名称
+     * @param version 版本号
+     */
+    public void generateTempVersion(String fileName, String version) {
+        tempSvc.generateTempVersion(fileName, version);
+    }
+
+}

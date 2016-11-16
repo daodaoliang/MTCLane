@@ -1,0 +1,146 @@
+2016-11-15 11:39:15 248  [ com.hgits.propControl.PropControl.run(PropControl.java:366):0 ] - [ INFO ] 
+  开始检查properties文件
+2016-11-15 11:39:15 294  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):46 ] - [ INFO ] 
+  resource/template/keyboard.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:15 294  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):46 ] - [ INFO ] 
+  resource/MTCLaneLPR.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:15 299  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):51 ] - [ INFO ] 
+  resource/socket.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:15 300  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):52 ] - [ INFO ] 
+  resource/hardware/lane.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:15 302  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):54 ] - [ INFO ] 
+  resource/MTCLane.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:15 306  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):58 ] - [ INFO ] 
+  resource/MTCLaneRTP.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:15 307  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):59 ] - [ INFO ] 
+  resource/MTCLaneServer.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:15 308  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):60 ] - [ INFO ] 
+  resource/template/TengHaoKeyboard.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:15 308  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):60 ] - [ INFO ] 
+  resource/MTCConfig.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:15 308  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):60 ] - [ INFO ] 
+  resource/MTCLaneComm.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:15 309  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):61 ] - [ INFO ] 
+  resource/MTCLaneConstant.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:15 309  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):61 ] - [ INFO ] 
+  resource/MTCLaneETC.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:15 310  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):62 ] - [ INFO ] 
+  resource/MTCLaneKeyboard.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:15 310  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):62 ] - [ INFO ] 
+  resource/MTCLaneFunction.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:15 311  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):63 ] - [ INFO ] 
+  resource/MTCLaneTest.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:15 312  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):64 ] - [ INFO ] 
+  resource/template/WangluKeyboard.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:15 312  [ com.hgits.propControl.PropControl.run(PropControl.java:374):64 ] - [ INFO ] 
+  properties文件检查完毕
+2016-11-15 11:39:23 482  [ com.hgits.propControl.PropControl.run(PropControl.java:366):0 ] - [ INFO ] 
+  开始检查properties文件
+2016-11-15 11:39:23 509  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):27 ] - [ INFO ] 
+  resource/template/keyboard.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:23 510  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):28 ] - [ INFO ] 
+  resource/MTCLaneLPR.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:23 512  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):30 ] - [ INFO ] 
+  resource/socket.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:23 513  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):31 ] - [ INFO ] 
+  resource/hardware/lane.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:23 514  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):32 ] - [ INFO ] 
+  resource/MTCLane.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:23 517  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):35 ] - [ INFO ] 
+  resource/MTCLaneRTP.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:23 518  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):36 ] - [ INFO ] 
+  resource/MTCLaneServer.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:23 520  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):38 ] - [ INFO ] 
+  resource/template/TengHaoKeyboard.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:23 520  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):38 ] - [ INFO ] 
+  resource/MTCConfig.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:23 521  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):39 ] - [ INFO ] 
+  resource/MTCLaneComm.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:23 522  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):40 ] - [ INFO ] 
+  resource/MTCLaneConstant.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:23 523  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):41 ] - [ INFO ] 
+  resource/MTCLaneETC.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:23 524  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):42 ] - [ INFO ] 
+  resource/MTCLaneKeyboard.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:23 525  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):43 ] - [ INFO ] 
+  resource/MTCLaneFunction.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:23 526  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:393):44 ] - [ INFO ] 
+  resource/MTCLaneTest.properties文件发现缺少的配置，自动生成配置：Param{comment=#上班标识 (0不需要刷身份卡，自动弹出上班窗口，默认员工号000018；1需要刷身份卡才能上班), key=loginCode, value=1}
+2016-11-15 11:39:23 529  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):47 ] - [ INFO ] 
+  resource/template/WangluKeyboard.properties文件检查完毕，无缺少配置
+2016-11-15 11:39:23 530  [ com.hgits.propControl.PropControl.run(PropControl.java:374):48 ] - [ INFO ] 
+  properties文件检查完毕
+2016-11-15 11:40:44 628  [ com.hgits.propControl.PropControl.run(PropControl.java:366):0 ] - [ INFO ] 
+  开始检查properties文件
+2016-11-15 11:40:44 676  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):48 ] - [ INFO ] 
+  resource/template/keyboard.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:44 678  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):50 ] - [ INFO ] 
+  resource/MTCLaneLPR.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:44 680  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):52 ] - [ INFO ] 
+  resource/socket.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:44 680  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):52 ] - [ INFO ] 
+  resource/hardware/lane.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:44 682  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):54 ] - [ INFO ] 
+  resource/MTCLane.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:44 686  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):58 ] - [ INFO ] 
+  resource/MTCLaneRTP.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:44 688  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):60 ] - [ INFO ] 
+  resource/MTCLaneServer.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:44 689  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):61 ] - [ INFO ] 
+  resource/template/TengHaoKeyboard.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:44 690  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):62 ] - [ INFO ] 
+  resource/MTCConfig.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:44 690  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):62 ] - [ INFO ] 
+  resource/MTCLaneComm.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:44 690  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):62 ] - [ INFO ] 
+  resource/MTCLaneConstant.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:44 691  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):63 ] - [ INFO ] 
+  resource/MTCLaneETC.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:44 691  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):63 ] - [ INFO ] 
+  resource/MTCLaneKeyboard.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:44 692  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):64 ] - [ INFO ] 
+  resource/MTCLaneFunction.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:44 692  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:393):64 ] - [ INFO ] 
+  resource/MTCLaneTest.properties文件发现缺少的配置，自动生成配置：Param{comment=#上班标识(0不需要刷身份卡，自动弹出上班窗口，默认员工号000018；1需要刷身份卡才能上班), key=loginCode, value=1}
+2016-11-15 11:40:44 694  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:393):66 ] - [ INFO ] 
+  resource/MTCLaneTest.properties文件发现缺少的配置，自动生成配置：Param{comment=#######################################################################################################################, key=null, value=null}
+2016-11-15 11:40:44 697  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):69 ] - [ INFO ] 
+  resource/template/WangluKeyboard.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:44 698  [ com.hgits.propControl.PropControl.run(PropControl.java:374):70 ] - [ INFO ] 
+  properties文件检查完毕
+2016-11-15 11:40:58 970  [ com.hgits.propControl.PropControl.run(PropControl.java:366):0 ] - [ INFO ] 
+  开始检查properties文件
+2016-11-15 11:40:59 015  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):45 ] - [ INFO ] 
+  resource/template/keyboard.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:59 016  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):46 ] - [ INFO ] 
+  resource/MTCLaneLPR.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:59 018  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):48 ] - [ INFO ] 
+  resource/socket.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:59 019  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):49 ] - [ INFO ] 
+  resource/hardware/lane.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:59 021  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):51 ] - [ INFO ] 
+  resource/MTCLane.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:59 024  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):54 ] - [ INFO ] 
+  resource/MTCLaneRTP.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:59 025  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):55 ] - [ INFO ] 
+  resource/MTCLaneServer.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:59 026  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):56 ] - [ INFO ] 
+  resource/template/TengHaoKeyboard.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:59 027  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):57 ] - [ INFO ] 
+  resource/MTCConfig.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:59 027  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):57 ] - [ INFO ] 
+  resource/MTCLaneComm.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:59 028  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):58 ] - [ INFO ] 
+  resource/MTCLaneConstant.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:59 029  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):59 ] - [ INFO ] 
+  resource/MTCLaneETC.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:59 029  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):59 ] - [ INFO ] 
+  resource/MTCLaneKeyboard.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:59 030  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):60 ] - [ INFO ] 
+  resource/MTCLaneFunction.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:59 030  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):60 ] - [ INFO ] 
+  resource/MTCLaneTest.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:59 031  [ com.hgits.propControl.PropControl.compareMaps(PropControl.java:390):61 ] - [ INFO ] 
+  resource/template/WangluKeyboard.properties文件检查完毕，无缺少配置
+2016-11-15 11:40:59 032  [ com.hgits.propControl.PropControl.run(PropControl.java:374):62 ] - [ INFO ] 
+  properties文件检查完毕

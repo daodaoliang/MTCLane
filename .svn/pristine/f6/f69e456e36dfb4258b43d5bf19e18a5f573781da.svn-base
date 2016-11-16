@@ -1,0 +1,2 @@
+useDllKey = ETCDLL
+ETCDLL=resource/dll/etcreader/IccReader_MingHua.dll

@@ -1,0 +1,140 @@
+package com.hgits.realTimePath;
+
+import com.hgits.control.LogControl;
+import com.hgits.realTimePath.vo.RTPConstant;
+import java.io.UnsupportedEncodingException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+/**
+ * 该工具类主要用于与路径识别服务器通信程序所用
+ *
+ * @author Wang Guodong
+ */
+public class ByteUtil {
+
+    static SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmssSSS");
+    static String charset = "utf8";//默认编码格式
+
+    /**
+     * 获取LV数组（（L表示给定字符串长度，用四字节byte数组表示；V表示给定字符串的数组））对应的字符串
+     *
+     * @deprecated
+     * @param buffer LV数组
+     * @return 对应的字符串
+     */
+    public static String getLVString(byte[] buffer) {
+        try {
+            if (buffer == null || buffer.length < 4) {
+                return "";
+            }
+            byte[] buffer1 = Arrays.copyOf(buffer, 4);
+            int len = FormatTransferUtil.hBytesToInt(buffer1);
+            String str = new String(buffer, 4, len, charset);
+            return str;
+        } catch (UnsupportedEncodingException ex) {
+            LogControl.logInfo("获取LV数组" + Arrays.toString(buffer) + "对应的字符串时异常", ex);
+            return "";
+        }
+    }
+
+    /**
+     * 根据给定的字符串获取其对应的LV数组（L表示给定字符串长度，用四字节byte数组表示；V表示给定字符串的数组）
+     * @deprecated 
+     * @param str 给定字符串
+     * @return LV数组
+     */
+    public static byte[] getLVbyte(String str) {
+        try {
+            if (str == null) {
+                str = "";
+            }
+            byte[] buffer2 = str.getBytes(charset);
+            byte[] buffer1 = FormatTransferUtil.toHH(buffer2.length);
+            int len = buffer1.length + buffer2.length;
+            byte[] buffer = new byte[len];
+            System.arraycopy(buffer1, 0, buffer, 0, buffer1.length);
+            System.arraycopy(buffer2, 0, buffer, buffer1.length, buffer2.length);
+            return buffer;
+        } catch (UnsupportedEncodingException ex) {
+            LogControl.logInfo("获取字符串" + str + "LV数组时异常", ex);
+            return new byte[4];
+        }
+    }
+
+    /**
+     * 获取给定数字所对应的字节数组（高字节在前，低字节在后）
+     *
+     * @param i 数字
+     * @return 字节数组
+     */
+    public static byte[] getByteArray(int i) {
+        return FormatTransferUtil.toHH(i);
+    }
+
+    /**
+     * 获取给定数字所对应的字节数组（高字节在前，低字节在后）
+     *
+     * @param i 数字
+     * @return 字节数组
+     */
+    public static byte[] getByteArray(short i) {
+        return FormatTransferUtil.toHH(i);
+    }
+
+    /**
+     * 根据给定的字符串获取其对应的LV数组
+     *
+     * @param str 字符串
+     * @return LV数组
+     */
+    public static byte[] getByteArray(String str) {
+        try {
+            return str.getBytes(RTPConstant.CHARSET);
+        } catch (UnsupportedEncodingException ex) {
+            Logger.getLogger(ByteUtil.class.getName()).log(Level.SEVERE, null, ex);
+            return null;
+        }
+    }
+
+    /**
+     * 根据给定的日期将其格式化（yyyyMMddHHmmss）之后获取其对应的LV数组
+     *
+     * @param date 日期
+     * @return 格式化（yyyyMMddHHmmss）之后对应的LV数组
+     */
+    public static byte[] getByteArray(Date date) {
+        if (date == null) {
+            return getByteArray("");
+        } else {
+            return getByteArray(sdf.format(date));
+        }
+
+    }
+
+    /**
+     * 将给定的数组集合按顺序组合为一个数组
+     *
+     * @param byteLists 给定的数组集合
+     * @return 组合后的数组
+     */
+    public static byte[] mergeBytes(List<byte[]> byteLists) {
+        byte[] buffer = new byte[1024];
+        int len = 0;
+        for (byte[] b : byteLists) {
+            if (b == null) {
+                continue;
+            }
+            System.arraycopy(b, 0, buffer, len, b.length);
+            len += b.length;
+        }
+        byte[] result = Arrays.copyOf(buffer, len);
+        return result;
+    }
+
+}

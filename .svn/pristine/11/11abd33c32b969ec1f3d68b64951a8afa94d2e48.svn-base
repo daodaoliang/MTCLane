@@ -1,0 +1,1066 @@
+package com.hgits.hardware.impl.icreaderwriter;
+
+import MyComm.MyComm;
+import java.io.IOException;
+import java.text.ParseException;
+import com.hgits.common.log.MTCLog;
+import com.hgits.control.FunctionControl;
+import com.hgits.control.ThreadPoolControl;
+import com.hgits.hardware.IcReaderWriter;
+import com.hgits.task.MyTask;
+import com.hgits.tool.driver.IcRWService;
+import com.hgits.util.IntegerUtils;
+import com.hgits.util.ParseUtil;
+import com.hgits.util.SetCOMs;
+import com.hgits.vo.Card;
+import com.hgits.vo.Constant;
+import java.util.ArrayList;
+import java.util.List;
+
+public class GeaIcReaderWriter implements IcReaderWriter {
+
+    /**
+     * 下载密钥共12套,第三个字节表示密钥类型，0~2中任何一个值表示密码A，4～6中任何一个值表示密码B，第四个字节表示扇区，最后六个字节表示密钥。
+     */
+    public static final String ORDER_4C_01 = "4C 0E 00 01 14 8A C5 E2 28 28 58 35 24 38 6E 39";
+    public static final String ORDER_4C_02 = "4C 0E 04 01 14 8A C5 E2 28 28 3E 79 35 48 79 70";
+    public static final String ORDER_4C_03 = "4C 0E 01 01 14 8A C5 E2 28 28 FF FF FF FF FF FF";
+    public static final String ORDER_4C_04 = "4C 0E 05 01 14 8A C5 E2 28 28 FF FF FF FF FF FF";
+    public static final String ORDER_4C_05 = "4C 0E 02 01 14 8A C5 E2 28 28 A0 A1 A2 A3 A4 A5";
+    public static final String ORDER_4C_06 = "4C 0E 06 01 14 8A C5 E2 28 28 B0 B1 B2 B3 B4 B5";
+    public static final String ORDER_4C_07 = "4C 0E 00 02 7D 3E 9F 4F 95 95 58 35 24 38 6E 39 ";
+    public static final String ORDER_4C_08 = "4C 0E 04 02 7D 3E 9F 4F 95 95 3E 79 35 48 79 70";
+    public static final String ORDER_4C_09 = "4C 0E 01 02 7D 3E 9F 4F 95 95 50 37 53 62 71 68";
+    public static final String ORDER_4C_10 = "4C 0E 05 02 7D 3E 9F 4F 95 95 22 78 2E 44 3F 43";
+    public static final String ORDER_4C_11 = "4C 0E 02 02 7D 3E 9F 4F 95 95 FF FF FF FF FF FF";
+    public static final String ORDER_4C_12 = "4C 0E 06 02 7D 3E 9F 4F 95 95 FF FF FF FF FF FF";
+    /**
+     * 读取卡的序列号，即防碰撞指令
+     */
+    public static String ORDER_42 = "42 05 00 00 00 00 00";
+    /**
+     * 读写器是否初始化完成
+     */
+    public static final String ORDER_52 = "52 02 C6 0E";
+    /**
+     * 让读写器复位 RF场产生间隙使卡复位
+     */
+    public static final String ORDER_4E = "4E 02 64 00";
+    /**
+     * 获取读写器设备的信息
+     */
+    public static final String ORDER_4F = "4F 00";
+    /**
+     * 读取卡中指定的块08的内容 (主要是记录全车牌的块)
+     */
+    public static final String ORDER_46_08 = "46 01 08";
+    /**
+     * 读取卡中指定的块09的内容
+     */
+    public static final String ORDER_46_09 = "46 01 09";
+    /**
+     * 向卡中指定的块08写内容
+     */
+    public static final String ORDER_47_08 = "47 11 08";
+    /**
+     * 向卡中指定的块09写内容
+     */
+    public static final String ORDER_47_09 = "47 11 09";
+    /**
+     * 寻卡指令
+     */
+    public static final String ORDER_41_81 = "41 01 81";
+    public static final String ORDER_41_00 = "41 01 00";
+    public static final String ORDER_41_01 = "41 01 01";
+    /**
+     * 选取给定序列号的卡
+     */
+    public static final String ORDER_43 = "43 04 ";
+    /**
+     *
+     */
+    public static final String ORDER_56 = "56 03 00 01 07";
+    /**
+     * 中止卡操作
+     */
+    public static final String ORDER_45 = "45 00";
+    /**
+     * 读取卡中指定块04的内容
+     */
+    public static final String ORDER_46_04 = "46 01 04";
+    /**
+     * 读取卡中指定块05的内容
+     */
+    public static final String ORDER_46_05 = "46 01 05";
+    /**
+     * 读取卡中指定块06的内容
+     */
+    public static final String ORDER_46_06 = "46 01 06";
+    /**
+     * 向卡中指定的块05写内容
+     */
+    public static final String ORDER_47_05 = "47 11 05";
+    /**
+     * 向卡中指定的块06写内容
+     */
+    public static final String ORDER_47_06 = "47 11 06";
+    public Byte index = 1;                  //数据交换包的序号
+    public boolean hasCard;             //天线上有卡
+    public boolean cardIsRead = false;          //通行卡已读
+    public boolean cardIsWritten;          //通行卡已写
+    public boolean readyToWrite;        //通行卡已准备好被写
+    public boolean running = true;        //主机向串口发送指令正在执行中
+    public String message = "";          //记录通讯信息
+    public Card card;                  //卡片信息实体
+    public Card cardInfo;
+    public String cardNo = "";         //存放未解析的卡号
+    public boolean flag42;             //标识读卡器是否已经读到了卡的序列号，并发送给了主机
+    public boolean resultOfWritten; //标示写卡是否成功
+    private IcRWService irw;
+    private StringBuffer key1 = new StringBuffer();          //01扇区的密钥
+    private StringBuffer key2 = new StringBuffer();          //02扇区的密钥
+    private MyComm myComm;
+    private boolean sec5Flag;//05区写卡标识，true写卡 false不写卡
+    private boolean sec6Flag;//06区写卡标识，true写卡 false不写卡
+    private boolean sec8Flag;//08区写卡标识，true写卡 false不写卡
+    private boolean sec9Flag;//09区写卡标识，true写卡 false不写卡
+
+    public void setCard(Card card) {
+        this.card = card;
+    }
+
+    public void setIndex(Byte index) {
+        this.index = index;
+    }
+
+    public Byte getIndex() {
+        return index;
+    }
+
+    public String getCardNo() {
+        return cardNo;
+    }
+
+    public void setCardNo(String cardNo) {
+        this.cardNo = cardNo;
+    }
+
+    public boolean isFlag42() {
+        return flag42;
+    }
+
+    public void setFlag42(boolean flag42) {
+        this.flag42 = flag42;
+    }
+
+    /**
+     * 向串口发送相应数据
+     *
+     * @param buffer 需要发送的数据
+     */
+    public void write(byte[] buffer) {
+        if (buffer != null && myComm != null && myComm.isRunning()) {
+            myComm.write(buffer);
+        }
+    }
+
+    /**
+     * 从读卡器获取装载通行卡信息的实例
+     *
+     * @return 装载通行卡信息的实例，无卡时返回null
+     */
+    public Card getReadedCard() {
+        if (hasCard && cardIsRead) {
+            if (card == null) {
+                return null;
+            } else {
+                return new Card(card);
+            }
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * 获取卡对象
+     *
+     * @return
+     */
+    public Card getCardObj() {
+        return card;
+    }
+
+    /**
+     * 获取判断是否有卡在读写器上
+     *
+     * @return
+     */
+    public boolean getHasCard() {
+        return hasCard;
+    }
+
+    /**
+     * 获取通行卡是否已被读
+     *
+     * @return
+     */
+    public boolean getCardIsRead() {
+        return cardIsRead;
+    }
+
+    /**
+     * 设置判断是否有卡在读写器上
+     *
+     * @param hasCard 是否有卡
+     */
+    public void setHasCard(boolean hasCard) {
+        this.hasCard = hasCard;
+    }
+
+    /**
+     * 设置通行卡是否已被读
+     *
+     * @param cardIsRead 卡是否已读
+     */
+    public void setCardIsRead(boolean cardIsRead) {
+        this.cardIsRead = cardIsRead;
+    }
+
+    /**
+     * 设置卡片是否已写
+     *
+     * @param cardIsWritten 卡是否已写
+     */
+    public void setCardIsWritten(boolean cardIsWritten) {
+        this.cardIsWritten = cardIsWritten;
+    }
+
+    public synchronized void setReadyToWrite(boolean readyToWrite) {
+        this.readyToWrite = readyToWrite;
+    }
+
+    /**
+     * 读写器的无参构造方法
+     */
+    public GeaIcReaderWriter() {
+    }
+
+    @Override
+    public void run() {
+        try {
+            String info = SetCOMs.getMIF();
+            if (info != null) {
+                MTCLog.log("启用天线:" + info);
+                String[] buffer = info.split(",");
+                if (buffer.length < 7) {
+                    MTCLog.log("天线配置信息异常:" + info);
+                    return;
+                }
+                String com = buffer[0];
+                int btl = IntegerUtils.parseString(buffer[1]);                     //串口波特率
+                int sjw = IntegerUtils.parseString(buffer[2]);                    //串口的数据位
+                int tzw = IntegerUtils.parseString(buffer[3]);                    //串口的数据停止位
+                int jyw = IntegerUtils.parseString(buffer[4]);                     //校验位
+                int logLevel = IntegerUtils.parseString(buffer[6]);
+                myComm = new MyComm();
+                int i = myComm.openComm(com, btl, sjw, tzw, jyw, logLevel);
+                if (i != 0) {
+                    running = false;
+                    MTCLog.log("串口" + com + "打开失败");
+                    return;
+                }
+                running = true;
+                irw = new IcRWService(this);
+                SendTask sendTask = new SendTask();
+                ThreadPoolControl.getThreadPoolInstance().execute(sendTask);
+                List<MyTask> taskList = new ArrayList();
+                taskList.add(sendTask);
+                MonitorTask monitorTask = new MonitorTask(taskList);
+                ThreadPoolControl.getThreadPoolInstance().execute(monitorTask);
+            } else {
+                MTCLog.log("未启用天线");
+                running = false;
+            }
+        } catch (Exception ex) {
+            //王国栋 2014-12-18修改，日志用MTCLOG记录
+            MTCLog.log("M1卡天线构造方法异常", ex);
+            running = false;
+        }
+
+    }
+
+    /**
+     * 读取M1卡的内容
+     *
+     * @return -1为未返回核心信息，-2为信息校验错误，0为信息正确 -4返回的卡信息长度出错，-5执行的命令失败 1 异常
+     */
+    private int readCard() {
+        int i = 0;
+        try {
+            i = irw.loadOrder(ORDER_46_04);                  //读取块4区域的信息
+            if (i != 0) {
+                return i;
+            }
+            i = irw.loadOrder(ORDER_46_05);              //读取块5区域的信息
+            if (i != 0) {
+                return i;
+            }
+            i = irw.loadOrder(ORDER_46_06);              //读取块6区域的
+            if (i != 0) {
+                return i;
+            }
+            ParseUtil.parseCardInfo(card);
+            i = irw.loadOrder(ORDER_45);
+            if (i != 0) {
+                return i;
+            }
+            if (card != null && card.getType().equals(Constant.CARD_TYPE_01)) {      //当只有是通行卡时才读取块7区 
+                boolean result2 = authenticateKey(cardNo, "02");    //发送用密钥存放区0的密钥A认证2扇区的命令
+                if (!result2) {
+                    return -5;
+                }
+                i = irw.loadOrder(ORDER_46_08);
+                if (i != 0) {
+                    return i;
+                }
+                ParseUtil.parse08(card);
+                if (FunctionControl.isCscEncryptActive()) {//09区域读写激活
+                    i = irw.loadOrder(ORDER_46_09);
+                    ParseUtil.parse09(card);
+                }
+            }
+        } catch (ParseException ex) {
+            //王国栋 2014-12-18修改，日志用MTCLOG记录
+            i = 1;
+            MTCLog.log("M1卡天线读卡异常", ex);
+        } finally {
+            if (i != 0) {
+                hasCard = false;
+                cardIsRead = false;
+                card = null;
+            }
+        }
+        return i;
+    }
+
+    /**
+     * 向M1卡内写数据
+     *
+     * @return -1为未返回核心信息，-2为信息校验错误，0为信息正确 -4返回的卡信息长度出错，-5执行的命令失败 1异常
+     */
+    private int writeCard() {
+        int i = 0;
+        try {
+            if (card == null || !card.getCardSerial().
+                    equals(cardInfo.getCardSerial())) {
+                MTCLog.log("写卡时发现卡片与所读卡片不一致,读卡:" + card + " 写卡:" + cardInfo);
+                return -1;
+            }
+            boolean flag;
+            int cnt = 0;//写卡失败次数计数器
+            while (sec5Flag || sec6Flag) {//写入第二扇区数据
+                try {
+                    Thread.sleep(1);
+                } catch (InterruptedException ex) {
+                }
+                flag = authenticateKey(ParseUtil.unParseCardNo(cardInfo.getCardSerial()), "01");
+                if (!flag) {
+                    return -5;
+                }
+                if (sec5Flag) {
+                    i = irw.write05(cardInfo);
+                    if (i != 0) {//05区写卡失败
+                        if (cnt == 0) {//第一次写卡失败，重新写卡
+                            cnt++;
+                            continue;
+                        }
+                        if (i == Constant.RESULT) {
+                            message = "M1卡天线通讯异常";
+                        }
+                        return i;
+                    } else {//05区写卡成功
+                        cnt = 0;
+                        message = "";
+                    }
+                }
+                if (sec6Flag) {
+                    i = irw.write06(cardInfo);
+                    if (i != 0) {//06区写卡失败
+                        if (cnt == 0) {//第一次写卡失败，重新写卡
+                            cnt++;
+                            continue;
+                        }
+                        if (i == Constant.RESULT) {
+                            message = "M1卡天线通讯异常";
+                        }
+                        return i;
+                    } else {//06区写卡成功
+                        message = "";
+                        break;
+                    }
+                }
+
+            }
+            cnt = 0;//写卡失败次数计数器
+            while (sec8Flag || sec9Flag) {//向第三扇区写入数据
+                try {
+                    Thread.sleep(1);
+                } catch (InterruptedException ex) {
+                }
+                i = irw.loadOrder(ORDER_45);
+                if (i != 0) {
+                    if (i == Constant.RESULT) {
+                        message = "M1卡天线通讯异常";
+                    }
+                    return i;
+                } else {
+                    message = "";
+                }
+//                if (card != null && cardInfo.getType().equals(Constant.CARD_TYPE_01)) {//通行卡才对0809区操作
+                flag = authenticateKey(ParseUtil.unParseCardNo(cardInfo.getCardSerial()), "02");
+                if (!flag) {
+                    return -5;
+                }
+                if (sec8Flag) {
+                    i = irw.write08(cardInfo);
+                    if (i != 0) {
+                        if (cnt == 0) {
+                            cnt++;
+                            continue;//第一次写卡失败，重新写入数据
+                        }
+                        if (i == Constant.RESULT) {
+                            message = "M1卡天线通讯异常";
+                        }
+                        return i;
+                    } else {
+                        message = "";
+                    }
+                }
+                if (FunctionControl.isCscEncryptActive() && sec9Flag) {
+                    i = irw.write09(cardInfo);//09区域操作
+                    if (i != 0) {
+                        if (cnt == 0) {
+                            cnt++;
+                            continue;//第一次写卡失败，重新写入数据
+                        }
+                        if (i == Constant.RESULT) {
+                            message = "M1卡天线通讯异常";
+                        }
+                        return i;
+                    } else {
+                        message = "";
+                        break;
+                    }
+                }
+//                } else {//非通行卡跳出对08区的写入
+                break;
+//                }
+            }
+        } catch (IOException ex) {
+            //王国栋 2014-12-18修改，日志用MTCLOG记录
+            MTCLog.log("M1卡天线写卡异常，写卡信息：" + cardInfo, ex);
+            return -1;
+        } finally {
+            if (i != 0) {
+                MTCLog.log("M1卡天线写卡失败，写卡信息：" + cardInfo);
+            }
+        }
+        return i;
+    }
+
+    /**
+     * 将需要写入卡中的车辆信息载入并且将卡片状态更改为readyToWrite,是卡片进入写卡,直至写卡成功
+     *
+     * @param card 需要写入的卡片信息
+     * @return 写卡成功返回0，失败返回非0
+     */
+//    public int write(Card card) {
+//        if (!hasCard || card == null) {
+//            return -1;
+//        }
+//        cardInfo = new Card(card);
+//        setReadyToWrite(true);
+//        setCardIsWritten(false);
+//        long temp = System.currentTimeMillis();
+//        while (true) {
+//            try {
+//                Thread.sleep(1);
+//            } catch (InterruptedException ex) {
+//            }
+//            if (System.currentTimeMillis() - temp >= 2000) {
+//                this.cardIsRead = false;
+//                this.hasCard = false;
+//                this.cardIsWritten = false;
+//                this.readyToWrite = false;
+//                this.resultOfWritten = false;
+//                this.flag42 = false;
+//                this.card = null;
+//                MTCLog.log("写卡超时");
+//                message = "写卡超时，请检查M1卡读写器是否通讯正常";
+//                return -1;
+//            }
+//            if (cardIsWritten && resultOfWritten) {                                                 //写卡成功
+//                if (message.startsWith("写卡超时")) {
+//                    message = "";
+//                }
+//                return 0;
+//            }
+//        }
+//    }
+    /**
+     * 寻找相对应的密钥并且进行验证
+     *
+     * @param cardNo 卡号
+     * @param section 需要认证的卡片扇区
+     * @return 认证的结果
+     */
+    private boolean authenticateKey(String cardNo, String section) {
+        /*如："40 07 01 5A DB 64 07 00 01";用密钥存放区0的密钥A认证1扇区的命令 40是指令代码；
+         * 07 是信息的长度； 01 密钥A； 5A DB 64 07 是卡号；00 是密钥存放区；01 是01扇区*/
+        boolean flag = false;
+        switch (section) {
+            case "01":
+                if (key1 != null && key1.length() != 0) {//若秘钥已验证过，直接采用已验证的秘钥
+                    if (key1.substring(6, 14).equals(cardNo)) {//当前卡号与秘钥所对应卡号一致
+                        flag = sendKeyOrder(key1.toString());
+                        if (flag) {
+                            return flag;
+                        }
+                    }
+                }
+                key1 = new StringBuffer();//若秘钥验证失败，重新认证全部秘钥
+                if (sendKeyOrder("400701" + cardNo + "00" + section)) {
+                    key1.append("400701").append(cardNo).append("00").append(section);
+                    flag = true;
+                } else if (sendKeyOrder("400701" + cardNo + "01" + section)) {
+                    key1.append("400701").append(cardNo).append("01").append(section);
+                    flag = true;
+                } else if (sendKeyOrder("400701" + cardNo + "02" + section)) {
+                    key1.append("400701").append(cardNo).append("02").append(section);
+                    flag = true;
+                } else if (sendKeyOrder("400701" + cardNo + "04" + section)) {
+                    key1.append("400701").append(cardNo).append("04").append(section);
+                    flag = true;
+                } else if (sendKeyOrder("400701" + cardNo + "05" + section)) {
+                    key1.append("400701").append(cardNo).append("05").append(section);
+                    flag = true;
+                } else if (sendKeyOrder("400701" + cardNo + "06" + section)) {
+                    key1.append("400701").append(cardNo).append("06").append(section);
+                    flag = true;
+                } else if (sendKeyOrder("400702" + cardNo + "00" + section)) {
+                    key1.append("400702").append(cardNo).append("00").append(section);
+                    flag = true;
+                } else if (sendKeyOrder("400702" + cardNo + "01" + section)) {
+                    key1.append("400702").append(cardNo).append("01").append(section);
+                    flag = true;
+                } else if (sendKeyOrder("400702" + cardNo + "02" + section)) {
+                    key1.append("400702").append(cardNo).append("02").append(section);
+                    flag = true;
+                } else if (sendKeyOrder("400702" + cardNo + "04" + section)) {
+                    key1.append("400702").append(cardNo).append("04").append(section);
+                    flag = true;
+                } else if (sendKeyOrder("400702" + cardNo + "05" + section)) {
+                    key1.append("400702").append(cardNo).append("05").append(section);
+                    flag = true;
+                } else if (sendKeyOrder("400702" + cardNo + "06" + section)) {
+                    key1.append("400702").append(cardNo).append("06").append(section);
+                    flag = true;
+                }
+                break;
+            case "02":
+                if (key2 != null && key2.length() != 0) {//若秘钥已验证过，直接采用已验证的秘钥
+                    if (key2.substring(6, 14).equals(cardNo)) {//当前卡号与秘钥所对应卡号一致
+                        flag = sendKeyOrder(key2.toString());
+                        if (flag) {
+                            return flag;
+                        }
+                    }
+                }
+                key2 = new StringBuffer();//若秘钥验证失败，重新认证全部秘钥
+                if (sendKeyOrder("400701" + cardNo + "00" + section)) {
+                    key2.append("400701").append(cardNo).append("00").append(section);
+                    flag = true;
+                } else if (sendKeyOrder("400701" + cardNo + "01" + section)) {
+                    key2.append("400701").append(cardNo).append("01").append(section);
+                    flag = true;
+                } else if (sendKeyOrder("400701" + cardNo + "02" + section)) {
+                    key2.append("400701").append(cardNo).append("02").append(section);
+                    flag = true;
+                } else if (sendKeyOrder("400701" + cardNo + "04" + section)) {
+                    key2.append("400701").append(cardNo).append("04").append(section);
+                    flag = true;
+                } else if (sendKeyOrder("400701" + cardNo + "05" + section)) {
+                    key2.append("400701").append(cardNo).append("05").append(section);
+                    flag = true;
+                } else if (sendKeyOrder("400701" + cardNo + "06" + section)) {
+                    key2.append("400701").append(cardNo).append("06").append(section);
+                    flag = true;
+                } else if (sendKeyOrder("400702" + cardNo + "00" + section)) {
+                    key2.append("400702").append(cardNo).append("00").append(section);
+                    flag = true;
+                } else if (sendKeyOrder("400702" + cardNo + "01" + section)) {
+                    key2.append("400702").append(cardNo).append("01").append(section);
+                    flag = true;
+                } else if (sendKeyOrder("400702" + cardNo + "02" + section)) {
+                    key2.append("400702").append(cardNo).append("02").append(section);
+                    flag = true;
+                } else if (sendKeyOrder("400702" + cardNo + "04" + section)) {
+                    key2.append("400702").append(cardNo).append("04").append(section);
+                    flag = true;
+                } else if (sendKeyOrder("400702" + cardNo + "05" + section)) {
+                    key2.append("400702").append(cardNo).append("05").append(section);
+                    flag = true;
+                } else if (sendKeyOrder("400702" + cardNo + "06" + section)) {
+                    key2.append("400702").append(cardNo).append("06").append(section);
+                    flag = true;
+                }
+                break;
+        }
+        if (flag == false) {
+            MTCLog.log("M1读卡器对" + cardNo + "通行卡" + section + "扇区全套秘钥认证失败");
+        }
+        return flag;
+    }
+
+    /**
+     * 发送密钥认证指令的方法
+     *
+     * @param order 指令
+     * @return true 成功；false 失败
+     */
+    private boolean sendKeyOrder(String order) {
+        return irw.loadOrder(order) == 0;
+    }
+
+    /**
+     * 关闭读写器
+     *
+     * @return 0表示成功；-1表示失败
+     */
+    public int exit() {
+        running = false;
+        if (myComm != null && myComm.isRunning()) {
+            myComm.closeComm();
+        }
+        return 0;
+    }
+
+    /**
+     * 获取M1卡的读写器的错误信息
+     *
+     * @return 错误信息
+     */
+    public String getErrorMessage() {
+        if (message != null && !message.isEmpty()) {
+            return "M1卡天线通讯异常";
+        }
+        if (myComm != null) {
+            String error = myComm.getErrorMsg();
+            if (error != null && !error.isEmpty()) {
+                return "M1卡天线通讯异常";
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public void write(byte b) {
+        byte[] buffer = new byte[1];
+        buffer[0] = b;
+        write(buffer);
+    }
+
+    @Override
+    public Byte readByte() {
+        Byte b = null;
+        if (myComm != null) {
+            b = myComm.readByte();
+        }
+        return b;
+    }
+
+    @Override
+    public byte[] readByteArray() {
+        byte[] buffer = null;
+        if (myComm != null) {
+            buffer = myComm.readByteArray();
+        }
+        return buffer;
+    }
+
+    @Override
+    public boolean isRunning() {
+        return running;
+    }
+
+    @Override
+    public int write(Card card, boolean sec5Flag, boolean sec6Flag, boolean sec8Flag, boolean sec9Flag) {
+        if (!hasCard || card == null) {
+            return -1;
+        }
+        this.sec5Flag = sec5Flag;
+        this.sec6Flag = sec6Flag;
+        this.sec8Flag = sec8Flag;
+        this.sec9Flag = sec9Flag;
+        cardInfo = new Card(card);
+        setReadyToWrite(true);
+        setCardIsWritten(false);
+        long start = System.currentTimeMillis();
+        while (true) {
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException ex) {
+            }
+            long now = System.currentTimeMillis();
+            if (now < start) {//当前时间小于开始时间，重新开始计时
+                start = now;
+            }
+            if (now - start >= 2000) {
+                this.cardIsRead = false;
+                this.hasCard = false;
+                this.cardIsWritten = false;
+                this.readyToWrite = false;
+                this.resultOfWritten = false;
+                this.flag42 = false;
+                this.card = null;
+                MTCLog.log("写卡超时");
+                message = "写卡超时，请检查M1卡读写器是否通讯正常";
+                return -1;
+            }
+            if (cardIsWritten && resultOfWritten) {                                                 //写卡成功
+                if (message.startsWith("写卡超时")) {
+                    message = "";
+                }
+                return 0;
+            }
+        }
+    }
+
+    @Override
+    public void increaseIndex() {
+        index++;
+    }
+
+    class SendTask extends MyTask {
+
+        /**
+         * 初始化M1卡读写器，包含获取设备信息，加载密钥等
+         *
+         * @return 0 成功；其他 失败
+         */
+        private int init() {
+            MTCLog.log("icrw send init info");
+            Outer:
+            while (running) {
+                try {
+                    Thread.sleep(100);
+                    if (irw.loadOrder(ORDER_4E) == Constant.RESULT) {         //RF场产生间隙使卡复位
+                        message = "M1卡天线通讯异常";
+                        continue Outer;
+                    } else {
+                        if (message.startsWith("M1卡天线通讯异常")) {
+                            message = "";
+                        }
+                    }
+                    if (irw.loadOrder(ORDER_52) == Constant.RESULT) {         //读写器是否初始化完成
+                        message = "M1卡天线通讯异常";
+                        continue Outer;
+                    } else {
+                        if (message.startsWith("M1卡天线通讯异常")) {
+                            message = "";
+                        }
+                    }
+                    if (irw.loadOrder(ORDER_4F) == Constant.RESULT) {         //获取读写器的设备信息
+                        message = "M1卡天线通讯异常";
+                        continue Outer;
+                    } else {
+                        if (message.startsWith("M1卡天线通讯异常")) {
+                            message = "";
+                        }
+                    }
+                    if (irw.loadOrder(ORDER_4C_01) == Constant.RESULT) {         //加载密钥共12套
+                        message = "M1卡天线通讯异常";
+                        continue Outer;
+                    } else {
+                        if (message.startsWith("M1卡天线通讯异常")) {
+                            message = "";
+                        }
+                    }
+                    if (irw.loadOrder(ORDER_4C_02) == Constant.RESULT) {         //加载密钥共12套
+                        message = "M1卡天线通讯异常";
+                        continue Outer;
+                    } else {
+                        if (message.startsWith("M1卡天线通讯异常")) {
+                            message = "";
+                        }
+                    }
+                    if (irw.loadOrder(ORDER_4C_03) == Constant.RESULT) {         //加载密钥共12套
+                        message = "M1卡天线通讯异常";
+                        continue Outer;
+                    } else {
+                        if (message.startsWith("M1卡天线通讯异常")) {
+                            message = "";
+                        }
+                    }
+                    if (irw.loadOrder(ORDER_4C_04) == Constant.RESULT) {         //加载密钥共12套
+                        message = "M1卡天线通讯异常";
+                        continue Outer;
+                    } else {
+                        if (message.startsWith("M1卡天线通讯异常")) {
+                            message = "";
+                        }
+                    }
+                    if (irw.loadOrder(ORDER_4C_05) == Constant.RESULT) {         //加载密钥共12套
+                        message = "M1卡天线通讯异常";
+                        continue Outer;
+                    } else {
+                        if (message.startsWith("M1卡天线通讯异常")) {
+                            message = "";
+                        }
+                    }
+                    if (irw.loadOrder(ORDER_4C_06) == Constant.RESULT) {         //加载密钥共12套
+                        message = "M1卡天线通讯异常";
+                        continue Outer;
+                    } else {
+                        if (message.startsWith("M1卡天线通讯异常")) {
+                            message = "";
+                        }
+                    }
+                    if (irw.loadOrder(ORDER_4C_07) == Constant.RESULT) {         //加载密钥共12套
+                        message = "M1卡天线通讯异常";
+                        continue Outer;
+                    } else {
+                        if (message.startsWith("M1卡天线通讯异常")) {
+                            message = "";
+                        }
+                    }
+                    if (irw.loadOrder(ORDER_4C_08) == Constant.RESULT) {         //加载密钥共12套
+                        message = "M1卡天线通讯异常";
+                        continue Outer;
+                    } else {
+                        if (message.startsWith("M1卡天线通讯异常")) {
+                            message = "";
+                        }
+                    }
+                    if (irw.loadOrder(ORDER_4C_09) == Constant.RESULT) {         //加载密钥共12套
+                        message = "M1卡天线通讯异常";
+                        continue Outer;
+                    } else {
+                        if (message.startsWith("M1卡天线通讯异常")) {
+                            message = "";
+                        }
+                    }
+                    if (irw.loadOrder(ORDER_4C_10) == Constant.RESULT) {         //加载密钥共12套
+                        message = "M1卡天线通讯异常";
+                        continue Outer;
+                    } else {
+                        if (message.startsWith("M1卡天线通讯异常")) {
+                            message = "";
+                        }
+                    }
+                    if (irw.loadOrder(ORDER_4C_11) == Constant.RESULT) {         //加载密钥共12套
+                        message = "M1卡天线通讯异常";
+                        continue Outer;
+                    } else {
+                        if (message.startsWith("M1卡天线通讯异常")) {
+                            message = "";
+                        }
+                    }
+                    if (irw.loadOrder(ORDER_4C_12) == Constant.RESULT) {         //加载密钥共12套
+                        message = "M1卡天线通讯异常";
+                        continue Outer;
+                    } else {
+                        if (message.startsWith("M1卡天线通讯异常")) {
+                            message = "";
+                        }
+                    }
+                    break;
+                } catch (Exception ex) {
+                    //王国栋 2014-12-18修改，日志用MTCLOG记录
+                    MTCLog.log("M1卡天线初始化异常", ex);
+                    throw new RuntimeException(ex);
+                }
+            }
+            return 0;
+        }
+
+        @Override
+        public void run() {
+            try {
+                MTCLog.log("icrw is running");
+                setAlive(true);
+                int flag = -1;    //标示是否初始化，如果发送的指令没有回应则重新初始化
+                int readed = 0;   //读卡的结果
+                boolean resultKey1 = true;   //秘要验证01区的结果
+                Outer:
+                while (running) {
+                    Thread.sleep(1);
+                    if (flag == -1) {
+                        flag = init();
+                        if (flag != 0) {
+                            continue Outer;
+                        }
+                    }
+
+                    if (!hasCard) {
+                        if (irw.loadOrder(ORDER_4E) == Constant.RESULT) {         //RF场产生间隙使卡复位
+                            continue Outer;
+                        } else {
+                            message = "";
+                        }
+                        if (irw.loadOrder(ORDER_41_81) == Constant.RESULT) {            //发送寻卡指令
+                            continue Outer;
+                        }
+                    } else {
+//                        Thread.sleep(15);
+                        flag42 = false;                                              //先将判断是否已经读到卡的序列号的标识设置为否
+                        if (irw.loadOrder(ORDER_42) == Constant.RESULT) {   //发送读取卡序列号的指令
+                            message = "M1卡天线通讯异常";
+                            continue Outer;
+                        } else {
+                            if (message.startsWith("M1卡天线通讯异常")) {
+                                message = "";
+                            }
+                        }
+                        if (!flag42) {
+                            continue;
+                        }
+                        if (!cardIsRead && flag42) {                                 //当卡的信息区域未被读取，并且已经获取到了卡的序列号
+                            if (card == null) {
+                                continue Outer;
+                            }
+                            if (irw.loadOrder(ORDER_43 + cardNo) == Constant.RESULT) {    //把已经获得的卡的序列号与选择卡的指令一起发送给读写器
+                                message = "M1卡天线通讯异常";
+                                continue Outer;
+                            } else {
+                                if (message.startsWith("M1卡天线通讯异常")) {
+                                    message = "";
+                                }
+                            }
+                            if (irw.loadOrder(ORDER_45) == Constant.RESULT) {                      //发送挂起卡45指令，暂停下对卡的操作
+                                message = "M1卡天线通讯异常";
+                                continue Outer;
+                            } else {
+                                if (message.startsWith("M1卡天线通讯异常")) {
+                                    message = "";
+                                }
+                            }
+                            if (irw.loadOrder(ORDER_41_00) == Constant.RESULT) {                     //发送寻卡00指令，再次确认卡是否真的在读写器上
+                                message = "M1卡天线通讯异常";
+                                continue Outer;
+                            } else {
+                                if (message.startsWith("M1卡天线通讯异常")) {
+                                    message = "";
+                                }
+                            }
+                            if (irw.loadOrder(ORDER_45) == Constant.RESULT) {                         //发送挂起卡45指令，暂停下对卡的操作
+                                message = "M1卡天线通讯异常";
+                                continue Outer;
+                            } else {
+                                if (message.startsWith("M1卡天线通讯异常")) {
+                                    message = "";
+                                }
+                            }
+                            key1 = new StringBuffer();
+                            if (card == null) {
+                                continue Outer;
+                            }
+                            resultKey1 = authenticateKey(cardNo, "01");   //发送用密钥存放区0的密钥A认证1扇区的命令
+                            if (!resultKey1) {
+                                continue Outer;
+                            } else {
+                                message = "";
+                            }
+                            readed = readCard();
+                            if (readed == Constant.RESULT) {
+                                message = "M1卡天线通讯异常";
+                                continue Outer;
+                            } else {
+                                if (readed == 0) {
+                                    setCardIsRead(true);
+                                }
+                                message = "";
+                            }
+
+                        }
+                        if (irw.loadOrder(ORDER_45) == Constant.RESULT) {
+                            message = "M1卡天线通讯异常";
+                            continue Outer;
+                        } else {
+                            message = "";
+                        }
+                        if (readyToWrite) {
+                            if (writeCard() == 0) {
+                                if (irw.loadOrder(ORDER_45) == Constant.RESULT) {
+                                    message = "M1卡天线通讯异常";
+                                    continue Outer;
+                                } else {
+                                    message = "";
+                                }
+                                setReadyToWrite(false);
+                                setCardIsWritten(true);
+                                resultOfWritten = true;
+                            } else {
+                                setCardIsWritten(true);
+                                resultOfWritten = false;
+                            }
+                        }
+                        if (irw.loadOrder(ORDER_4E) == Constant.RESULT) {         //RF场产生间隙使卡复位
+                            continue Outer;
+                        } else {
+                            if (message.startsWith("M1卡天线通讯异常")) {
+                                message = "";
+                            }
+                        }
+                        if (irw.loadOrder(ORDER_41_81) == Constant.RESULT) {            //发送寻卡指令
+                            continue Outer;
+                        }
+                    }
+                }
+            } catch (Throwable ex) {
+                //王国栋 2014-12-18修改，日志用MTCLOG记录
+                MTCLog.log("M1卡天线异常", ex);
+            } finally {
+                MTCLog.log("············天线关闭···············");
+                message = "M1卡天线通讯异常";
+                cardIsRead = false;
+                hasCard = false;
+                cardIsWritten = false;
+                readyToWrite = false;
+                resultOfWritten = false;
+                flag42 = false;
+                card = null;
+                setAlive(false);
+            }
+        }
+
+    }
+
+    class MonitorTask extends MyTask {
+
+        List<MyTask> taskList;
+
+        public MonitorTask(List<MyTask> taskList) {
+            this.taskList = taskList;
+        }
+
+        @Override
+        public void run() {
+            while (running) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ex) {
+                }
+                if (taskList == null || taskList.isEmpty()) {
+                    continue;
+                }
+                for (MyTask myTask : taskList) {
+                    if (!myTask.isAlive()) {
+                        ThreadPoolControl.getThreadPoolInstance().execute(myTask);
+                    }
+                }
+            }
+        }
+    }
+
+}

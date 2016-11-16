@@ -1,0 +1,4 @@
+##ETC\u8bfb\u5199\u5668\u52a8\u6001\u5e93\u540d\u79f0
+useDllKey = ETCDLL
+##ETC\u8bfb\u5199\u5668\u52a8\u6001\u5e93\u8def\u5f84
+ETCDLL=resource/dll/etcreader/IccReader_MingHua.dll

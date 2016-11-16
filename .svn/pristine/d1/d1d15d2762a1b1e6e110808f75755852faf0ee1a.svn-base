@@ -1,0 +1,416 @@
+1.3.1601.0升级至1.3.1602.0更新步骤
+升级文件如下
+MTCLane.jar
+update
+
+
+具体升级步骤如下
+1 关闭车道软件
+2 打开MTCLaneFunction.properties文件，增加以下内容
+#用于配置抓拍车牌后是否获取第一次车牌结果 0-不获取 1-获取，默认0（注：汉王车牌识别设备需要将此项设为1）
+lprCaptureMode=1
+#入口已发通行卡再刷ETC卡的功能 0-启用 1-不启用 默认0
+cscToEtcFun=0
+#出口现金付款时必须输入收取通行费并且输入金额需大于等于应收通行费功能(通行费为0时可以不用输入) 0-启用 1-不启用 默认1
+fareInputFun=1
+3 将升级文件放到MTCLane\update\mtclane文件夹下，打开车道软件
+4 升级完成后收费界面左上角显示升级后的版本1.3.1601.0
+##########################################################华丽丽的分割线##################################################
+##########################################################华丽丽的分割线###################################################
+
+1.2.1601.17升级至1.3.1601.0更新步骤
+升级文件如下
+MTCLane.jar
+update
+
+
+具体升级步骤如下
+1 关闭车道软件
+2 打开MTCLaneFunction.properties文件，增加以下内容
+#车牌识别抓拍车牌模式，默认0，根据现场实际情况进行配置
+#0-循环抓拍，无结果自动重新抓拍
+#1-车辆到达线圈后或车型确认后开始抓拍，无结果需要手动重新输入车型或按【00】键手动抓拍
+lprPlateMode=0
+3 将升级文件放到MTCLane\update\mtclane文件夹下，打开车道软件
+4 升级完成后收费界面左上角显示升级后的版本1.3.1601.0
+##########################################################华丽丽的分割线##################################################
+##########################################################华丽丽的分割线###################################################
+
+1.2.1601.16升级至1.2.1601.17更新步骤
+升级文件如下
+MTCLane.jar
+update
+
+
+具体升级步骤如下
+1 关闭车道软件
+2 将升级文件放到MTCLane\update\mtclane文件夹下，打开车道软件
+3 升级完成后收费界面左上角显示升级后的版本1.2.1601.17
+##########################################################华丽丽的分割线##################################################
+##########################################################华丽丽的分割线###################################################
+
+
+1.2.1601.15升级至1.2.1601.16更新步骤
+升级文件如下
+MTCLane.jar
+update
+
+
+具体升级步骤如下
+1 关闭车道软件
+2 打开MTCLaneFunction.properties，增加以下内容
+#是否启用货车湘通储值卡打折功能 0-启用 1-不启用，默认0
+truckETCDisFun=0
+#合法装载货车湘通储值卡打折折扣率,默认0.9
+truckETCDisRate1=0.9
+#合法装载货车非湘通储值卡打折折扣率，默认0.98
+truckETCDisRate2=0.98
+#货车ETC储值卡打折开始时间,格式为yyyy-MM-dd HH:mm:ss，默认2016-10-01 00:00:00
+truckETCDisStartTime=2016-10-01 00:00:00
+#货车ETC储值卡打折结束时间,格式为yyyy-MM-dd HH:mm:ss，默认2017-10-01 00:00:00
+truckETCDisEndTime=2017-10-01 00:00:00
+3 将升级文件放到MTCLane\update\mtclane文件夹下，打开车道软件
+4 升级完成后收费界面左上角显示升级后的版本1.2.1601.16
+##########################################################华丽丽的分割线##################################################
+##########################################################华丽丽的分割线###################################################
+1.2.1601.14升级至1.2.1601.15更新步骤
+升级文件如下
+\resource\template
+\resource\template\print.txt
+\resource\template\printCollect.txt
+MTCLane.jar
+update
+
+
+
+具体升级步骤如下
+1 关闭车道软件
+2 打开MTCLaneFunction.properties，增加以下内容
+#费显异常报警功能 0启用 1不启用(默认1)
+TFIErrorAlarm=1
+3 打开MTCLaneConstant.properties，增加以下内容
+#等待卡机收发针上升到顶及下降到底的超时时间，单位秒，默认（60）
+CicmPinWait=60
+#车牌识别设备抓拍车牌的间隔时间，单位毫秒，默认200
+lprSleepInterval=200
+4 将升级文件放到MTCLane\update\mtclane文件夹下，打开车道软件
+5 升级完成后收费界面左上角显示升级后的版本1.2.1601.15
+##########################################################华丽丽的分割线##################################################
+##########################################################华丽丽的分割线###################################################
+1.2.1601.13升级至1.2.1601.14更新步骤
+升级文件如下
+MTCLane.jar
+update
+
+
+
+具体升级步骤如下
+1 关闭车道软件
+2 将升级文件放到MTCLane\update\mtclane文件夹下，打开车道软件
+3 升级完成后收费界面左上角显示升级后的版本1.2.1601.14
+##########################################################华丽丽的分割线##################################################
+##########################################################华丽丽的分割线###################################################
+
+1.2.1601.12升级至1.2.1601.13更新步骤
+升级文件如下
+MTCLane.jar
+update
+
+
+
+具体升级步骤如下
+1 关闭车道软件
+2 将升级文件放到MTCLane\update\mtclane文件夹下，打开车道软件
+3 升级完成后收费界面左上角显示升级后的版本1.2.1601.13
+##########################################################华丽丽的分割线##################################################
+##########################################################华丽丽的分割线###################################################
+
+1.2.1601.11升级至1.2.1601.12更新步骤
+升级文件如下
+MTCLane.jar
+update
+
+
+
+具体升级步骤如下
+1 关闭车道软件
+2 将升级文件放到MTCLane\update\mtclane文件夹下，打开车道软件
+3 升级完成后收费界面左上角显示升级后的版本1.2.1601.12
+##########################################################华丽丽的分割线##################################################
+##########################################################华丽丽的分割线###################################################
+
+1.2.1601.10升级至1.2.1601.11更新步骤
+升级文件如下
+MTCLane.jar
+update
+
+
+
+具体升级步骤如下
+1 关闭车道软件
+2 将升级文件放到MTCLane\update\mtclane文件夹下，打开车道软件
+3 升级完成后收费界面左上角显示升级后的版本1.2.1601.11
+##########################################################华丽丽的分割线##################################################
+##########################################################华丽丽的分割线###################################################
+
+1.2.1601.9升级至1.2.1601.10更新步骤
+升级文件如下
+MTCLane.jar
+update
+
+
+
+具体升级步骤如下
+1 关闭车道软件
+2 打开MTCLaneRTP.properties文件，将pathServerip对应的IP地址修改为当前收费站路径识别服务器的IP地址，然后将realTimeRoadFlag的值改为2
+3 将升级文件放到MTCLane\update\mtclane文件夹下，打开车道软件
+4 升级完成后收费界面左上角显示升级后的版本1.2.1601.10
+##########################################################华丽丽的分割线##################################################
+##########################################################华丽丽的分割线###################################################
+1.2.1601.8升级至1.2.1601.9更新步骤
+升级文件如下
+\resource\dll\lpr\uniview\EZPlayer.dll
+\resource\dll\lpr\uniview\EZPlayerEx.dll
+\resource\dll\lpr\uniview\EZ_dsp_audio_aac.dll
+\resource\dll\lpr\uniview\EZ_dsp_audio_aac_enc.dll
+\resource\dll\lpr\uniview\EZ_dsp_audio_g711.dll
+\resource\dll\lpr\uniview\EZ_dsp_video_filter.dll
+\resource\dll\lpr\uniview\EZ_dsp_video_h264.dll
+\resource\dll\lpr\uniview\EZ_dsp_video_mjpeg.dll
+\resource\dll\lpr\uniview\EZ_MPPV3_PicPostProc.dll
+\resource\dll\lpr\uniview\iconv.dll
+\resource\dll\lpr\uniview\LPR_uniview.dll
+\resource\dll\lpr\uniview\MA_AudioTrans.dll
+\resource\dll\lpr\uniview\MA_Client.dll
+\resource\dll\lpr\uniview\Microsoft.VC90.CRT.manifest
+\resource\dll\lpr\uniview\msvcm90.dll
+\resource\dll\lpr\uniview\msvcp90.dll
+\resource\dll\lpr\uniview\msvcr90.dll
+\resource\dll\lpr\uniview\mw_sdk_bp.dll
+\resource\dll\lpr\uniview\mw_sdk_ipc.dll
+\resource\dll\lpr\uniview\mw_sdk_iq.dll
+\resource\dll\lpr\uniview\mw_sdk_ma.dll
+\resource\dll\lpr\uniview\mw_sdk_player.dll
+\resource\dll\lpr\uniview\RM_Module.dll
+\resource\dll\lpr\uniview\Tinyxml.dll
+\resource\dll\lpr\wisesoft\dhnetsdk.DLL
+\resource\dll\lpr\wisesoft\WiseSoft_LPR.DLL
+\resource\hardware\hardware.xml
+\resource\hardware\lane.properties
+\resource\MTCLaneConstant.properties
+\resource\config.ini
+MTCLane.jar
+update
+
+
+具体升级步骤如下
+1 关闭车道软件
+2 打开MTCLane/resource/MTCLaneFunction.properties文件，在文件末尾增加以下内容
+#ETC读写器读写M1通行卡功能  0-启用 1-不启用 默认1
+etcTscFunction=1
+#车牌识别模式 0-加锁 1-不加锁（默认0）
+lprmode=0
+3 打开MTCLane/resource/MTCLaneLPR.properties文件，在文件末尾增加以下内容
+############北京川大智胜 车牌识别动态库#############
+lprDLL7=resource\\dll\\lpr\\wisesoft\\WiseSoft_LPR.dll
+#注：启用川大智胜的车牌识别设备时，需要沿用原gea动态库配置文件config.ini文件。必须将gea系统中的config.ini放至MTCLane/resource文件夹下。
+###################################
+4 将升级文件放到MTCLane\update\mtclane文件夹下，打开车道软件
+5 升级完成后收费界面左上角显示升级后的版本1.2.1601.9
+
+##########################################################华丽丽的分割线##################################################
+##########################################################华丽丽的分割线###################################################
+1.2.1601.7升级至1.2.1601.8更新步骤
+升级文件如下
+\resource\hardware\hardware.xml
+\resource\hardware\lane.properties
+\resource\uniview.ini
+AutoUpdate.jar
+MTCLane.jar
+update
+
+具体升级步骤如下
+1 关闭车道软件
+2 打开MTCLane/resource/MTCLaneFunction.properties文件，在文件末尾增加以下内容
+#记录临时流水方案 0-优化前 1-优化后，默认1
+tempFunction=1
+3 打开MTCLane/resource/MTCLaneLPR.properties文件，在文件末尾增加以下内容
+############浙江宇视 车牌识别动态库#############
+lprDLL6=resource\\dll\\lpr\\uniview\\LPR_uniview.dll
+###################################
+4 打开MTCLane/resource/MTCLaneConstant.properties文件，在文件末尾增加以下内容
+#代收金额，以逗号分隔，最多9个,(0表示无代收),代收金额在0-999999之间(无此配置或配置为空的话，按无代收处理)
+collectMoney=0,5,10,15
+5 将升级文件放到MTCLane\update\mtclane文件夹下，打开车道软件
+6 升级完成后收费界面左上角显示升级后的版本1.2.1601.8
+
+##########################################################华丽丽的分割线##################################################
+##########################################################华丽丽的分割线###################################################
+1.2.1601.6升级至1.2.1601.7更新步骤
+升级文件如下
+MTCLane.jar
+update
+
+具体升级步骤如下
+1 关闭车道软件
+2 打开MTCLane/resource/MTCLaneFunction.properties文件，在文件末尾增加以下内容
+#人工发卡车道接入自助发卡机 0-启用 1-不启用，默认1
+manualAutoFunction=1
+注：若是人工发卡车道（未启用自助发卡功能）但接入了自助发卡卡机并进行自助发卡，需要将manualAutoFunction的值设为0
+3 升级步骤
+	将升级文件放到MTCLane\update\mtclane文件夹下，打开车道软件
+4 升级完成后收费界面左上角显示升级后的版本1.2.1601.7
+
+##########################################################华丽丽的分割线##################################################
+##########################################################华丽丽的分割线###################################################
+1.2.1601.5升级至1.2.1601.6更新步骤
+升级文件如下
+lib\org.springframework.web-3.0.5.RELEASE.jar
+MTCLane.jar
+update
+
+具体升级步骤如下
+1 关闭车道软件
+2 升级步骤
+	将升级文件放到MTCLane\update\mtclane文件夹下，打开车道软件
+3 升级完成后收费界面左上角显示升级后的版本1.2.1601.6
+##########################################################华丽丽的分割线##################################################
+##########################################################华丽丽的分割线###################################################
+1.2.1601.4升级至1.2.1601.5更新步骤
+
+升级文件如下
+resource\log4j.xml
+MTCLane.jar
+update
+
+
+具体升级步骤如下
+1 关闭车道软件
+2 升级步骤
+	将升级文件放到MTCLane\update\mtclane文件夹下，打开车道软件
+3 升级完成后收费界面左上角显示升级后的版本1.2.1601.5
+
+##########################################################华丽丽的分割线##################################################
+##########################################################华丽丽的分割线###################################################
+1.0.1601.9更新到1.2.1601.2更新步骤
+升级文件
+AutoUpdate.jar
+FileUpload.jar
+MTCLane.jar
+start_MTCLane.bat
+StopFileUpload.jar
+audio\blackVeh.wav
+audio\byebye.wav
+audio\fare.wav
+audio\grayVeh.wav
+audio\welcome.wav
+lib\AutoMachine.jar
+lib\Automation.BDaq.jar
+param\tb_EncryptionKey.txt
+param\tb_station.txt
+resource\MTCConfig.properties
+resource\MTCLane.properties
+resource\MTCLaneConstant.properties
+resource\MTCLaneETC.properties
+resource\MTCLaneFunction.properties
+resource\MTCLaneLPR.properties
+resource\MTCLaneRTP.properties
+resource\MTCLaneTest.properties
+resource\socket.properties
+resource\dll\etcreader\IccReader_MingHua.dll
+resource\dll\lpr\deya\LPR.dll
+resource\dll\lpr\dongshiyuan\AudioRender.dll
+resource\dll\lpr\dongshiyuan\calib.dll
+resource\dll\lpr\dongshiyuan\D3DX9_43.dll
+resource\dll\lpr\dongshiyuan\gdiplus.dll
+resource\dll\lpr\dongshiyuan\HCCore.dll
+resource\dll\lpr\dongshiyuan\HCNetSDK.dll
+resource\dll\lpr\dongshiyuan\HikSetting.ini
+resource\dll\lpr\dongshiyuan\msvcp120.dll
+resource\dll\lpr\dongshiyuan\msvcr120.dll
+resource\dll\lpr\dongshiyuan\PlayCtrl.dll
+resource\dll\lpr\dongshiyuan\PRDLL.dll
+resource\dll\lpr\dongshiyuan\SuperRender.dll
+resource\dll\lpr\dongshiyuan\VPR_LOG.txt
+resource\dll\lpr\dongshiyuan\HCNetSDKCom\AnalyzeData.dll
+resource\dll\lpr\dongshiyuan\HCNetSDKCom\AudioIntercom.dll
+resource\dll\lpr\dongshiyuan\HCNetSDKCom\DsSdk.dll
+resource\dll\lpr\dongshiyuan\HCNetSDKCom\HCAlarm.dll
+resource\dll\lpr\dongshiyuan\HCNetSDKCom\HCAlarm.lib
+resource\dll\lpr\dongshiyuan\HCNetSDKCom\HCCoreDevCfg.dll
+resource\dll\lpr\dongshiyuan\HCNetSDKCom\HCDisplay.dll
+resource\dll\lpr\dongshiyuan\HCNetSDKCom\HCGeneralCfgMgr.dll
+resource\dll\lpr\dongshiyuan\HCNetSDKCom\HCGeneralCfgMgr.lib
+resource\dll\lpr\dongshiyuan\HCNetSDKCom\HCIndustry.dll
+resource\dll\lpr\dongshiyuan\HCNetSDKCom\HCPlayBack.dll
+resource\dll\lpr\dongshiyuan\HCNetSDKCom\HCPreview.dll
+resource\dll\lpr\dongshiyuan\HCNetSDKCom\HCPreview.lib
+resource\dll\lpr\dongshiyuan\HCNetSDKCom\HCVoiceTalk.dll
+resource\dll\lpr\dongshiyuan\HCNetSDKCom\libiconv2.dll
+resource\dll\lpr\dongshiyuan\HCNetSDKCom\msvcr90.dll
+resource\dll\lpr\dongshiyuan\HCNetSDKCom\OpenAL32.dll
+resource\dll\lpr\dongshiyuan\HCNetSDKCom\StreamTransClient.dll
+resource\dll\lpr\dongshiyuan\HCNetSDKCom\SystemTransform.dll
+resource\dll\lpr\hanwang\LPR_HW.dll
+resource\dll\lpr\hikvision\AudioRender.dll
+resource\dll\lpr\hikvision\calib.dll
+resource\dll\lpr\hikvision\D3DX9_43.dll
+resource\dll\lpr\hikvision\gdiplus.dll
+resource\dll\lpr\hikvision\HCCore.dll
+resource\dll\lpr\hikvision\HCNetSDK.dll
+resource\dll\lpr\hikvision\HikSetting.ini
+resource\dll\lpr\hikvision\msvcp120.dll
+resource\dll\lpr\hikvision\msvcr120.dll
+resource\dll\lpr\hikvision\PlayCtrl.dll
+resource\dll\lpr\hikvision\PRDLL.dll
+resource\dll\lpr\hikvision\SuperRender.dll
+resource\dll\lpr\hikvision\HCNetSDKCom\AnalyzeData.dll
+resource\dll\lpr\hikvision\HCNetSDKCom\AudioIntercom.dll
+resource\dll\lpr\hikvision\HCNetSDKCom\DsSdk.dll
+resource\dll\lpr\hikvision\HCNetSDKCom\HCAlarm.dll
+resource\dll\lpr\hikvision\HCNetSDKCom\HCAlarm.lib
+resource\dll\lpr\hikvision\HCNetSDKCom\HCCoreDevCfg.dll
+resource\dll\lpr\hikvision\HCNetSDKCom\HCDisplay.dll
+resource\dll\lpr\hikvision\HCNetSDKCom\HCGeneralCfgMgr.dll
+resource\dll\lpr\hikvision\HCNetSDKCom\HCGeneralCfgMgr.lib
+resource\dll\lpr\hikvision\HCNetSDKCom\HCIndustry.dll
+resource\dll\lpr\hikvision\HCNetSDKCom\HCPlayBack.dll
+resource\dll\lpr\hikvision\HCNetSDKCom\HCPreview.dll
+resource\dll\lpr\hikvision\HCNetSDKCom\HCPreview.lib
+resource\dll\lpr\hikvision\HCNetSDKCom\HCVoiceTalk.dll
+resource\dll\lpr\hikvision\HCNetSDKCom\libiconv2.dll
+resource\dll\lpr\hikvision\HCNetSDKCom\msvcr90.dll
+resource\dll\lpr\hikvision\HCNetSDKCom\OpenAL32.dll
+resource\dll\lpr\hikvision\HCNetSDKCom\StreamTransClient.dll
+resource\dll\lpr\hikvision\HCNetSDKCom\SystemTransform.dll
+resource\dll\lpr\signalway\HvDevice.dll
+resource\dll\lpr\signalway\HVDLL.DLL
+resource\dll\lpr\signalway\LPR_Signalway.dll
+resource\hardware\hardware.xml
+resource\hardware\lane.properties
+
+
+
+1 关闭车道软件
+
+2 原有文件处理
+	将resource\Cartridge.properties文件重命名为MTCLaneCartridge.properties
+	将resource\comm.properties文件重命名为resource\MTCLaneComm.properties
+	备份并删除resource\RealTimeRoad.properties
+	备份并删除resource\socket.properties
+	备份并删除resource\LPR.properties
+	备份并删除resource\application.properties
+	备份并删除resource\Constant.properties
+	备份并删除resource\server.properties
+3 车道信息及功能配置
+	在resource\MTCLaneConfig.properties文件中设置当前路段号，收费站号，车道号，车道类型以及服务器IP
+	根据当前车道的功能配置情况，在MTCLaneFunction.properties文件中启用相应功能
+	根据当前车道的车牌识别设备的厂家配置MTCLaneLPR.properties
+4 升级步骤
+	将配置后的升级文件放到MTCLane\update\mtclane文件夹下，打开车道软件
+5 升级完成后收费界面左上角显示升级后的版本1.2.1601.4
+
+
+
+
+

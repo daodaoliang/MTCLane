@@ -1,0 +1,24 @@
+package com.hgits.propControl;
+
+/**
+ *
+ * @author Wang Guodong
+ */
+public class ActualParam {
+
+    public static final String PROP_MTCCONFIG = "resource/MTCConfig.properties";
+    public static final String PROP_MTCLANE = "resource/MTCLane.properties";
+    public static final String PROP_MTCLANE_COMM = "resource/MTCLaneComm.properties";
+    public static final String PROP_MTCLANE_CONSTANT = "resource/MTCLaneConstant.properties";
+    public static final String PROP_MTCLANE_ETC = "resource/MTCLaneETC.properties";
+    public static final String PROP_MTCLANE_FUNCTION = "resource/MTCLaneFunction.properties";
+    public static final String PROP_MTCLANE_RTP = "resource/MTCLaneRTP.properties";
+    public static final String PROP_MTCLANE_SERVER = "resource/MTCLaneServer.properties";
+    public static final String PROP_MTCLANE_TEST = "resource/MTCLaneTest.properties";
+    public static final String PROP_MTCLANE_KEYBOARD = "resource/MTCLaneKeyboard.properties";
+    public static final String PROP_SOCKET = "resource/socket.properties";
+    public static final String PROP_MTCLANE_LPR = "resource/MTCLaneLPR.properties";
+    public static final String PROP_LANE = "resource/hardware/lane.properties";
+    public static final String PROP_KEYBOARD = "resource/template/keyboard.properties";
+    public static final String PROP_WANGLUKEYBOARD = "resource/template/WangluKeyboard.properties";
+}

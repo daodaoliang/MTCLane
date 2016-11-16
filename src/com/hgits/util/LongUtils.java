@@ -1,0 +1,79 @@
+package com.hgits.util;
+
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+
+/**
+ *
+ * @author Wangguodong
+ */
+public class LongUtils {
+
+    /**
+     * 表示数字的正则表达式
+     */
+    public static final String REGIX_NUM = "-?[0-9]\\d*";
+    /**
+     * 表示16进制数字的正则表达式
+     */
+    public static final String REGIX_HEX = "[a-fA-F0-9]+";
+
+    /**
+     * 将字符串转换为相应的数字，若字符串为非数字或为null，转为0
+     *
+     * @param str 字符串
+     * @return 数字
+     */
+    public static long parseString(String str) {
+        if (str != null && str.trim().matches(REGIX_NUM)) {//是否符合正则表达式
+            return Long.valueOf(str.trim());
+        } else {
+            return 0;
+        }
+    }
+
+    /**
+     * 将16进制字符串转换为数字，若字符串不符合16进制规则或为null，返回0
+     *
+     * @param hex 16进制字符串
+     * @return
+     */
+    public static long parseHexString(String hex) {
+        if (hex != null && hex.trim().matches(REGIX_HEX)) {//是否符合正则表达式
+            return Long.valueOf(hex.trim(), 16);
+        } else {
+            return 0;
+        }
+    }
+
+    /**
+     * long值转换为8字节byte数组
+     *
+     * @param x long值
+     * @return 8字节byte数组
+     */
+    public static byte[] longToBytes(long x) {
+        ByteBuffer buffer = ByteBuffer.allocate(8);
+        buffer.putLong(0, x);
+        return buffer.array();
+    }
+
+    /**
+     * byte数组转换为long值
+     *
+     * @param bytes byte数组
+     * @return long值
+     */
+    public static long bytesToLong(byte[] bytes) {
+        int len = bytes.length;
+        len = len>=8?8:len;
+        byte[] byteBuffer = new byte[8];
+        System.arraycopy(bytes, 0, byteBuffer, 8-len, len);
+        ByteBuffer buffer = ByteBuffer.allocate(8);
+//        buffer.put(bytes, 0, bytes.length);
+        buffer.put(byteBuffer, 0, byteBuffer.length);
+        buffer.flip();//need flip  
+        return buffer.getLong();
+    }
+
+}

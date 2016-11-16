@@ -1,0 +1,170 @@
+/**
+ * 
+ */
+package com.hgits.vo;
+
+import java.util.Date;
+
+/**
+ * 公务卡
+ * 
+ * @author wh
+ *
+ */
+public class OfficialCard {
+
+	private String officilCardNo;
+	private Integer officialCardType;
+	private Integer status;
+	private String vehPlate;
+	private Integer freeType;
+	private String freeRoadList;
+	private Integer version;
+	private Date startTime;
+	private Date endTime;
+	private String spare;
+
+	/**
+	 * @return the officilCardNo
+	 */
+	public String getOfficilCardNo() {
+		return officilCardNo;
+	}
+
+	/**
+	 * @param officilCardNo
+	 *            the officilCardNo to set
+	 */
+	public void setOfficilCardNo(String officilCardNo) {
+		this.officilCardNo = officilCardNo;
+	}
+
+	/**
+	 * @return the officialCardType
+	 */
+	public Integer getOfficialCardType() {
+		return officialCardType;
+	}
+
+	/**
+	 * @param officialCardType
+	 *            the officialCardType to set
+	 */
+	public void setOfficialCardType(Integer officialCardType) {
+		this.officialCardType = officialCardType;
+	}
+
+	/**
+	 * @return the status
+	 */
+	public Integer getStatus() {
+		return status;
+	}
+
+	/**
+	 * @param status
+	 *            the status to set
+	 */
+	public void setStatus(Integer status) {
+		this.status = status;
+	}
+
+	/**
+	 * @return the vehPlate
+	 */
+	public String getVehPlate() {
+		return vehPlate;
+	}
+
+	/**
+	 * @param vehPlate
+	 *            the vehPlate to set
+	 */
+	public void setVehPlate(String vehPlate) {
+		this.vehPlate = vehPlate;
+	}
+
+	/**
+	 * @return the freeType
+	 */
+	public Integer getFreeType() {
+		return freeType;
+	}
+
+	/**
+	 * @param freeType
+	 *            the freeType to set
+	 */
+	public void setFreeType(Integer freeType) {
+		this.freeType = freeType;
+	}
+
+	/**
+	 * @return the freeRoadList
+	 */
+	public String getFreeRoadList() {
+		return freeRoadList;
+	}
+
+	/**
+	 * @param freeRoadList
+	 *            the freeRoadList to set
+	 */
+	public void setFreeRoadList(String freeRoadList) {
+		this.freeRoadList = freeRoadList;
+	}
+
+	public Integer getVersion() {
+		return version;
+	}
+
+	public void setVersion(Integer version) {
+		this.version = version;
+	}
+
+	/**
+	 * @return the startTime
+	 */
+	public Date getStartTime() {
+		return startTime;
+	}
+
+	/**
+	 * @param startTime
+	 *            the startTime to set
+	 */
+	public void setStartTime(Date startTime) {
+		this.startTime = startTime;
+	}
+
+	/**
+	 * @return the endTime
+	 */
+	public Date getEndTime() {
+		return endTime;
+	}
+
+	/**
+	 * @param endTime
+	 *            the endTime to set
+	 */
+	public void setEndTime(Date endTime) {
+		this.endTime = endTime;
+	}
+
+	/**
+	 * @return the spare
+	 */
+	public String getSpare() {
+		return spare;
+	}
+
+	/**
+	 * @param spare
+	 *            the spare to set
+	 */
+	public void setSpare(String spare) {
+		this.spare = spare;
+	}
+
+}

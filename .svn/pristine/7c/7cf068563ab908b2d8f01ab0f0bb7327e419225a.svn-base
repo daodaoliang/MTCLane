@@ -1,0 +1,31 @@
+#总配置开关(选择需要启用的动态库路径对应的key)
+useDllKey = lprDLL1
+
+############信路威  标清动态库############# 
+lprDLL1=resource\\dll\\lpr\\signalway\\LPR_Signalway.dll
+###################################
+
+############南京汉王 车牌识别动态库############# 
+lprDLL2=resource\\dll\\lpr\\hanwang\\LPR.dll
+###################################
+
+############苏州德亚 车牌识别动态库############# 
+lprDLL3=resource\\dll\\lpr\\deya\\LPR.dll
+###################################
+
+############杭州海康威视 车牌识别动态库############# 
+lprDLL4=resource\\dll\\lpr\\hikvision\\PRDLL.dll
+###################################
+
+############北京动视元 车牌识别动态库############# 
+lprDLL5=resource\\dll\\lpr\\dongshiyuan\\PRDLL.dll
+###################################
+
+############浙江宇视 车牌识别动态库#############
+lprDLL6=resource\\dll\\lpr\\uniview\\LPR_uniview.dll
+###################################
+
+############北京川大智胜 车牌识别动态库#############
+lprDLL7=resource\\dll\\lpr\\wisesoft\\WiseSoft_LPR.dll
+#注：启用川大智胜的车牌识别设备时，需要沿用原gea动态库配置文件config.ini文件。必须将gea系统中的config.ini放至MTCLane/resource文件夹下。
+###################################

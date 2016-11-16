@@ -1,0 +1,761 @@
+package com.hgits.util;
+
+import com.hgits.control.FunctionControl;
+import com.hgits.service.EncryptService;
+import java.io.UnsupportedEncodingException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.log4j.Logger;
+
+import com.hgits.util.cache.ParamCacheQuery;
+import com.hgits.vo.Card;
+import com.hgits.vo.Constant;
+import com.hgits.vo.CpuCard;
+import com.hgits.vo.Issuer;
+import java.util.Date;
+import java.util.Scanner;
+import java.util.TimeZone;
+
+/**
+ * 主要用于解析从卡片不同区域 读取到的信息
+ *
+ * @author Wang Guodong
+ */
+public class ParseUtil {
+    
+    private static final Logger logger = Logger.getLogger(ParseUtil.class);
+    
+    public static void parseCardInfo(Card card) throws ParseException {
+        parse04(card);
+        parse05(card);
+        parse06(card);
+    }
+
+    /**
+     * 解析卡片中04块的信息
+     *
+     * @param card 卡片信息
+     * @return 解析后的结果
+     * @throws ParseException
+     */
+    public static String parse04(Card card) {
+        String doc = card.getSection_04_info();
+        if (doc == null) {
+            return null;
+        }
+        card.setType(doc.substring(0, 2));                                        //获得卡的类型
+        card.setVersion(doc.substring(2, 4));
+        card.setNetwork(doc.substring(4, 6));
+        String dateStr = StringUtils.hexToDateStr(doc.substring(6, 10));           //获取卡初始化的日期
+        SimpleDateFormat sdf = new SimpleDateFormat(Constant.SHORT_TIME_PATTERN);
+        try {
+            card.setFmtDate(sdf.parse(dateStr));
+        } catch (ParseException ex) {
+            logger.error("解析卡片格式化时间异常", ex);
+        }
+        String validDateStr = StringUtils.hexToDateStr(doc.substring(10, 14));     //有效期限（公务卡）
+        try {
+            card.setValidDate(sdf.parse(validDateStr));
+        } catch (ParseException ex) {
+            logger.error("解析卡片有效期异常", ex);
+        }
+        card.setId(doc.substring(14, 19));
+        StringBuilder res = new StringBuilder(doc);
+        res.delete(32, 34);
+        res.replace(11, 14, validDateStr).replace(6, 10, dateStr);
+//        card.setSection_04_info(res.toString());
+        return res.toString();
+    }
+
+    /**
+     * 解析卡片中05块的信息
+     *
+     * @param card 卡片信息
+     * @return 解析后的结果
+     */
+    public static String parse05(Card card) {
+        String doc = card.getSection_05_info();
+        if (doc == null) {
+            return null;
+        }
+        card.setStatus(doc.substring(0, 2));                                 //通行卡或标签卡的状态
+        String dateStr = StringUtils.hexToDateStr(doc.substring(2, 10));          //取出写入卡的的时间
+        String laneStr = new String(HexUtils.decode(doc.substring(14, 16)));       //取出车道编号的前一个字母；如‘X01’的X
+        SimpleDateFormat sdf = new SimpleDateFormat(Constant.FULL_TIME_PATTERN); //将取出的时间进行标准化”YYYYmmDDhhMMss“
+        Date date = new Date(0);
+        try {
+            date = new Date(sdf.parse(dateStr).getTime()); //先将DateFormat时间转换成Date类型，再转成1970-1-1后到此时间的秒值
+        } catch (ParseException ex) {
+            logger.error("解析入口交易时间出现异常", ex);
+        }
+        card.setDhm(date);
+        String roadId = doc.substring(10, 12);                                   //路段代号
+        if (!checkRoadid(roadId)) {
+            logger.debug("解析入口路段号" + roadId + "异常");
+            roadId = "00";
+        }
+        card.setRoadid(roadId);
+        String stationId = doc.substring(12, 14);                                //站代号
+        if (!checkStationid(stationId)) {
+            logger.debug("解析入口收费站号" + stationId + "异常");
+            stationId = "00";
+        }
+        card.setStationid(stationId);
+        String laneId = laneStr + doc.substring(16, 18);                         //拼接完整的车道编号
+        if (!checkLaneid(laneId)) {
+            logger.debug("解析入口车道号" + laneId + "异常");
+            laneId = "000";
+        }
+        card.setLaneId(laneId);
+        String staffId = doc.substring(18, 24);                                  //员工号，例如是出口道读则是入口发卡道的员工号
+        card.setStaffId(staffId);
+        String writingNum = doc.substring(24, 30);
+        card.setWritingNum(writingNum);
+        StringBuilder res = new StringBuilder(doc);
+        res.delete(32, 34);
+        res.replace(14, 16, laneStr).replace(2, 10, dateStr);
+//        card.setSection_05_info(res.toString());
+        return res.toString();
+    }
+
+    /**
+     * 解析卡片中06块的信息
+     *
+     * @param card 卡片信息
+     * @return 解析后的结果
+     */
+    public static String parse06(Card card) {
+        String doc = card.getSection_06_info();
+        if (doc == null) {
+            return null;
+        }
+        StringBuilder res = new StringBuilder(doc);
+        card.setCartId(doc.substring(0, 5));    //获取卡箱号
+        card.setCartCycleNum(doc.substring(5, 11));  //获取卡箱循环次数
+        String cardOrderNum = doc.substring(11, 14);                             //获取通行卡在卡箱的顺序号
+        card.setCscNum(cardOrderNum);
+        card.setVehClass(doc.substring(14, 16));   //获取车型
+        card.setKeySet(doc.substring(16, 18));
+        String vehPlateNum = new String(HexUtils.decode(doc.substring(18, 24)));   //收费员确认的车牌后三位
+        card.setVehPlateNum(vehPlateNum);
+        String lprPlateNum = new String(HexUtils.decode(doc.substring(24, 30)));   //获取车牌识别的车牌后三位
+        card.setLprPlateNum(lprPlateNum);
+        res.delete(32, 34);
+        res.replace(18, 24, vehPlateNum);
+        res.delete(16, 18);
+//        card.setSection_06_info(res.toString());
+
+        return res.toString();
+    }
+
+    /**
+     * 解析08块的内容，即全车牌部分
+     *
+     * @param card 卡片实体类
+     * @return 解析后的结果
+     */
+    public static String parse08(Card card) {
+        String doc = card.getSection_08_info();
+        if (doc == null) {
+            return null;
+        }
+        String fullLpr = "";
+        try {
+            fullLpr = new String(HexUtils.decode(doc.substring(0, 24)), "gbk").trim();
+        } catch (UnsupportedEncodingException ex) {
+            logger.error("解析全车牌异常", ex);
+        }
+        if (!checkFullPlate(fullLpr)) {//车牌号码不符合规则
+            logger.error("解析全车牌" + fullLpr + "异常");
+            fullLpr = "";
+        }
+        card.setFullVehPlateNum(fullLpr);
+        String plateColor = new String(HexUtils.decode(doc.substring(24, 26)));
+        card.setPlateColor(plateColor);
+        StringBuilder res = new StringBuilder(doc);
+        res.delete(32, 34);
+        return res.replace(24, 26, plateColor).replace(0, 24, fullLpr).toString();
+    }
+
+    /**
+     * 解析09块的内容，即加密部分
+     *
+     * @param card 卡片实体类
+     * @return 解析后的结果
+     */
+    public static String parse09(Card card) {
+        String sb = card.getSection_09_info();
+        if (sb == null) {
+            return null;
+        } else if (sb.length() < 21) {
+            return null;
+        }
+        String str = sb.substring(1, 17);
+        card.setCodedMsg(str);//加密信息
+        String str1 = sb.substring(17, 21);
+        int i = Integer.parseInt(str1, 16);
+        card.setTransNum(i);//交易序号
+        return str;
+    }
+
+    /**
+     * 将16进制的卡号，转换成10进制的可识别的卡号
+     *
+     * @param num 获取到的10进制的卡号
+     * @return 返回可识别的卡号
+     */
+    public static String parseCardNo(String num) {
+        num = num.replace(" ", "").trim();
+        StringBuffer sb = new StringBuffer();
+        for (int i = num.length(); i > 0; i = i - 2) {       //先反转字符串
+            sb.append(num.substring(i - 2, i));
+        }
+        long no = LongUtils.parseHexString(sb.toString());      //将16进制的字符串转成数字
+        sb = new StringBuffer(Long.toString(no));
+//        if(sb.length()<10){                               //如果数字的长度小于10，则在前面补0至10的长度
+//            for(int i=0;i<=10-sb.length();i++){
+//                sb.insert(0, "0");
+//            }
+//        }
+        return StringUtils.toLength(sb.toString(), 10);
+    }
+
+    /**
+     * 解析ETC卡内部文件标识为15的信息 包含卡片发行方、卡片类型、卡片的版本、卡片的序列号、卡片的生效日期、卡片的有效截至日期、15文件中的全车牌、
+     * 用户类型、绑定标识、车牌的颜色
+     *
+     * @param card ETC卡实体类
+     */
+    public static void pare15(CpuCard card) {
+        String sb = card.getInfo15();
+        try {
+            card.setIssuer(sb.substring(0, 16));     //发行方
+            card.setCardType(IntegerUtils.parseHexString(sb.substring(16, 18)) + "");              //卡片类型
+            card.setCardVersion(sb.substring(18, 20));                //卡片版本
+            String serial = sb.substring(20, 40);
+            String issuer = card.getIssuer().substring(0, 8);
+            Issuer iss = ParamCacheQuery.queryIssuer(issuer);
+            if (iss != null && iss.getTransNetId() == 1) {//长三角五省一市ETC卡需要进行网络编码转换
+                serial = StringUtils.toLength(iss.getProvinceCode(), 2) + serial.substring(2);
+            }
+            card.setCardSerial(serial);                                         //卡片序列号
+            card.setStartDate(sb.substring(40, 48));                            //生效日期
+            card.setEndDate(sb.substring(48, 56));                              //有效截至日期
+            String str = sb.substring(56, 80);
+            String plateNum = new String(HexUtils.decode(sb.substring(56, 80)), "gbk").trim();
+            plateNum = checkSpecialPlateNum(plateNum);//检验车牌中是否有非汉字字母以及数字的字符
+            card.setPlateInCard15(plateNum); //15文件中的车牌
+            card.setFullVehPlateNum(plateNum);//车辆全车牌以0015文件中车牌为准
+        } catch (UnsupportedEncodingException ex) {
+            throw new RuntimeException(ex);
+        }
+        int i = IntegerUtils.parseHexString(sb.substring(80, 82));//用户类型
+        if (i / 10 == 0) {
+            card.setUserType("0" + i);
+        } else {
+            card.setUserType("" + i);
+        }
+        int color;
+        if (card.getCardVersion().startsWith("4")) {//新国标ETC卡
+            color = IntegerUtils.parseHexString(sb.substring(82, 84));                  //车牌颜色
+            card.setVehClass(IntegerUtils.parseHexString(sb.substring(84, 86)) + "");                           //车型
+        } else {//旧国标ETC卡
+            card.setBindFlag(IntegerUtils.parseHexString(sb.substring(82, 84)));       //绑定标识
+            color = IntegerUtils.parseHexString(sb.substring(84, 86));                  //车牌颜色
+        }
+        
+        if (color == 0) {
+            card.setPlateColor("U");
+        } else if (color == 1) {
+            card.setPlateColor("Y");
+        } else if (color == 2) {
+            card.setPlateColor("B");
+        } else if (color == 3) {
+            card.setPlateColor("W");
+        } else {
+            card.setPlateColor("");
+        }
+        //处理部分省份将车牌颜色做为车牌号码首字母的特殊ETC卡
+        String plateNum = card.getFullVehPlateNum();
+//        String col = decodePlateCol(plateNum.substring(0, 1));
+        String col = null;
+        if (plateNum != null && plateNum.length() >= 1) {
+            if (plateNum.startsWith("黑")) {//车牌号码以“黑”开头
+                String issuer = card.getIssuer();
+                if (issuer != null && issuer.startsWith("C1FABDAD")) {//当前卡发行省份为“黑龙江”
+                    if (plateNum.startsWith("黑黑")) {
+                        col = decodePlateCol(plateNum.substring(0, 1));
+                    }
+                } else {//当前卡发行省份不是“黑龙江”
+                    col = decodePlateCol(plateNum.substring(0, 1));
+                }
+            } else {//车牌号码不以“黑”开头
+                col = decodePlateCol(plateNum.substring(0, 1));
+            }
+        }
+        if (col != null) {//车牌号码首字母为车牌颜色
+            card.setPlateColor(col);//重置车牌颜色
+            if (plateNum != null && plateNum.length() >= 1) {
+                card.setFullVehPlateNum(plateNum.substring(1));//重置车牌号码
+                card.setPlateInCard15(plateNum.substring(1));//重置车牌号码
+            }
+        }
+        
+    }
+
+    /**
+     * 解析ETC卡内部文件标识为19的信息 包含：复合应用类型标识符、记录长度、应用的锁定标识、入口的路段和站，入口车道、入口时间
+     * 车型、卡流通状态，标识站，入口收费员工号，入口班次，车牌，出口收费路段和站
+     *
+     * @param card 卡片实体类
+     */
+    public static void pare19(CpuCard card) {
+        //已经转换的19文件的内容==AA 29 00 4301 0511 01 53FF6667 01 01 000000000000000000 000012 02 CFE645544330303500000000 0000 0000
+        String sb = card.getInfo19();
+        card.setRoadid(sb.substring(10, 12));         //入口路段,注：此处不需要进行16进制转换
+        card.setStationid(sb.substring(12, 14));     //入口站,注：此处不需要进行16进制转换
+        String str = sb.substring(14, 16);
+        card.setLaneId("E" + StringUtils.hexToNum(sb.substring(14, 16), 2));//入口车道，注：此处需要进行16进制转换
+        String time = sb.substring(16, 24);          //入口时间
+        Date date = parseUnixTime(time);
+//        Date date = new Date(LongUtils.parseHexString(time) * 1000);
+        card.setDhm(date);                          //入口时间
+        if (card.getCardVersion().startsWith("4")) {//新国标卡
+            //新国标规定0015文件中记录了车型，车型信息需要从0015文件中获取
+        } else {
+            //旧国标中车型只有在0019文件中才有
+            card.setVehClass(sb.substring(25, 26));      //车型
+        }
+        card.setLaneStatus(sb.substring(26, 28));        //流通状态 
+        String enstaff = sb.substring(46, 52);//解析入口员工号，16进制存储，需解析为10进制
+        card.setStaffId(hexToStaffid(enstaff, 6));       //入口员工号,以16进制形式存储,解析为10进制
+        card.setEnJobNum(IntegerUtils.parseHexString(sb.substring(52, 54)) + "");       //入口工班号,注：此处需要进行16进制转换
+        try {
+            String plateNum = new String(HexUtils.decode(sb.substring(54, 78)), "gbk").trim();
+            plateNum = checkSpecialPlateNum(plateNum);//检测车牌非法字符
+            card.setPlateInCard19(plateNum);
+        } catch (UnsupportedEncodingException ex) {
+            throw new RuntimeException(ex);
+        }
+        if (sb.length() >= 86) {
+            String exitRoadId = sb.substring(82, 84);
+            String exitStationId = sb.substring(84, 86);
+            card.setExitRoadId(exitRoadId);
+            card.setExitStationId(exitStationId);
+        }
+    }
+
+    /**
+     * 将16进制员工号转码为10进制员工号
+     *
+     * @param hexStaffid 16进制员工号
+     * @param len 10进制员工号的长度，不足前面补零
+     * @return 10进制员工号
+     */
+    public static String hexToStaffid(String hexStaffid, int len) {
+        int i = IntegerUtils.parseHexString(hexStaffid);
+        return StringUtils.toLength(i, len);
+    }
+
+    /**
+     * 反编译通行卡序列号
+     *
+     * @param cardSerial
+     * @return
+     */
+    public static String unParseCardNo(String cardSerial) {
+        long i = LongUtils.parseString(cardSerial);
+        String str = StringUtils.changeLongToHex(i, 8);
+        StringBuilder sb = new StringBuilder(8);
+        int len = str.length();
+        sb.append(str.substring(len - 2, len)).append(str.substring(len - 4, len - 2)).append(str.substring(len - 6, len - 4)).append(str.substring(len - 8, len - 6));
+        return sb.toString();
+    }
+
+    /**
+     * 检测发行方是否是长三角五省一市(上海，江苏，浙江，安徽，福建，江西)卡片
+     *
+     * @param issuer 发行方前八位
+     * @return
+     */
+    public static boolean checkIssuer(String issuer) {
+        List<String> list = new ArrayList();
+        list.add("C9CFBAA3");//上海
+        list.add("BDADCBD5");//江苏
+        list.add("D5E3BDAD");//浙江
+        list.add("B0B2BBD5");//安徽
+        list.add("B8A3BDA8");//福建
+        list.add("BDADCEF7");//江西
+        return list.contains(issuer);
+    }
+
+    /**
+     * 车牌号码由（简体）汉字字母以及数字组成，将车牌中不符合规定的字符删掉，返回修改后的车牌
+     *
+     * @param plateNum 车牌号码
+     * @return 确认符合规定的车牌号码
+     */
+    public static String checkSpecialPlateNum(String plateNum) {
+        try {
+            if (plateNum == null) {
+                return null;
+            }
+            String str = plateNum;
+            String regex1 = "[\u4e00-\u9fa5]";//汉字正则表达式
+            String regex2 = "[0-9]+";//正整数正则表达式
+            String regex3 = "[A-Za-z]+";//大写字母正则表达式
+            str = str.replaceAll(regex1, "");
+            str = str.replaceAll(regex2, "");
+            str = str.replaceAll(regex3, "");
+            int len = str.length();
+            for (int i = 0; i < str.length(); i++) {
+                String temp = str.substring(i, i + 1);
+                plateNum = plateNum.replace(temp, " ");
+            }
+            plateNum = plateNum.replaceAll(" ", "").toUpperCase();
+        } catch (Exception ex) {
+            logger.error("检查车牌号码是否有非法字符异常", ex);
+        }
+        return plateNum;
+    }
+
+    /**
+     * 将中文车牌颜色转为英文缩写，如蓝—U
+     *
+     * @param chPlateColor 中文车牌颜色
+     * @return 英文车牌颜色缩写
+     */
+    public static String decodePlateCol(String chPlateColor) {
+        if (chPlateColor == null) {
+            return null;
+        }
+        String str = null;
+        switch (chPlateColor) {
+            case "蓝":
+                str = "U";
+                break;
+            case "黄":
+                str = "Y";
+                break;
+            case "黑":
+                str = "B";
+                break;
+            case "白":
+                str = "W";
+                break;
+            case "红":
+                str = "R";
+                break;
+            case "绿":
+                str = "G";
+                break;
+            default:
+                break;
+            
+        }
+        return str;
+    }
+
+    /**
+     * 根据卡内信息生成需要写入05区域的数据
+     *
+     * @param card 卡信息
+     * @return 05区域数据
+     */
+    public static String unParse05(Card card) {
+        SimpleDateFormat sdf = new SimpleDateFormat(Constant.FULL_TIME_PATTERN);  //获取当前的系统的时间
+        String date;
+        if (card.getDhm() == null) {
+            date = StringUtils.dateStrToHex(sdf.format(new Date()));
+        } else {
+            date = StringUtils.dateStrToHex(sdf.format(card.getDhm()));        //将操作时间转换成16进制的字符串写入
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append(StringUtils.toLength(card.getStatus(), 2)) //卡状态
+                .append(StringUtils.toLength(date, 8)) //写卡时间(即交易时间)
+                .append(StringUtils.toLength(card.getRoadid(), 2)) // 路段
+                .append(StringUtils.toLength(card.getStationid(), 2));  //站
+        String laneId = card.getLaneId();                   //车道
+        if (laneId == null || laneId.length() < 3) {
+            laneId = "";
+        } else {
+            laneId = Integer.toHexString(laneId.charAt(0)) + laneId.substring(1, 3);
+        }
+        sb.append(StringUtils.toLength(laneId, 4));
+        switch (card.getType()) {
+            case Constant.CARD_TYPE_01:                                         //为通行卡时
+                sb.append(StringUtils.toLength(card.getStaffId(), 6));
+                break;
+            case Constant.CARD_TYPE_04:                                         //为卡箱标签卡时
+                sb.append(StringUtils.toLength(card.getStaffId(), 6));
+                break;
+            case Constant.CARD_TYPE_05:                                         //公务卡
+                sb.append(StringUtils.toLength(card.getStaffId(), 6));
+                break;
+            case Constant.CARD_TYPE_06:                                         //储值卡
+                sb.append(StringUtils.toLength(card.getStaffId(), 6));
+                break;
+            default:                                                            //员工卡
+                sb.append("000000");
+        }
+        sb.append(StringUtils.toLength(card.getWritingNum(), 6));
+        String data = StringUtils.fillBCC(sb.toString(), 16);
+        return data;
+    }
+
+    /**
+     * 根据卡内信息生成需要写入06区域的数据
+     *
+     * @param card 卡信息
+     * @return 06区域数据
+     */
+    public static String unParse06(Card card) {
+        StringBuilder sb = new StringBuilder();
+        switch (card.getType()) {
+            case Constant.CARD_TYPE_04:                                             //当卡箱标签卡时
+                sb.append("00000").append(StringUtils.toLength(IntegerUtils.parseString(card.getCartCycleNum()), 6));  //卡箱的循环次数
+                sb.append(StringUtils.toLength(IntegerUtils.parseString(card.getCscNum()), 3));              //卡箱内卡的数量
+                sb.append("00").append("20").append("000000").append("202020");
+                break;
+            case Constant.CARD_TYPE_01:                                             //当通行卡时
+                sb.append(StringUtils.toLength(card.getCartId().trim(), 5));
+                sb.append(StringUtils.toLength(IntegerUtils.parseString(card.getCartCycleNum()), 6));           //卡的循环次数
+                sb.append(StringUtils.toLength(IntegerUtils.parseString(card.getCscNum()), 3));                //卡在卡箱中的顺序
+                sb.append(StringUtils.toLength(IntegerUtils.parseString(card.getVehClass()), 2));
+                sb.append("00");
+                String plateNum = card.getVehPlateNum();
+                if (plateNum == null || plateNum.length() < 3) {
+                    sb.append("202020");
+                } else {
+                    sb.append(HexUtils.encode(plateNum.getBytes()).substring(0, 6));
+                }
+                String lprPlateNum = card.getLprPlateNum();
+                if (lprPlateNum == null || lprPlateNum.length() < 3) {
+                    sb.append("202020");
+                } else {
+                    sb.append(HexUtils.encode(lprPlateNum.getBytes()).substring(0, 6));
+                }
+                break;
+            case Constant.CARD_TYPE_05:                                         //当为serv卡时
+                sb.append("202020202020202020");
+                String lprPlateNum1 = card.getLprPlateNum();
+                if (lprPlateNum1 == null || lprPlateNum1.length() < 3) {
+                    sb.append("202020");
+                } else {
+                    sb.append(HexUtils.encode(lprPlateNum1.getBytes()).substring(0, 6));
+                }
+                sb.append("202020");
+                break;
+            default:                                                            //身份卡或储值卡
+                sb.append("000000000000000000000000000000");
+        }
+        String data = StringUtils.fillBCC(sb.toString(), 16);
+        return data;
+    }
+
+    /**
+     * 根据卡内信息生成需要写入08区域的数据
+     *
+     * @param card 卡信息
+     * @return 08区域数据
+     */
+    public static String unParse08(Card card) {
+        StringBuilder sb = new StringBuilder();
+        String fullPlatenum = card.getFullVehPlateNum();
+        if (fullPlatenum == null) {
+            sb.append("202020202020202020202020");
+        } else {
+            String sf = "";
+            try {
+                sf = HexUtils.encode(fullPlatenum.trim().getBytes("gbk"));
+            } catch (UnsupportedEncodingException ex) {
+            }
+            if (sf.length() < 24) {
+                int j = (24 - sf.length()) / 2;
+                for (int i = 0; i < j; ++i) {
+                    sf = sf + "20";
+                }
+            } else if (sf.length() > 24) {
+                sf = sf.substring(0, 24);
+            }
+            sb.append(sf);
+        }
+        String color = card.getPlateColor();
+        if (color == null) {
+            sb.append("200000");
+        } else {
+            if (color.length() == 0) {
+                sb.append("200000");
+            } else {
+                sb.append(Integer.toHexString(color.charAt(0)));
+                sb.append("0000");
+            }
+        }
+        String data = StringUtils.fillBCC(sb.toString(), 16);
+        return data;
+    }
+
+    /**
+     * 根据卡内信息生成需要写入09区域的数据
+     *
+     * @param card 卡信息
+     * @return 09区域数据
+     */
+    public static String unParse09(Card card) {
+        String sb5 = unParse05(card);
+        String sb6 = unParse06(card);
+        String sb8 = unParse08(card);
+        if (sb5 == null || sb6 == null || sb8 == null) {
+            return null;
+        } else if (sb5.length() != 32 || sb6.length() != 32 || sb8.length() != 32) {
+            return null;
+        }
+        int transNum = card.getTransNum();
+        String hexTransNum = StringUtils.changeIntToHex(transNum, 4);
+        EncryptService svc = new EncryptService();
+        String encryptMsg = null;
+        if (FunctionControl.isCscEncryptActive()) {//未启用加密功能
+            encryptMsg = svc.encryptString(sb5.toUpperCase() + sb6.toUpperCase() + sb8.toUpperCase());
+        }
+        String data;
+        if (encryptMsg == null) {//加密失败
+            data = StringUtils.toLength("0", 17);
+            data = data + hexTransNum;
+//            data = StringUtils.toLength(data, 30);
+            data = data + "000000000";
+        } else {
+            data = "A" + encryptMsg + hexTransNum + "000000000";
+        }
+        data = StringUtils.fillBCC(data, 16);
+        return data;
+    }
+
+    /**
+     * 获取给定时间对应的unix时间的秒数转换后的hex字符串(8位，不足8位前面补0)
+     *
+     * @param date 给定时间
+     * @return 转换后的字符串
+     */
+    public static String formatUnixTime(Date date) {
+        Date gmtDate = getGMTDate(date);
+        if (gmtDate == null) {
+            return "00000000";
+        }
+        long time = gmtDate.getTime() / 1000;
+        String str = StringUtils.changeLongToHex(time, 8);
+        return str;
+    }
+
+    /**
+     * 将代表UNIX时间的16进制字符串转换为本地时间
+     *
+     * @param hexStr 代表UNIX时间的16进制字符串
+     * @return 本地时间
+     */
+    public static Date parseUnixTime(String hexStr) {
+        long temp = Long.parseLong(hexStr, 16);
+        Date date = new Date(temp * 1000);
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
+        String str = sdf.format(date);
+        sdf.setTimeZone(TimeZone.getDefault());
+        Date localDate = null;
+        try {
+            localDate = sdf.parse(str);
+        } catch (ParseException ex) {
+            logger.error(ex, ex);
+        }
+        return localDate;
+    }
+
+    /**
+     * 将当前时间转换为GMT时间（如当前时区的2016-01-01 01:00:00转换为GMT时区的2016-01-01 01:00:00）
+     *
+     * @param date 需要转换的时间
+     * @return 转换后的时间
+     */
+    public static Date getGMTDate(Date date) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String str = sdf.format(date);
+        sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
+        Date gmtDate = null;
+        try {
+            gmtDate = sdf.parse(str);
+        } catch (ParseException ex) {
+            logger.error(ex, ex);
+        }
+        return gmtDate;
+    }
+
+    /**
+     * 判断路段号是否符合要求（两位数字）
+     *
+     * @param roadid 路段号
+     * @return true/false
+     */
+    private static boolean checkRoadid(String roadid) {
+        if (roadid == null) {
+            return false;
+        }
+        return roadid.matches("[0-9][0-9]");
+    }
+
+    /**
+     * 判断收费站号是否符合要求（两位数字）
+     *
+     * @param stationid 收费站号
+     * @return true/false
+     */
+    private static boolean checkStationid(String stationid) {
+        if (stationid == null) {
+            return false;
+        }
+        return stationid.matches("[0-9][0-9]");
+    }
+
+    /**
+     * 判断车道号是否符合要求（E/X+两位数字）
+     *
+     * @param laneid 车道号
+     * @return true/false
+     */
+    private static boolean checkLaneid(String laneid) {
+        boolean flag = true;
+        if (laneid == null) {
+            flag = false;
+        } else if (laneid.length() != 3) {//车道号长度错误
+            flag = false;
+        } else if (!laneid.startsWith("E") && !laneid.startsWith("X")) {//车道号首字母错误
+            flag = false;
+        } else if (!laneid.substring(1, 3).matches("[0-9][0-9]")) {//车道号编号错误
+            flag = false;
+        }
+        return flag;
+    }
+
+    /**
+     * 判断车牌号码是否符合要求，字母，数字，汉字以及.
+     *
+     * @param fullPlate
+     * @return
+     */
+    private static boolean checkFullPlate(String fullPlate) {
+        if (fullPlate == null) {
+            return false;
+        }
+        String reg = "[.\u4e00-\u9fa5a-zA-Z0-9]+";//字母，数字，汉字以及.的正则表达式
+        return fullPlate.matches(reg);
+    }
+    /**
+     * 判断车牌号码后三位是否符合要求，数字以及.
+     * @param plate
+     * @return 
+     */
+    private static boolean checkLastPlate(String plate){
+        return false;
+    }
+    
+}

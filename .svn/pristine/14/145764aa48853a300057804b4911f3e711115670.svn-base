@@ -1,0 +1,192 @@
+package com.hgits.vo;
+
+import com.hgits.util.StringUtil;
+import java.io.Serializable;
+import java.util.Date;
+import java.util.Objects;
+
+/**
+ *记录工作人员信息的实体类
+ * @author Wang Guodong
+ */
+public class Staff implements Serializable{
+    private static final long serialVersionUID = 1L;
+    //员工姓名
+    private String staffName;
+    //员工编号
+    private String staffId;
+    //员工上班时间
+    private Date jobStartTime;
+    //员工班次
+    private int shiftId;
+    //工班号（例如2014-1-1 23:30 至2014-1-2 7:30之间上班，工班号为1;2014-1-2 7:30 至2014-1-2 15:30之间上班，工班号为2;2014-1-2 15:30 至2014-1-2 23:30之间上班，工班号为3）
+    private int squadId;
+    //工班日期（例如2014-1-1 23:30 至2014-1-2 23:30之间上班，工班日期为20140102）
+    private Date squadDate;
+    //密码
+    private String password;
+    //路段号
+    private String roadId;
+    //站台号
+    private String stationId;
+    //员工身份卡序列号
+    private String staffCardSerial;
+
+    public int getSquadId() {
+        return squadId;
+    }
+
+    public void setSquadId(int squadId) {
+        this.squadId = squadId;
+    }
+
+    public Date getSquadDate() {
+        return squadDate;
+    }
+
+    public void setSquadDate(Date squadDate) {
+        this.squadDate = squadDate;
+    }
+
+//    public String getGroupTime() {
+//        return groupTime;
+//    }
+//
+//    public void setGroupTime(String groupTime) {
+//        this.groupTime = groupTime;
+//    }
+
+    public String getStaffCardSerial() {
+        return staffCardSerial;
+    }
+
+    public void setStaffCardSerial(String staffCardSerial) {
+        this.staffCardSerial = staffCardSerial;
+    }
+
+    public int getShiftId() {
+        return shiftId;
+    }
+
+    public void setShiftId(int shiftId) {
+        this.shiftId = shiftId;
+    }
+
+    public String getRoadId() {
+        return roadId;
+    }
+
+    public void setRoadId(String roadId) {
+        this.roadId = roadId;
+    }
+
+    public String getStationId() {
+        return stationId;
+    }
+
+    public void setStationId(String stationId) {
+        this.stationId = stationId;
+    }
+
+    public String getStaffName() {
+        return staffName;
+    }
+
+    public void setStaffName(String staffName) {
+        this.staffName = staffName;
+    }
+
+    public String getStaffId() {
+        return staffId;
+    }
+
+    public void setStaffId(String staffId) {
+        this.staffId = staffId;
+    }
+
+    public Date getJobStartTime() {
+        return jobStartTime;
+    }
+
+    public void setJobStartTime(Date jobStartTime) {
+        this.jobStartTime = jobStartTime;
+    }
+
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+    //加密员工编号获取第六位数字
+    public String encodeStaffId(){
+        return StringUtil.encodeID(staffId);
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 13 * hash + Objects.hashCode(this.staffName);
+        hash = 13 * hash + Objects.hashCode(this.staffId);
+        hash = 13 * hash + Objects.hashCode(this.jobStartTime);
+        hash = 13 * hash + Objects.hashCode(this.shiftId);
+        hash = 13 * hash + Objects.hashCode(this.password);
+        hash = 13 * hash + Objects.hashCode(this.roadId);
+        hash = 13 * hash + Objects.hashCode(this.stationId);
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final Staff other = (Staff) obj;
+        if (!Objects.equals(this.staffName, other.staffName)) {
+            return false;
+        }
+        if (!Objects.equals(this.staffId, other.staffId)) {
+            return false;
+        }
+        if (!Objects.equals(this.jobStartTime, other.jobStartTime)) {
+            return false;
+        }
+        if (!Objects.equals(this.shiftId, other.shiftId)) {
+            return false;
+        }
+        if (!Objects.equals(this.password, other.password)) {
+            return false;
+        }
+        if (!Objects.equals(this.roadId, other.roadId)) {
+            return false;
+        }
+        if (!Objects.equals(this.stationId, other.stationId)) {
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public String toString() {
+        return "Staff{" + "staffName=" + staffName + ", staffId=" + staffId + ", jobStartTime=" + jobStartTime + ", shiftId=" + shiftId + ", squadId=" + squadId + ", squadDate=" + squadDate + ", password=" + password + ", roadId=" + roadId + ", stationId=" + stationId + ", staffCardSerial=" + staffCardSerial + '}';
+    }
+
+    
+    
+    /**
+     * 获取经过Luhn加密运算之后的员工编号
+     * @return 加密后的员工号
+     */
+    public String getEncodedId(){
+        if(staffId==null){
+            return null;
+        }else{
+            return StringUtil.encodeID(staffId);
+        }
+    }   
+}

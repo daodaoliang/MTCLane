@@ -1,0 +1,42 @@
+MTCLane/resource/HIERARCHY_CSSP.txt	用于记录收费站上下级关系的配置文件，所有车道共用，开通新的收费站时该文件需要更新,不应手动修改
+
+MTCLane/resource/HN_CONFIG.ini	用于配置车道车牌识别设备IP地址的配置文件，各个车道不同
+
+MTCLane/resource/log4j.xml 用于记录日志的配置文件，所有车道共用，该文件不应修改
+
+MTCLane/resource/MTCConfig.properties	用于配置当前车道的基本信息，需要配置收费站及车道信息
+
+MTCLane/resource/MTCLane.properties	用于配置车道软件的基本配置信息，所有车道共用，除非用户有特殊要求，否则该文件不应修改
+
+MTCLane/resource/MTCLaneCartridge.properties	用于记录车道当前卡箱信息的配置文件，由软件自动生成，除非出现特殊情况，否则不可手动修改
+
+MTCLane/resource/MTCLaneComm.properties	用于配置车道硬件的串口号，波特率等信息，大部分车道应该保持一致，如车道硬件信息与配置不同，可修改该配置文件
+
+MTCLane/resource/MTCLaneConstant.properties 用于配置车道软件所用的一些常量，所有车道共用，除非用户有特殊要求，否则该文件不应修改
+
+MTCLane/resource/MTCLaneETC.properties	用于配置车道软件所用ETC读写器动态库的配置文件，取决于车道所用ETC读写器的厂家以及所需动态库（目前仅有一家）
+
+MTCLane/resource/MTCLaneFunction.properties 用于配置车道软件各种功能是否启用的配置文件，根据车道当前所需启用的功能而定
+
+MTCLane/resource/MTCLaneLPR.properties	用于配置车道软件所用车牌识别设备的动态库的配置文件，取决于车道所用车牌识别设备厂家及所需动态库
+
+MTCLane/resource/MTCLaneRTP.properties	用于配置车道软件按实际路径收费的配置文件，在未启用按实际路径收费功能时不需对该文件进行配置
+
+MTCLane/resource/MTCLaneServer.properties	用于记录图片上传服务器的IP信息，同一收费站内各车道共用，不同收费站的车道该文件不同
+
+MTCLane/resource/MTCLaneTest.properties	用于配置车道软件测试时所需的一些功能，在收费现场该文件不应修改（可直接删除）
+
+MTCLane/resource/socket.properties 用于配置端口信息的配置文件，所有车道共用，该文件不应修改
+
+MTCLane/resource/tb_alarmcode.txt 用于配置车道软件报警信息的配置文件，所有车道共用，该文件不应修改
+
+MTCLane/resource/hardware/lane.properties 用于设备代码类配置（截至2016-7-14,仅在使用IO控制卡时需要修改该文件）
+
+MTCLane/resource/config.ini用于川大智胜车牌识别设备，各个车道不同
+
+MTCLane/resource/uniview.ini用于宇视的车牌识别设备，所有车道共用，本文件不应修改
+
+
+
+
+

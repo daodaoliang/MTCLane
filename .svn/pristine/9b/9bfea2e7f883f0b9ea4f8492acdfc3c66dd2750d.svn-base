@@ -1,0 +1,146 @@
+/**
+ *
+ */
+package com.hgits.service;
+
+import ui.AlarmJFrame;
+import ui.ExtJFrame;
+
+import com.hgits.control.FlowControl;
+import com.hgits.hardware.Keyboard;
+
+/**
+ * 键盘服务类
+ *
+ * @author wh
+ *
+ */
+public class KeyBoardService {
+
+    private FlowControl fc; //主流程类
+    private AlarmJFrame alarmJFrame; //报警界面
+    private ExtJFrame extJFrame; //主界面
+
+    private Keyboard keyboard; //键盘处理
+
+    private boolean isPressCancel = false; //是否报警界面，是否按过取消
+    public static boolean isActionCancelButton = false; //是否处理过取消按钮
+
+    private final String greenLightKey = "绿灯"; //绿灯键
+    private final String readLightKey = "红灯"; //红灯键
+    private final String upKey = "上"; //上键
+    private final String downKey = "下"; //下键
+    private final String systemKey = "系统"; //系统键
+    private final String cancelKey = "取消"; //取消键
+
+    public void setFc(FlowControl fc) {
+        this.fc = fc;
+    }
+
+    public void setAlarmJFrame(AlarmJFrame alarmJFrame) {
+        this.alarmJFrame = alarmJFrame;
+    }
+
+    public void setExtJFrame(ExtJFrame extJFrame) {
+        this.extJFrame = extJFrame;
+    }
+
+    public void setKeyboard(Keyboard keyboard) {
+        this.keyboard = keyboard;
+    }
+
+    /**
+     * 需要对按键进行特殊处理，雨棚灯或者是系统键【收费键盘】
+     *
+     * @param key 按键
+     */
+    public boolean specialHand(Integer key) {
+        String value = String.valueOf((char) (int) key); //将ACSII码转换成为键盘值
+        return specialHand(value);
+    }
+
+    /**
+     * 需要对按键进行特殊处理，雨棚灯或者是系统键【电脑键盘】
+     *
+     * @param key 按键
+     */
+    public boolean specialHand(String key) {
+        key = key.toUpperCase(); //转大写
+        key = keyboard.getMap().get(key); //转换成中文
+        canopyLlightHandle(key);
+        showAlarmJFrame(key);
+        if (isActionCancelButton) { // 如果是点击了取消按钮
+            isActionCancelButton = false;
+            isPressCancel = false;
+            return false;
+        } else {// 没有点击按键，走之前的老流程
+            if (alarmJFrame.isShowing()) {// 如果界面是打开的状态，则不响应按键事件
+                return true;
+            }
+            if (isPressCancel) {// 如果是通过按【取消】键
+                isPressCancel = false;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 雨棚灯处理
+     *
+     * @param key 按键
+     */
+    private void canopyLlightHandle(String key) {
+        if (fc != null && key != null) { // 按键不为空
+            if (fc.isOnduty()) { // 如果是上班的状态
+                if (greenLightKey.equalsIgnoreCase(key)) {
+                    fc.runChangeCanopyGreen();
+                } else if (readLightKey.equalsIgnoreCase(key)) {
+                    fc.runChangeCanopyRed();
+                }
+            }
+        }
+    }
+
+    /**
+     * 是否显示报警界面
+     *
+     * @param key 键
+     */
+    private void showAlarmJFrame(String key) {
+        if (alarmJFrame != null && extJFrame != null) {
+//			System.out.println("key:\t"+key);
+            if (key != null) {
+                if (systemKey.equalsIgnoreCase(key)) { // 按【系统】键，弹出报警界面
+                    if (!alarmJFrame.isShowing()) {
+                        alarmJFrame.comeUp();
+                        extJFrame.requestFocus();
+                        extJFrame.setAlwaysOnTop(false);
+                    }
+                } else if (cancelKey.equalsIgnoreCase(key)) { // 按【取消】键，关闭报警窗口
+                    if (alarmJFrame.isShowing()) { // 如果界面打开了
+                        alarmJFrame.setVisible(false);
+//                                                extJFrame.setAlwaysOnTop(true);
+                        extJFrame.showOnTop();
+                        isPressCancel = true; //设置处理状态
+                    }
+                    extJFrame.requestFocus();
+                } else if (upKey.equalsIgnoreCase(key)) { // 按【上】键
+                    if (alarmJFrame.isShowing()) { // 如果界面打开了
+                        alarmJFrame.moveRowSetCursor(true);
+                    }
+                } else if (downKey.equalsIgnoreCase(key)) { // 按【下】键
+                    if (alarmJFrame.isShowing()) { // 如果界面打开了
+                        alarmJFrame.moveRowSetCursor(false);
+                    }
+                } else if (greenLightKey.equalsIgnoreCase(key) || readLightKey.equalsIgnoreCase(key)) {
+                    return;
+                } else {
+                    if (alarmJFrame.isShowing()) { // 只有报警界面显示的情况下，才报警
+                        keyboard.sendAlert(); // 按其他键报警。
+                    }
+                }
+            }
+        }
+    }
+}

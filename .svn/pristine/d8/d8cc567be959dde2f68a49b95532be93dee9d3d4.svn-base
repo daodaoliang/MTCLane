@@ -1,0 +1,4 @@
+##ETC读写器动态库名称
+useDllKey = ETCDLL
+##ETC读写器动态库路径
+ETCDLL=resource/dll/etcreader/IccReader_MingHua.dll

@@ -1,0 +1,192 @@
+package com.hgits.service;
+
+import com.hgits.control.LogControl;
+import com.hgits.hardware.CXP;
+import com.hgits.hardware.Keyboard;
+import com.hgits.util.MyPropertiesUtils;
+import com.hgits.util.StringUtils;
+import com.hgits.vo.Constant;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import ui.ExtJFrame;
+
+/**
+ * 自助发卡车道禁止大客车通行服务类
+ *
+ * @author Wang Guodong
+ */
+public class AutoForbidService {
+
+    private final Keyboard keyboard;
+
+    private final ExtJFrame extJFrame;
+
+    private final CXP cxp;
+
+    public AutoForbidService(Keyboard keyboard, ExtJFrame extJFrame, CXP cxp) {
+        this.keyboard = keyboard;
+        this.extJFrame = extJFrame;
+        this.cxp = cxp;
+    }
+
+    /**
+     * 自助发卡车道凌晨禁止大客车取卡功能
+     *
+     * @param vehClass 车型
+     * @return true/false
+     */
+    public boolean checkAutoForbitVeh(String vehClass) {
+        boolean flag1 = checkAutoForbitTime();//判断时间
+        boolean flag2 = checkAutoForbitVehClass(vehClass);//判断车型
+        if (flag1 && flag2) {//车型和时间都符合禁止通行配置
+
+            runAutoForbid();
+        }
+        return flag1 && flag2;
+    }
+
+    /**
+     * 判断当前时间是否在禁止通行时间内
+     *
+     * @return true/false
+     */
+    private boolean checkAutoForbitTime() {
+        String autoForbidTime = MyPropertiesUtils.getProperties(Constant.PROP_MTCLANE_FUNCTION, "autoForbidTime", null);
+        if (null == autoForbidTime) {
+            return false;
+        } else if (autoForbidTime.trim().isEmpty()) {
+            return false;
+        }
+        autoForbidTime = StringUtils.replace(autoForbidTime, "，", ",");//中文逗号改为英文逗号
+        String[] timeBuffer = StringUtils.split(autoForbidTime, ",");
+        int len = timeBuffer.length;
+        for (int i = 0; i < len; i++) {
+            String str = timeBuffer[i];
+            String[] buffer = StringUtils.split(str, "-");
+            if (buffer == null || buffer.length != 2) {
+                LogControl.logInfo("自助发卡车道凌晨禁止大客车取卡功能作用时间段配置错误：" + autoForbidTime);
+                continue;
+            }
+            String str1 = buffer[0];
+            String str2 = buffer[1];
+            String reg = "([0-1]?[0-9]|2[0-4])([0-5][0-9])";
+            if (str1.length() != 4 || str2.length() != 4 || !str1.matches(reg) || !str2.matches(reg)) {
+                LogControl.logInfo("自助发卡车道凌晨禁止大客车取卡功能作用时间段配置错误：" + str);
+                continue;
+            }
+            SimpleDateFormat sdf = new SimpleDateFormat("HHmm");
+            Date date = new Date();
+            String str3 = sdf.format(date);
+            int start = Integer.parseInt(str1);
+            int now = Integer.parseInt(str3);
+            int end = Integer.parseInt(str2);
+            if (start > 2400 || end > 2400) {
+                LogControl.logInfo("自助发卡车道凌晨禁止大客车取卡功能作用时间段配置错误：" + str);
+                continue;
+            }
+            boolean flag = false;
+            if (start > end) {//例如2300-0100
+                flag = (now >= start && now <= 2400) || (now < end);
+            } else {//2300-2400
+                flag = now >= start && now < end;
+            }
+            if (flag) {//当前处于配置时间段内
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * 判断当前车型是否为禁止通行车型
+     *
+     * @param vehClass 禁止通行车型
+     * @return true/false
+     */
+    private boolean checkAutoForbitVehClass(String vehClass) {
+        String str = MyPropertiesUtils.getProperties(Constant.PROP_MTCLANE_FUNCTION, "autoForbidVehClass", null);
+        if (str == null) {
+            return false;
+        } else if (str.trim().isEmpty()) {
+            LogControl.logInfo("自助发卡车道禁止大客车通行车型配置为空");
+            return false;
+        }
+        str = StringUtils.replace(str, "，", ",");
+        String[] buffer = StringUtils.split(str, ",");
+        for (String temp : buffer) {
+            if (vehClass.equals(temp)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 锁定车道
+     */
+    private void runAutoForbid() {
+        String autoForbidTime = MyPropertiesUtils.getProperties(Constant.PROP_MTCLANE_FUNCTION, "autoForbidTime", null);
+        if (autoForbidTime == null || autoForbidTime.trim().isEmpty()) {
+            return;
+        }
+        String formatTime = parseTime(autoForbidTime);
+        LogControl.logInfo("自助发卡车道" + formatTime + "禁止大客车通行，锁定车道");
+        extJFrame.updateInfo("车道已锁定", formatTime + "时间段内，营运大客车禁止进入高速。\n系统已锁定，请按【模拟】键解锁\n解锁前需要先让车辆倒车离开");
+        String str;
+        cxp.warningAlarm();
+        long start = System.currentTimeMillis();
+        while (true) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException ex) {
+            }
+            long now = System.currentTimeMillis();
+            if (start > now) {
+                start = now;
+            } else if (now - start >= 5000) {
+                cxp.stopAlarm();
+            }
+            str = keyboard.getMessage();
+            if (Keyboard.SIMU.equals(str) && !cxp.checkArriveCoil()) {
+                LogControl.logInfo("自助发卡车道解锁");
+                cxp.stopAlarm();
+                break;
+            }
+
+        }
+    }
+
+    /**
+     * 将HHmm格式的时间转换为HH:mm格式
+     *
+     * @param time HHmm格式的时间
+     * @return
+     */
+    private String parseTime(String time) {
+        if (time == null || time.trim().isEmpty()) {
+            return null;
+        }
+        time = StringUtils.replace(time, "，", ",");//中文逗号转换为英文逗号
+        String[] buffer = StringUtils.split(time, ",");
+        StringBuilder sb = new StringBuilder();
+        for (String str : buffer) {
+            String temp = str.trim();
+            if (temp.length() != 9) {
+                continue;
+            } else {
+                sb.append(temp.substring(0, 2)).append(":").append(temp.substring(2, 7));
+                sb.append(":").append(temp.substring(7, 9));
+                sb.append(",");
+            }
+        }
+        if(sb.lastIndexOf(",")==(sb.length()-1)){//返回信息以逗号结尾
+            sb.deleteCharAt(sb.length()-1);
+        }
+        return sb.toString();
+    }
+
+    public static void main(String[] args) {
+
+    }
+}

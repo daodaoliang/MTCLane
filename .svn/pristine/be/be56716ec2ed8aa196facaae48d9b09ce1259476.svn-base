@@ -1,0 +1,491 @@
+package com.hgits.control;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.util.Arrays;
+
+import org.apache.log4j.Logger;
+
+import com.hgits.service.constant.DateConstant;
+import com.hgits.service.constant.ParamConstant;
+import com.hgits.util.DateUtils;
+import com.hgits.util.StringUtils;
+import com.hgits.util.db.SQLiteCRUD;
+import com.hgits.util.db.SQLiteConn;
+import com.hgits.util.file.FileUtils;
+import com.hgits.util.rate.ParamCacheFileRead;
+import com.hgits.vo.XTCardBlackBaseListByte;
+import com.hgits.vo.XTCardBlackDeltaList;
+
+/**
+ * 湘通卡黑名单控制类
+ * @author Administrator
+ *
+ */
+public class ETCCardBlackControl {
+	
+	/**
+	 * ETC卡黑名单全量表
+	 */
+	private static final int CARD_BLACK = 8;
+
+	/**
+	 * ETC卡黑名单增量表
+	 */
+	private static final int CARD_BLACK_DELTA = 9;
+
+	private static Logger logger = Logger.getLogger(ETCCardBlackControl.class);
+	
+	private static ETCCardBlackControl etcCardBlackControl;
+	
+	/**
+	 * 根目录
+	 */
+	static String root = FileUtils.getRootPath()+File.separatorChar;
+	/**
+	 * 参数目录
+	 */
+	static String param=root+"param"+File.separatorChar;
+	
+	public final static String etcCardBlackAllDB = param+"tb_xtcardblackbaselist.db"; //ETC卡黑名单全量表
+	public final static String etcCardBlackDeltaDB = param+"tb_xtcardblackdeltalist.db";//ETC卡黑名单增量表
+	public final static String etcCardBlackAllTempDB = param+"tb_xtcardblackbaseTempList.db"; //ETC卡黑名单临时全量表
+	public final static String etcCardBlackDeltaTempDB = param+"tb_xtcardblackdeltaTempList.db";//ETC卡黑名单临时增量表
+	
+	/**
+	 * 全量表是否为老版本
+	 */
+	private boolean isAllOldVersion = true;
+	/**
+	 * 增量表是否为老版本
+	 */
+	private boolean isDeltaOldVersion = true;
+	
+
+	private ETCCardBlackControl(){
+		
+	}
+	
+	public static ETCCardBlackControl getInstance(){
+		if(etcCardBlackControl == null){
+			etcCardBlackControl = new ETCCardBlackControl();
+		}
+		return etcCardBlackControl;
+	}
+	
+	/**
+	 * 将文件替换成sqlite文件
+	 * @return true表示替换成功，false表示替换失败
+	 */
+	@SuppressWarnings("resource")
+	@Deprecated
+	public boolean convertToSqlite2() {
+		boolean isReplace = false;
+		FileInputStream isr = null;
+		int length = XTCardBlackBaseListByte.lineLength;
+		byte[] record = new byte[length]; // 湘通卡黑名单记录长度
+		byte[] content = new byte[length];
+		try {
+			SQLiteConn sqliteCon = new SQLiteConn(new File(param+"xtcardBlackListTemp.db"));
+			SQLiteCRUD sqliteCRUD = new SQLiteCRUD(sqliteCon.getConnection());
+			isr = new FileInputStream(ParamCacheFileRead.getParamFilePath(
+							ParamConstant.PARAM_XTCARD_BLACK_BASE_LIST));
+			String mode = FileUtils.dataEncodeMode;
+			if (mode.equalsIgnoreCase("1")) { // 广东版本的参数需要跳过文件头
+				isr.skip(13); // 跳过表头
+//				isr.skip(18); // 跳过文件头
+				int len  = 0;
+				sqliteCRUD.createTable("create table tb_XTCardBlackBaseList (XTCardNetNum,XTCardNo,XTCardType,status,GenCau,GenTime,Version,StartTime);");
+				sqliteCRUD.createTable("create INDEX ID_tb_XTCardBlackBaseList on tb_XTCardBlackBaseList (XTCardNetNum  COLLATE NOCASE);");
+				String[] params = null;
+				while (true) {
+					len = isr.read(content);
+					if(len == -1){ // 字节数读取完毕
+						break;
+					}
+					
+					System.arraycopy(content, 0, record, 0, length); // 复制湘通卡黑名单的内容
+					params = new String[]{
+							new String(Arrays.copyOfRange(record, 0, 4)),
+							new String(Arrays.copyOfRange(record, 4, 20)),
+							new String(Arrays.copyOfRange(record, 20, 22)),
+							new String(Arrays.copyOfRange(record, 22, 23)),
+							new String(Arrays.copyOfRange(record, 23, 24)),
+							new String(Arrays.copyOfRange(record, 24, 38)),
+							new String(Arrays.copyOfRange(record, 38, 41)),
+							new String(Arrays.copyOfRange(record, 41, 55))
+					};
+//					xtCardBlackList = new XTCardBlackList();
+//					xtCardBlackList.setXtCardNo(new String(Arrays.copyOfRange(record,
+//							0, 20)));// 卡号
+//					xtCardBlackList.setXtCardType(Integer.valueOf(new String(Arrays
+//							.copyOfRange(record, 20, 22))));// 卡类型
+//					xtCardBlackList.setStatus(Integer.valueOf(new String(Arrays
+//							.copyOfRange(record, 22, 23))));// 卡状态
+//					xtCardBlackList.setGenCau(Integer.valueOf(new String(Arrays
+//							.copyOfRange(record, 23, 24))));// 生成原因
+//					xtCardBlackList.setGenTime(DateUtils.parseDate(
+//							new String(Arrays.copyOfRange(record, 24, 38)),
+//							DateConstant.DATE_FORMAT_YYYYMMDDHHMMSS));// 生成日期
+//					xtCardBlackList.setVersion(Integer.valueOf(new String(Arrays
+//							.copyOfRange(record, 38, 41))));// 版本号
+//					xtCardBlackList.setStartTime(DateUtils.parseDate(
+//							new String(Arrays.copyOfRange(record, 41, 55)),
+//							DateConstant.DATE_FORMAT_YYYYMMDDHHMMSS));// 启用时间
+					sqliteCRUD.insert("tb_XTCardBlackBaseList", params);
+				}
+				
+
+			}
+		} catch (Exception e) {
+			logger.error("异常" + e.getMessage(), e);
+		}
+
+		return isReplace;
+	}
+	
+	/**
+	 * 将文件转成sqlite数据
+	 * @param orgFileName 原始文件
+	 * @param type 转换黑名单类型
+	 * @param tableName 保存到sqlite的表名
+	 * @return
+	 */
+	public boolean convertToSqlite(String orgFileName,Integer type,String tableName) {
+		
+		boolean isConvert = false;
+		Process process = null;
+		try {
+			String dbFileName = null;
+			if(type == ParamConstant.ALL_CARD_BLACK_TYPE ){
+				dbFileName = etcCardBlackAllTempDB;
+			}
+			else if(type == ParamConstant.DELTA_CARD_BLACK_TYPE){
+				dbFileName = etcCardBlackDeltaTempDB;
+			}
+			if(FileUtils.isExist(dbFileName)){ //如果存在，先删除掉对应文件，再增加内容
+				FileUtils.deleteFile(dbFileName);
+			}
+			String tempParam = param.replaceAll("\\\\", "\\/"); //sqlite语法，否则无法处理黑名单数据。
+			StringBuffer sBuffer = new StringBuffer();
+			sBuffer.append("cmd /c echo .quit | ");
+			sBuffer.append(root + "sqlite3 ");
+			sBuffer.append(dbFileName);
+			sBuffer.append(" -cmd \".separator \"\\t\" \" -cmd \".import ");
+			sBuffer.append(tempParam).append(orgFileName).append(" ").append(tableName);
+			sBuffer.append("\" \"CREATE INDEX index_name ON ").append(tableName);
+			if (type == ParamConstant.ALL_CARD_BLACK_TYPE) {
+				if (isAllOldVersion) {
+					sBuffer.append(" (BlackListNo);\"");
+				} else {
+					sBuffer.append(" (XTCardNetNum,XTCardNo);\"");
+				}
+			} else if (type == ParamConstant.DELTA_CARD_BLACK_TYPE) {
+				if (isDeltaOldVersion) {
+					sBuffer.append(" (BlackDeltaListNo);\"");
+				} else {
+					sBuffer.append(" (XTCardNetNum,XTCardNo);\"");
+				}
+			}
+			
+//			String cmd = "cmd /c echo .quit | " + root + "sqlite3 "
+//					+ dbFileName
+//					+ " -cmd \".separator \"\\t\" \" -cmd \".import "
+//					+ tempParam + orgFileName + " " + tableName
+//					+ "\" \"CREATE INDEX index_name ON " + tableName
+//					+ " (XTCardNetNum,XTCardNo);\"";
+			process = Runtime.getRuntime().exec(sBuffer.toString());
+			int result = process.waitFor();
+			if(result == 0){ //0 表示正常终止。
+				isConvert = true;
+			}
+		} catch (Exception e) {
+			logger.error("异常" + e.getMessage(), e);
+		}
+		finally {
+			if (process != null) {
+				process.destroy();
+			}
+		}
+		
+		return isConvert;
+	}
+	
+	/**
+	 * 查询对应湘通卡记录
+	 * @param etcCardNo ETC卡卡号
+	 * @return
+	 */
+	public XTCardBlackDeltaList queryETCCardBlackList(String etcCardNo) {
+		XTCardBlackDeltaList xtCardBlack = null;
+		try {
+			if(etcCardNo != null && etcCardNo.length() == 20){ //ETC卡卡号必须满足20位
+				String netNo = etcCardNo.substring(0,4);
+				String cardNo = etcCardNo.substring(4,etcCardNo.length());
+				XTCardBlackDeltaList etcCardBlackAll = queryETCCardBlackAll(netNo,cardNo);
+				XTCardBlackDeltaList etcCardBlackIncrement = queryETCCardBlackIncrement(netNo,cardNo);
+				if(etcCardBlackAll == null){
+					if(etcCardBlackIncrement != null){
+						if(etcCardBlackIncrement.getValidFlag() == 0){ // 表示黑名单还在有效
+							xtCardBlack = etcCardBlackIncrement;
+						}
+					}
+				}else{
+					if(etcCardBlackIncrement == null){
+						xtCardBlack = etcCardBlackAll;
+					}else{
+						if(etcCardBlackIncrement.getValidFlag() == 1){ // 表示黑名单已经失效
+							xtCardBlack = null;
+						}
+					}
+				}
+			}
+
+		} catch (Exception e) {
+			logger.error("查询ETC卡数据异常，错误原因：" + e.getMessage(), e);
+		}
+		return xtCardBlack;
+	}
+
+	/**
+	 * 查询ETC卡全量表
+	 * @param netNo ETC卡网络号
+	 * @param cardNo ETC卡卡号
+	 * @return
+	 * @throws Exception
+	 */
+	public XTCardBlackDeltaList queryETCCardBlackAll(String netNo, String cardNo) throws Exception {
+		XTCardBlackDeltaList xtCardBlackDeltaList = null;
+		if(FileUtils.isExist(etcCardBlackAllDB)){
+			SQLiteConn sqliteCon = new SQLiteConn(new File(etcCardBlackAllDB));
+			SQLiteCRUD sqliteCRUD = new SQLiteCRUD(sqliteCon.getConnection());
+			StringBuffer paramString = new StringBuffer(1024);
+			if(isAllOldVersion){ //如果是老版本的数据话，直接查询单个字段
+				if(StringUtils.isNotEmpty(netNo) && StringUtils.isNotEmpty(cardNo)){
+					paramString.append(" AND BlackListNo LIKE '"+netNo+cardNo+"%'");
+				}
+			}else{
+				if(StringUtils.isNotEmpty(netNo)){
+					paramString.append(" AND XTCardNetNum = "+netNo);
+				}
+				if(StringUtils.isNotEmpty(cardNo)){
+					paramString.append(" AND XTCardNo = '" + cardNo + "'");
+				}
+			}
+			
+			Object[] obj = sqliteCRUD.selectOneObject("tb_xtcardblackbaselist",
+					paramString.toString());
+			if(isAllOldVersion){
+				String entry = null;
+				if(obj.length == 1){
+					entry = (String)obj[0];
+					if(entry != null){
+						xtCardBlackDeltaList = new XTCardBlackDeltaList();
+						xtCardBlackDeltaList.setXtCardNetNum(Integer.valueOf(entry.substring(0,4)));// 网络号
+						xtCardBlackDeltaList.setXtCardNo(entry.substring(4,20));// 卡号
+						xtCardBlackDeltaList.setXtCardType(Integer.valueOf(entry.substring(20,22)));// 卡类型
+						xtCardBlackDeltaList.setStatus(Integer.valueOf(entry.substring(22,23)));// 卡状态
+						xtCardBlackDeltaList.setGenCau(Integer.valueOf(entry.substring(23,24)));// 生成原因
+						xtCardBlackDeltaList.setGenTime(DateUtils.parseDate(
+								entry.substring(24,38),
+								DateConstant.DATE_FORMAT_YYYYMMDDHHMMSS));// 生成日期
+						xtCardBlackDeltaList.setVersion(Integer.valueOf(entry.substring(38,41)));// 版本号
+						xtCardBlackDeltaList.setStartTime(DateUtils.parseDate(
+								entry.substring(41,55),
+								DateConstant.DATE_FORMAT_YYYYMMDDHHMMSS));// 启用时间
+					}
+					
+				}
+			}else{
+				if(obj.length == CARD_BLACK){
+					xtCardBlackDeltaList = new XTCardBlackDeltaList();
+					xtCardBlackDeltaList.setXtCardNetNum(Integer.valueOf(String.valueOf(obj[0])));// 网络号
+					xtCardBlackDeltaList.setXtCardNo(String.valueOf(obj[1]));// 卡号
+					xtCardBlackDeltaList.setXtCardType(Integer.valueOf(String.valueOf(obj[2])));// 卡类型
+					xtCardBlackDeltaList.setStatus(Integer.valueOf(String.valueOf(obj[3])));// 卡状态
+					xtCardBlackDeltaList.setGenCau(Integer.valueOf(String.valueOf(obj[4])));// 生成原因
+					xtCardBlackDeltaList.setGenTime(DateUtils.parseDate(
+							String.valueOf(obj[5]),
+							DateConstant.DATE_FORMAT_YYYYMMDDHHMMSS));// 生成日期
+					xtCardBlackDeltaList.setVersion(Integer.valueOf(String.valueOf(obj[6])));// 版本号
+					xtCardBlackDeltaList.setStartTime(DateUtils.parseDate(
+							String.valueOf(obj[7]),
+							DateConstant.DATE_FORMAT_YYYYMMDDHHMMSS));// 启用时间
+				}
+			}
+			
+		}
+		return xtCardBlackDeltaList;
+	}
+	
+	/**
+	 * 查询ETC卡增量表
+	 * @param etcCardNo ETC卡卡号
+	 * @param cardNo 
+	 * @return
+	 * @throws Exception
+	 */
+	public XTCardBlackDeltaList queryETCCardBlackIncrement(String netNo, String cardNo) throws Exception {
+		XTCardBlackDeltaList xtCardBlackDeltaList = null;
+		if(FileUtils.isExist(etcCardBlackDeltaDB)){
+			SQLiteConn sqliteCon = new SQLiteConn(new File(etcCardBlackDeltaDB));
+			SQLiteCRUD sqliteCRUD = new SQLiteCRUD(sqliteCon.getConnection());
+			StringBuffer paramBuffer = new StringBuffer();
+			if(isDeltaOldVersion){ //如果是老版本的数据话，直接查询单个字段
+				if(StringUtils.isNotEmpty(netNo) && StringUtils.isNotEmpty(cardNo)){
+					paramBuffer.append(" AND BlackDeltaListNo LIKE '"+netNo+cardNo+"%'");
+				}
+			}else{
+				if(StringUtils.isNotEmpty(netNo)){
+					paramBuffer.append(" AND XTCardNetNum = "+netNo);
+				}
+				if(StringUtils.isNotEmpty(cardNo)){
+					paramBuffer.append(" AND XTCardNo = '" + cardNo + "'");
+				}
+			}
+			Object[] obj = sqliteCRUD.selectOneObject("tb_xtcardblackbaselist",
+					paramBuffer.toString());
+			if(isDeltaOldVersion){
+				String entry = null;
+				if(obj.length == 1){
+					entry = (String)obj[0];
+					if(entry != null){
+						xtCardBlackDeltaList = new XTCardBlackDeltaList();
+						xtCardBlackDeltaList.setXtCardNetNum(Integer.valueOf(entry.substring(0,4)));
+						xtCardBlackDeltaList.setXtCardNo(entry.substring(4,20));// 卡号
+						xtCardBlackDeltaList.setXtCardType(Integer.valueOf(entry.substring(20,22)));// 卡类型
+			            xtCardBlackDeltaList.setStatus(Integer.valueOf(entry.substring(22,23)));// 卡状态
+			            xtCardBlackDeltaList.setGenCau(Integer.valueOf(entry.substring(23,24)));// 生成原因
+						xtCardBlackDeltaList.setGenTime(DateUtils.parseDate(
+								entry.substring(24,38),
+								DateConstant.DATE_FORMAT_YYYYMMDDHHMMSS));// 生成日期
+						xtCardBlackDeltaList.setValidFlag(Integer.valueOf(entry.substring(38,39)));// 有效标识
+						xtCardBlackDeltaList.setVersion(Integer.valueOf(entry.substring(39,42)));// 版本号
+						xtCardBlackDeltaList.setStartTime(DateUtils.parseDate(
+								entry.substring(42,56),
+								DateConstant.DATE_FORMAT_YYYYMMDDHHMMSS));// 启用时间
+					}
+					
+				}
+			}else{
+				if (obj.length == CARD_BLACK_DELTA) {
+					xtCardBlackDeltaList = new XTCardBlackDeltaList();
+					xtCardBlackDeltaList.setXtCardNetNum(Integer.valueOf(String.valueOf(obj[0])));
+					xtCardBlackDeltaList.setXtCardNo(String.valueOf(obj[1]));// 卡号
+					xtCardBlackDeltaList.setXtCardType(Integer.valueOf(String.valueOf(obj[2])));// 卡类型
+		            xtCardBlackDeltaList.setStatus(Integer.valueOf(String.valueOf(obj[3])));// 卡状态
+		            xtCardBlackDeltaList.setGenCau(Integer.valueOf(String.valueOf(obj[4])));// 生成原因
+					xtCardBlackDeltaList.setGenTime(DateUtils.parseDate(
+							String.valueOf(obj[5]),
+							DateConstant.DATE_FORMAT_YYYYMMDDHHMMSS));// 生成日期
+					xtCardBlackDeltaList.setValidFlag(Integer.valueOf(String.valueOf(obj[6])));// 有效标识
+					xtCardBlackDeltaList.setVersion(Integer.valueOf(String.valueOf(obj[7])));// 版本号
+					xtCardBlackDeltaList.setStartTime(DateUtils.parseDate(
+							String.valueOf(obj[8]),
+							DateConstant.DATE_FORMAT_YYYYMMDDHHMMSS));// 启用时间
+				}
+			}
+		}
+		
+		return xtCardBlackDeltaList;
+	}
+	
+//	/**
+//	 * 是否启用新版本黑名单查询功能
+//	 * @return
+//	 */
+//	public boolean isOptimisedActive(){
+//		//是否使用优化黑名单查询功能 0-不启用 1-启用 默认0
+//        String str = MyPropertiesUtils.getProperties(Constant.PROP_MTCLANE_FUNCTION, "optimisedforBlack", "0");
+//        return "1".equals(str);
+//	}
+	
+//	/**
+//	 * 参数是否为老版本的数据
+//	 * @param type  
+//	 * @return
+//	 */
+//	public boolean isOldData(Integer type){
+//		if(type == ParamConstant.ALL_CARD_BLACK_TYPE){
+//			return isAllOldVersion;
+//		}
+//		else if(type == ParamConstant.DELTA_CARD_BLACK_TYPE){
+//			return isDeltaOldVersion;
+//		}
+//		return false;
+//	}
+	
+	/**
+	 * 把临时数据文件转换成为正式数据文件
+	 * @param destFilePath 临时文件路径
+	 * @param tagetFilePath 正式文件路径
+	 */
+	public void replace(String destFilePath,String tagetFilePath){
+		if(FileUtils.isExist(destFilePath)){
+			FileUtils.rename(destFilePath, tagetFilePath);
+		}
+	}
+	
+	/**
+	 * 检查参数文件，看文件的格式是否为旧版本参数
+	 * @param type 文件类型
+	 * @param fileName 文件名
+	 */
+	public void checkFileFormatVersion(Integer type,String fileName){
+		if(type == ParamConstant.ALL_CARD_BLACK_TYPE){
+			//判断参数文件是否为旧版本程序
+			String file = param.concat(fileName);
+			FileInputStream isr = null;
+			int length = 11;
+			byte[] content = new byte[length];
+			byte[] record = new byte[length]; //湘通卡黑名单全量表旧版本表头
+			try {
+				isr = new FileInputStream(file);
+				int len = isr.read(content);
+				if(len == -1){ // 字节数读取完毕
+					return;
+				}
+				System.arraycopy(content, 0, record, 0, length); // 复制参数文件头的内容
+				String title = new String(Arrays.copyOfRange(record, 0, length));
+				isAllOldVersion = title.equalsIgnoreCase("BlackListNo");
+			}
+			catch(Exception e){
+				logger.error("检查参数文件是否为旧版本异常，错误原因：" + e.getMessage(), e);
+			}
+		}else if(type == ParamConstant.DELTA_CARD_BLACK_TYPE){
+			String file = param.concat(fileName);
+			FileInputStream isr = null;
+			int length = 16;
+			byte[] content = new byte[length];
+			byte[] record = new byte[length]; //湘通卡黑名单增量表旧版本表头
+			try {
+				isr = new FileInputStream(file);
+				int len = isr.read(content);
+				if(len == -1){ // 字节数读取完毕
+					return;
+				}
+				System.arraycopy(content, 0, record, 0, length); // 复制参数文件头的内容
+				String title = new String(Arrays.copyOfRange(record, 0, length));
+				isDeltaOldVersion = title.equalsIgnoreCase("BlackDeltaListNo");
+			}
+			catch(Exception e){
+				logger.error("检查参数文件是否为旧版本异常，错误原因：" + e.getMessage(), e);
+			}
+		}
+	}
+	
+	public static void main(String[] args) {
+		ETCCardBlackControl etcCardBlackControl =ETCCardBlackControl.getInstance();
+		long startTime = System.currentTimeMillis();
+		System.out.println(etcCardBlackControl.convertToSqlite("tb_xtcardblackbaselist_Recv.txt",ParamConstant.ALL_CARD_BLACK_TYPE,"tb_xtcardblackbaselist"));
+		long endTime = System.currentTimeMillis();
+		System.out.println((endTime - startTime) / 1000);
+		etcCardBlackControl.replace(etcCardBlackAllTempDB, etcCardBlackAllDB);
+		startTime = System.currentTimeMillis();
+		System.out.println(etcCardBlackControl
+				.queryETCCardBlackList("61011310240000043646"));
+		endTime = System.currentTimeMillis();
+		System.out.println((endTime - startTime));
+	}
+
+}

@@ -1,0 +1,266 @@
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package com.hgits.tool.socket.entity;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * 记录出口车道交易时的操作状态变化 。用于客户端发送json数据给服务器
+ *
+ * @author huangjz
+ */
+public class ExitInfo extends Equipment {
+
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	/**
+     * 出口站
+     */
+    private String exStation = "";
+    /**
+     * 入口站
+     */
+    private String enStation = "";
+    /**
+     * 车道
+     */
+    private String lane = "";
+    /**
+     * 身份号
+     */
+    private String userId = "";
+    /**
+     * 班次
+     */
+    private String classes = "";
+    /**
+     * 交易
+     */
+    private String tradeTime = "";
+    /**
+     * 交易号
+     */
+    private String tradeId = "";
+    /**
+     * 出口车型
+     */
+    private String exVehType = "";
+    /**
+     * 入口车型
+     */
+    private String enVehType = "";
+    /**
+     * 出口车种
+     */
+    private String exVehClass = "";
+    /**
+     * 入口车种
+     */
+    private String enVehClass = "";
+
+    /**
+     * 车费
+     */
+    private String fee = "";
+    /**
+     * 付款方式
+     */
+    private String paymentMethod = "";
+    /**
+     * 观察码状态
+     */
+    private String status = "";
+    /**
+     * 报警信息
+     */
+    private String alarmInformation = "";
+    /**
+     * 雨棚灯信号 1变绿 0变红 2关闭
+     */
+    private String canopyLight = "";
+    /**
+     * 报警标志1报警 0不报警
+     */
+    private String alarmType = "";
+
+    public String getAlarmType() {
+        return alarmType;
+    }
+
+    public void setAlarmType(String alarmType) {
+        this.alarmType = alarmType;
+    }
+
+    public String getExVehType() {
+        return exVehType;
+    }
+
+    public void setExVehType(String exVehType) {
+        this.exVehType = exVehType;
+    }
+
+    public String getEnVehType() {
+        return enVehType;
+    }
+
+    public void setEnVehType(String enVehType) {
+        this.enVehType = enVehType;
+    }
+
+    public String getExVehClass() {
+        return exVehClass;
+    }
+
+    public void setExVehClass(String exVehClass) {
+        this.exVehClass = exVehClass;
+    }
+
+    public String getEnVehClass() {
+        return enVehClass;
+    }
+
+    public void setEnVehClass(String enVehClass) {
+        this.enVehClass = enVehClass;
+    }
+
+    /**
+     * 返回车道信息
+     *
+     * @return 车道信息
+     */
+    public String getLane() {
+        return lane;
+    }
+
+    public void setLane(String lane) {
+        this.lane = lane;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+    public String getClasses() {
+        return classes;
+    }
+
+    public void setClasses(String classes) {
+        this.classes = classes;
+    }
+
+    public String getTradeTime() {
+        return tradeTime;
+    }
+
+    public void setTradeTime(String tradeTime) {
+        this.tradeTime = tradeTime;
+    }
+
+    public String getTradeId() {
+        return tradeId;
+    }
+
+    public void setTradeId(String tradeId) {
+        this.tradeId = tradeId;
+    }
+
+    public String getCanopyLight() {
+        return canopyLight;
+    }
+
+    public void setCanopyLight(String canopyLight) {
+        this.canopyLight = canopyLight;
+    }
+
+    public String getFee() {
+        return fee;
+    }
+
+    public void setFee(String fee) {
+        this.fee = fee;
+    }
+
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(String paymentMethod) {
+        this.paymentMethod = paymentMethod;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public String getAlarmInformation() {
+        return alarmInformation;
+    }
+
+    public void setAlarmInformation(String alarmInformation) {
+        this.alarmInformation = alarmInformation;
+    }
+
+    public String getExStation() {
+        return exStation;
+    }
+
+    public void setExStation(String exStation) {
+        this.exStation = exStation;
+    }
+
+    public String getEnStation() {
+        return enStation;
+    }
+
+    public void setEnStation(String enStation) {
+        this.enStation = enStation;
+    }
+
+    /**
+     * 获取所有的属性值
+     *
+     * @return 属性集合
+     */
+    public List<String> getAllElement() {
+
+        List<String> list = new ArrayList<String>();
+        list.add(this.exStation);
+        list.add("");
+        list.add(this.lane);
+        list.add("");
+        list.add(this.userId);
+        list.add(this.classes);
+        list.add(this.tradeTime);
+        list.add(this.tradeId);
+        list.add(this.exVehType);
+        list.add(this.exVehClass);
+        list.add(this.enStation);
+        list.add(this.enVehType);
+        list.add(this.enVehClass);
+        list.add(this.fee);
+        list.add(this.paymentMethod);
+        list.add(this.status);
+        list.add(this.alarmInformation);
+
+        return list;
+    }
+
+    @Override
+    public String toString() {
+        return "{\"exStation\":\"" + exStation + "\",\"lane\":\"" + lane + "\",\"userId\":\"" + userId + "\",\"classes\":\"" + classes + "\",\"tradeTime\":\"" + tradeTime + "\",\"tradeId\":\"" + tradeId + "\",\"exVehType\":\"" + exVehType + "\",\"exVehClass\":\"" + exVehClass + "\",\"enStation\":\"" + enStation + "\",\"enVehType\":\"" + enVehType + "\",\"enVehClass\":\"" + enVehClass + "\",\"fee\":\"" + fee + "\",\"paymentMethod\":\"" + paymentMethod + "\",\"status\":\"" + status + "\",\"alarmInformation\":\"" + alarmInformation + "\",\"canopyLight\":\"" + canopyLight + "\",\"alarmType\":\"" + alarmType + "\",\"timeout\":\"" + super.getTimeout() + "\"}";
+    }
+    
+}

@@ -1,0 +1,255 @@
+package com.hgits.vo;
+
+import com.hgits.util.DoubleUtils;
+import java.io.Serializable;
+import java.sql.Timestamp;
+
+/**
+ * 用于记录车辆的相关信息
+ *
+ * @author Wang Guodong
+ */
+public class Vehicle implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+    //车型
+    private int vehicleClass;
+    //车种
+    private int vehicleType = Constant.NORMAL_VEHICLE;//车种 ：0 正常  1 内部车  2 军警车  3 紧急车  4 绿通车
+    //收费员确认全车牌号码
+    private String fullVehPlateNum;
+    //收费员确认车牌号码后三位
+    private String vehPlateNum;
+    //视频确认全车牌
+    private String lprFullVehPlateNum;
+    //车货总重
+    private double weight;
+    //限重
+    private double limitWeight;
+    //轴数
+    private int axleCount;
+    //轴组数
+    private int axleGroupCount;
+    //里程
+    private double distance;
+    //费用
+    private int fare;
+    //车辆经过入口(出口)的时间
+    private Timestamp date;
+    //收费员确认车牌颜色
+    private String keyedPlateColor;
+    //车牌识别系统识别车牌颜色
+    private String lprPlateColor;
+    //特殊车辆标记0 黑名单 1灰名单 9白名单 2 正常车辆
+    private int speVehFlag;
+    //特殊车辆原因，与属性speVehFlag对应
+    private String speVehReason;
+    /**
+     * 车牌黑白灰名单描述
+     */
+    private String describe;
+
+    public String getLprPlateColor() {
+        return lprPlateColor;
+    }
+
+    public void setLprPlateColor(String lprPlateColor) {
+        this.lprPlateColor = lprPlateColor;
+    }
+
+    public int getAxleCount() {
+        return axleCount;
+    }
+
+    public void setAxleCount(int axleCount) {
+        this.axleCount = axleCount;
+    }
+
+    public int getAxleGroupCount() {
+        return axleGroupCount;
+    }
+
+    public void setAxleGroupCount(int axleGroupCount) {
+        this.axleGroupCount = axleGroupCount;
+    }
+
+    public int getSpeVehFlag() {
+        return speVehFlag;
+    }
+
+    public void setSpeVehFlag(int speVehFlag) {
+        this.speVehFlag = speVehFlag;
+    }
+
+    public String getSpeVehReason() {
+        return speVehReason;
+    }
+
+    public void setSpeVehReason(String speVehReason) {
+        this.speVehReason = speVehReason;
+    }
+
+    public String getLprFullVehPlateNum() {
+        return lprFullVehPlateNum;
+    }
+
+    public void setLprFullVehPlateNum(String lprFullVehPlateNum) {
+        this.lprFullVehPlateNum = lprFullVehPlateNum;
+    }
+
+    public int getVehicleClass() {
+        return vehicleClass;
+    }
+
+    public void setVehicleClass(int vehicleClass) {
+        this.vehicleClass = vehicleClass;
+    }
+
+    public int getVehicleType() {
+        return vehicleType;
+    }
+
+    public void setVehicleType(int vehicleType) {
+        this.vehicleType = vehicleType;
+    }
+
+    public String getFullVehPlateNum() {
+        return fullVehPlateNum;
+    }
+
+    public void setFullVehPlateNum(String fullVehPlateNum) {
+        this.fullVehPlateNum = fullVehPlateNum;
+    }
+
+    public String getVehPlateNum() {
+        return vehPlateNum;
+    }
+
+    public void setVehPlateNum(String vehPlateNum) {
+        this.vehPlateNum = vehPlateNum;
+    }
+
+    public double getWeight() {
+        return weight;
+    }
+
+    public void setWeight(double weight) {
+        this.weight = weight;
+    }
+
+    public double getLimitWeight() {
+        return limitWeight;
+    }
+
+    public void setLimitWeight(double limitWeight) {
+        this.limitWeight = limitWeight;
+    }
+
+    public double getDistance() {
+        return distance;
+    }
+
+    public void setDistance(double distance) {
+        this.distance = distance;
+    }
+
+    public int getFare() {
+        return fare;
+    }
+
+    public void setFare(int fare) {
+        this.fare = fare;
+    }
+
+    public Timestamp getDate() {
+        return date;
+    }
+
+    public void setDate(Timestamp date) {
+        this.date = date;
+    }
+
+    public String getKeyedPlateColor() {
+        return keyedPlateColor;
+    }
+
+    public void setKeyedPlateColor(String keyedPlateColor) {
+        this.keyedPlateColor = keyedPlateColor;
+    }
+
+    /**
+     * 是否为货车
+     *
+     * @return true货车 false非货车
+     */
+    public boolean isTruck() {
+        return vehicleClass == 7 || vehicleClass == 8 || vehicleClass == 9;
+    }
+
+    /**
+     * 获取车辆计费重量，为车辆总重的97.5%,不足5吨按5吨计算
+     *
+     * @return 收费重量
+     */
+    public double getFareWeight() {
+        if (weight == 0) {
+            return 0;
+        }
+        double fareWeight = DoubleUtils.mul(weight, 0.975);
+        if (fareWeight > 5) {
+            return fareWeight;
+        } else {
+            return 5;
+        }
+    }
+
+    public String getDescribe() {
+        return describe;
+    }
+
+    public void setDescribe(String describe) {
+        this.describe = describe;
+    }
+
+    @Override
+    public String toString() {
+        return "Vehicle [vehicleClass="
+                + vehicleClass
+                + ", vehicleType="
+                + vehicleType
+                + ", "
+                + (fullVehPlateNum != null ? "fullVehPlateNum="
+                        + fullVehPlateNum + ", " : "")
+                + (vehPlateNum != null
+                        ? "vehPlateNum=" + vehPlateNum + ", "
+                        : "")
+                + (lprFullVehPlateNum != null ? "lprFullVehPlateNum="
+                        + lprFullVehPlateNum + ", " : "")
+                + "weight="
+                + weight
+                + ", limitWeight="
+                + limitWeight
+                + ", axleCount="
+                + axleCount
+                + ", axleGroupCount="
+                + axleGroupCount
+                + ", distance="
+                + distance
+                + ", fare="
+                + fare
+                + ", "
+                + (date != null ? "date=" + date + ", " : "")
+                + (keyedPlateColor != null ? "keyedPlateColor="
+                        + keyedPlateColor + ", " : "")
+                + (lprPlateColor != null ? "lprPlateColor=" + lprPlateColor
+                        + ", " : "")
+                + "speVehFlag="
+                + speVehFlag
+                + ", "
+                + (speVehReason != null
+                        ? "speVehReason=" + speVehReason + ", "
+                        : "")
+                + (describe != null ? "describe=" + describe : "") + "]";
+    }
+
+}

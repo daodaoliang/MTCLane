@@ -1,0 +1,139 @@
+package com.hgits.control;
+
+import java.io.File;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+
+import org.apache.commons.io.filefilter.FileFilterUtils;
+import org.apache.log4j.Logger;
+
+import com.hgits.service.constant.DateConstant;
+import com.hgits.util.DateUtils;
+import com.hgits.util.MyPropertiesUtils;
+import com.hgits.util.file.FileUtils;
+import com.hgits.vo.Constant;
+
+/**
+ * 时间检查控制类
+ *
+ * @author Administrator
+ */
+public class TimeCheckControl {
+	
+	private static Logger logger = Logger.getLogger(TimeCheckControl.class);
+	
+	/**
+	 * 最后一次下班时间戳
+	 */
+	private static Date lastLogoutTime = null;
+	
+	private static final String timeFileSuffix = ".time";
+	
+    /**
+     * 为最后一次下班记录赋值
+     * @param lastLogoutTime
+     */
+    public static void setLastLogoutTime(Date lastLogoutTime) {
+    	if(TimeCheckControl.lastLogoutTime == null){
+    		TimeCheckControl.lastLogoutTime = lastLogoutTime;
+    	}
+	}
+    
+	/**
+	 * 判断当前时间是否合法
+	 * @return
+	 */
+	public static boolean isVaildTime() {
+
+		File tempFile = null;
+		Collection<File> timeList = getAllTimeStampFile();
+		Date tempTimeStamp = null;
+		if (lastLogoutTime == null) {
+			if (timeList.isEmpty()) {
+				return true; //变量中未设置，且没有文件时间戳，可能存在车道之前未启用过时间戳功能
+			} else {
+				tempFile = Collections.max(timeList);
+			}
+			String name = tempFile.getName();
+			if (name.matches("^[0-9]{14}\\.(time)$")) {
+				tempTimeStamp = DateUtils.parseDate(name,
+						DateConstant.DATE_FORMAT_YYYYMMDDHHMMSS);
+			}
+		}
+		
+		//时间戳文件不存在
+		if(tempTimeStamp == null){
+			return true;
+		}
+		
+		/**
+		 * 判断是用文件时间戳还是用控制类中的变量作为时间戳
+		 */
+		Date comp = tempTimeStamp == null ? lastLogoutTime : tempTimeStamp;
+
+		Date nowDate = DateUtils.getCurrentDate();
+		
+		long difference = DateUtils.getTimeDifference(nowDate, comp);//判断当前时间与时间戳文件的差额
+
+		long configDifference =Long.valueOf(MyPropertiesUtils.getProperties(
+				Constant.PROP_MTCLANE_FUNCTION,
+				"checkTimeInterval", "28800"));
+		difference = difference/1000;
+		//差异是否大于配置文件中设置的值
+		if(Math.abs(difference) >configDifference){
+			return false;
+		}
+	
+		return true;
+	}
+    
+    /**
+     * 生成最后一次下班时间的时间戳
+     */
+    public static void genLoginTime(){
+		try {
+			setLastLogoutTime(DateUtils.getCurrentDate()); //设置最后一次的时间戳
+			
+			String timeStamp = FileUtils.getRootPath()
+					+ File.separatorChar
+					+ DateUtils.formatDateToString(
+							TimeCheckControl.lastLogoutTime,
+							DateConstant.DATE_FORMAT_YYYYMMDDHHMMSS)
+					+ timeFileSuffix;
+			
+			File timeStampFile = new File(timeStamp);
+			
+			/*
+			 * 先清除，后新增
+			 */
+			clearTimeStampFile();
+			timeStampFile.createNewFile();
+			
+		}catch(Exception e){
+			logger.error("生成下班时间戳失败，错误原因：" + e.getMessage(), e);
+		}
+    }
+    
+    /**
+     * 清除所有的时间戳文件
+     */
+    private static void clearTimeStampFile(){
+		Collection<File> list = getAllTimeStampFile();
+		for (File file : list) {
+			file.delete();
+		}
+    }
+
+	/**
+	 * 获取所有的时间戳文件
+	 * @return
+	 */
+	private static Collection<File> getAllTimeStampFile() {
+		Collection<File> list = FileUtils.listFiles(new File(FileUtils.getRootPath()),
+				FileFilterUtils.suffixFileFilter(timeFileSuffix), null);
+		return list;
+	}
+
+}

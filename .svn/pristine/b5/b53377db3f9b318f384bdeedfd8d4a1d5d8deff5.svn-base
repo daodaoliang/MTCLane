@@ -1,0 +1,37 @@
+package com.hgits.service.constant;
+
+/**
+ * MTC 所需要的常量
+ * @author wh
+ *
+ */
+public interface MtcConstant {
+	public static final String PROPERTIES_LANETYPE= "laneType";
+	
+	/**
+	 * MTC车道类型
+	 */
+    public static final String MTC_LANE_TYPE_EN="1";
+    
+    
+    /**
+     * mtc车道版本
+     */
+    public static final String MTC_VERSION = "mtc";
+    
+    /**
+	 * log压缩日志失效期限
+	 */
+	public static final String LOG_EXPIRES_DATE = "365";
+	
+	/**
+	 * 字符编码GBK
+	 */
+	public static final String ENCODE_GBK = "GBK";
+
+	/**
+	 * 字符编码UTF-8
+	 */
+	public static final String ENCODE_UTF_8 = "UTF-8";
+	
+}

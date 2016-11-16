@@ -1,0 +1,334 @@
+package com.hgits.hardware.impl.lprservice;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+
+import com.hgits.common.log.MTCLog;
+import com.hgits.control.FlowControl;
+import com.hgits.control.ThreadPoolControl;
+import com.hgits.hardware.CXP;
+import com.hgits.tool.driver.HvLPR;
+import com.hgits.util.IntegerUtils;
+import com.hgits.vo.Lane;
+import com.hgits.hardware.LprService;
+import com.hgits.util.MyPropertiesUtils;
+import com.hgits.vo.Constant;
+
+public class GeaLprService implements Runnable, LprService {
+
+    private long time1;//第一次抓拍图像的时间（1970-1-1至今，单位秒）
+    private long time2;//第一次图像处理结束的时刻(1970-1-1至今，单位秒)
+    private long t;//上一次图像处理结束的时刻
+    private HvLPR lpr;//车牌识别设备
+    private CXP cxp;//CXP板
+    private byte[] vehImg;//全车图片
+    private boolean captureFlag = true;//是否进行车牌识别的标志
+    private boolean lprIsReady;//车牌识别设备正常工作
+    private SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss SSS");
+    private String plateColor;//车牌颜色
+    private String plateNum;//车牌号码
+    private int logLevel;//日志级别 0简单 1普通 2详细
+
+    public GeaLprService(CXP cxp) {
+    }
+
+    public void start() {
+        ThreadPoolControl.getThreadPoolInstance().execute(this);
+        ThreadPoolControl.getThreadPoolInstance().execute(new Runnable() {
+            @Override
+            public void run() {
+                while (true) {
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException ex) {
+                    }
+                    if (lpr != null) {
+                        int i = lpr.lprIsReady();//检测车牌识别设备是否运行正常
+                        lprIsReady = i > 0;
+                        if (lprIsReady && "W".equals(FlowControl.chargeObserCode)) {
+                            FlowControl.chargeObserCode = "";
+                        } else if (!lprIsReady) {
+                            FlowControl.chargeObserCode = "W";//车牌识别无响应
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    @Override
+    public void run() {
+        try {
+            String str = MyPropertiesUtils.getProperties(Constant.PROP_MTCLANE_CONSTANT, "lprInterval", "1");
+            int lprInterval = IntegerUtils.parseString(str);
+            MTCLog.log("LPR:" + "lprInterval=" + lprInterval + "秒");
+            if (lprInterval < 1) {
+                lprInterval = 1;
+            }
+            String lprInfo = MyPropertiesUtils.getProperties(Constant.PROP_MTCLANE_COMM, "LPR", "");
+            String[] buffer = lprInfo.split(",");
+            if (buffer.length >= 7) {
+                String level = buffer[6];
+                logLevel = IntegerUtils.parseString(level);
+            }
+            MTCLog.log("LPR:" + "logLevel=" + logLevel);
+            MTCLog.log("LPR:" + "车牌识别线程开始运行");
+            lpr = new HvLPR();
+            int i = 0;
+            //打开通信端口并初始化车牌识别器
+            while (true) {
+                try {
+                    Thread.sleep(400);
+                } catch (Exception ex) {
+                }
+                int init = lpr.initHvLPR();
+                if (init <= 0) {
+                    MTCLog.log("LPR:" + "车牌识别初始化失败，初始化结果为" + init);
+                    i++;
+                    lprIsReady = false;//车牌识别初始化失败
+                    if (i == 10) {
+                        //连续初始化失败10次，等待5分钟后再次进行初始化
+                        i = 0;
+                        try {
+                            Thread.sleep(5 * 60 * 1000);
+                        } catch (Exception ex) {
+                        }
+                    }
+                    continue;
+                } else {
+                    MTCLog.log("LPR:" + "车牌识别初始化成功，初始化结果为" + init);
+                    break;
+                }
+            }
+            i = 0;
+            while (true) {
+                try {
+                    Thread.sleep(400);
+                } catch (Exception ex) {
+                }
+                int ready = lpr.lprIsReady();
+                if (ready <= 0) {
+                    MTCLog.log("LPR:" + "车牌识别设备尚未准备就绪,返回结果为" + ready);
+                    i++;
+                    lprIsReady = false;
+                    if (i == 10) {
+                        i = 0;
+                        try {
+                            Thread.sleep(5 * 60 * 1000);
+                        } catch (Exception ex) {
+                        }
+                    }
+                    continue;
+                } else {
+                    MTCLog.log("LPR:" + "车牌识别设备准备就绪,返回结果为" + ready);
+                    lprIsReady = true;
+                    break;
+                }
+            }
+            Outer:
+            while (lprIsReady) {
+                try {
+                    Thread.sleep(100);
+                } catch (Exception ex) {
+                }
+                if (!captureFlag) {//不进行车牌识别
+                    continue;
+                }
+                lpr.captuerImage();
+                long start = System.currentTimeMillis();
+                long t2;
+                while (true) {
+                    t2 = lpr.getLastTimePlate();//等待直至获取到最后一次图像处理结束的时刻(秒)
+                    if (logLevel >= 2) {//详细日志记录时，记录每一次获取到的图像处理结束的时刻
+                        MTCLog.log("LPR:" + "getLastTimePlate=" + t2);
+                    }
+                    if (t2 > t) {//信路威车牌识别，信路威车牌识别会自动进行，根据两次车牌识别的差距时间来判断
+                        break;
+                    }
+                    long now = System.currentTimeMillis();
+                    if (now < start) {//当前时间小于开始时间，重新开始计时
+                        start = now;
+                    }
+                    if (now - start > lprInterval * 1000) {
+                        break;
+                    }
+                    try {
+                        Thread.sleep(50);
+                    } catch (Exception ex) {
+                    }
+                }
+                t = t2;
+                plateNum = lpr.getPlate();
+                plateColor = lpr.getPlateColor();
+                if (logLevel >= 2) {//详细日志记录时，记录每一次车牌识别的结果
+                    MTCLog.log("LPR:" + "lpr.getPlateNum():" + plateNum);
+                    MTCLog.log("LPR:" + "lpr.getPlateColor():" + plateColor);
+                }
+                vehImg = lpr.getPicture();
+                if (plateNum != null && plateColor != null) {
+                    MTCLog.log("LPR:" + "lpr.getPlateNum():" + plateNum);
+                    MTCLog.log("LPR:" + "lpr.getPlateColor():" + plateColor);
+                    captureFlag = false;//获取到车牌识别结果，车牌识别结束
+                }
+            }
+        } catch (Exception ex) {
+            MTCLog.log("LPR:" + "车牌识别异常", ex);
+        } finally {
+            if (lpr != null) {
+                int i = lpr.closeHvLPR();
+                MTCLog.log("LPR:" + "关闭车牌识别设备:" + (i > 0));
+            }
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException ex) {
+            }
+            ThreadPoolControl.getThreadPoolInstance().execute(this);
+        }
+    }
+
+    /**
+     * 开始进行车牌识别
+     */
+    public void startCaptureImg() {
+        if (captureFlag = true) {//正在进行车牌识别
+        } else {
+            captureFlag = true;
+        }
+    }
+
+    /**
+     * 停止进行车牌识别
+     */
+    public void stopCaptureImg() {
+        captureFlag = false;
+    }
+
+    /**
+     * 根据给定的路径创建图片
+     *
+     * @param vehImgFilePath 给定的图片路径
+     * @return 创建图片成功true 失败false
+     */
+    public boolean createPicture(String vehImgFilePath) {
+        FileOutputStream vehFos = null;
+        boolean vehFlag = false;
+//        String vehImgFilePath = "img" + File.separator + listNum + "-1.jpg";
+        try {
+            if (vehImg != null) {
+                vehFos = new FileOutputStream(vehImgFilePath);
+                vehFos.write(vehImg);
+                vehFos.flush();
+                File vehImgFile = new File(vehImgFilePath);
+                if (vehImgFile.exists() && vehImgFile.length() == vehImg.length) {
+                    vehFlag = true;
+                    vehImg = null;
+                }
+            }
+        } catch (Exception ex) {
+            MTCLog.log("LPR:" + "生成抓拍图片" + vehImgFilePath + "失败", ex);
+        } finally {
+            try {
+                if (vehFos != null) {
+                    vehFos.close();
+                }
+            } catch (IOException ex) {
+                MTCLog.log("LPR:" + "异常", ex);
+            }
+        }
+        return vehFlag;
+    }
+
+    /**
+     * 获取车牌识别车牌
+     *
+     * @return 识别车牌号码，无识别返回null
+     */
+    public String getPlate() {
+        try {
+            String plate = plateNum;
+            if (plate == null || "".equals(plate)) {
+//                FlowControl.chargeObserCode = "W";
+                return null;
+            } else {
+                plate = plate.trim();
+                if (plate.length() > 8) {
+                    plate = plate.substring(0, 8);
+                }
+                plate = plate.trim();
+                if ("无车牌".equals(plate)) {
+                    plate = null;
+                }
+                return plate;
+            }
+        } catch (Exception ex) {
+            MTCLog.log("LPR:" + "车牌获取异常：", ex);
+            return null;
+        }
+    }
+
+    /**
+     * 获取车牌识别车牌颜色
+     *
+     * @return 识别车牌颜色，无识别返回null
+     */
+    public String getPlateColor() {
+        try {
+            String plateCol = this.plateColor;
+            if (plateCol == null || "".equals(plateCol)) {
+                return null;
+            } else {
+                plateCol = plateCol.trim();
+                if (plateCol.length() > 1) {
+                    plateCol = plateCol.substring(0, 1);
+                }
+                plateCol = plateCol.trim();
+                if (plateCol.equals("_")) {
+                    plateCol = null;
+                }
+                return plateCol;
+            }
+        } catch (Exception ex) {
+            MTCLog.log("LPR:" + "车牌颜色获取异常", ex);
+            return null;
+        }
+    }
+
+    /**
+     * 获取车牌识别设备错误信息
+     *
+     * @return 车牌识别设备错误信息
+     */
+    public String getErrorMsg() {
+        try {
+            if (lpr == null || !lprIsReady) {
+                if (Lane.getInstance().isEntry()) {
+                    return "56";
+                } else if (Lane.getInstance().isExit()) {
+                    return "33";
+                }
+            }
+            return lpr.getErrorMsg();
+        } catch (Exception ex) {
+            MTCLog.log("LPR:" + "获取车牌识别设备异常信息时出现异常,", ex);
+            if (Lane.getInstance().isEntry()) {
+                return "56";
+            } else if (Lane.getInstance().isExit()) {
+                return "33";
+            } else {
+                return null;
+            }
+        }
+    }
+
+    /**
+     * 初始化车牌信息
+     */
+    public void initPlateInfo() {
+        plateNum = null;
+        plateColor = null;
+        vehImg = null;
+    }
+
+}

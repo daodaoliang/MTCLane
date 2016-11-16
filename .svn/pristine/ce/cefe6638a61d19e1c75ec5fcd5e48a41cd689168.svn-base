@@ -1,0 +1,8 @@
+﻿##全键盘键值表文件路径
+fullKeyboardPath=path2
+
+#网路全键盘键值表文件路径
+path1 = resource/template/WangluKeyboard.properties
+
+#腾浩全键盘键值表文件路径
+path2 = resource/template/TengHaoKeyboard.properties

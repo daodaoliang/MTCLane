@@ -1,0 +1,93 @@
+package ui.myJLabel;
+
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import javax.swing.JLabel;
+
+/**
+ * 自定义用于雨棚灯的标签
+ *
+ * @author Wang Guodong
+ */
+public class LightJLabel extends JLabel {
+
+    private boolean lightFlag;//true绿灯 false红灯
+
+    @Override
+    public void paint(Graphics g) {
+        super.paint(g);
+        Graphics2D g2d = (Graphics2D) g;
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        int w = getWidth();
+        int h = getHeight();
+        if (lightFlag) {
+            //画绿灯图片
+            g2d.setColor(Color.green);
+            int[] xbuffer = new int[7];
+            int[] ybuffer = new int[7];
+            int x = 40;
+            int y = 30;
+            xbuffer[0] = w / 2 - x / 2;
+            ybuffer[0] = 0;
+            xbuffer[1] = w / 2 - x / 2;
+            ybuffer[1] = h / 2;
+            xbuffer[2] = w / 2 - x / 2 - y;
+            ybuffer[2] = h / 2;
+            xbuffer[3] = w / 2;
+            ybuffer[3] = h;
+            xbuffer[4] = w / 2 + x / 2 + y;
+            ybuffer[4] = h / 2;
+            xbuffer[5] = w / 2 + x / 2;
+            ybuffer[5] = h / 2;
+            xbuffer[6] = w / 2 + x / 2;
+            ybuffer[6] = 0;
+            g2d.fillPolygon(xbuffer, ybuffer, 7);
+            System.out.println("green");
+        } else {
+            //画红灯图片
+            g2d.setColor(Color.red);
+            int[] xbuffer = new int[4];
+            int[] ybuffer = new int[4];
+            int x = 30;
+            xbuffer[0] = 0;
+            ybuffer[0] = 0;
+            xbuffer[1] = w - x;
+            ybuffer[1] = h;
+            xbuffer[2] = w;
+            ybuffer[2] = h;
+            xbuffer[3] = x;
+            ybuffer[3] = 0;
+            g2d.fillPolygon(xbuffer, ybuffer, 4);
+            xbuffer[0] = w - x;
+            ybuffer[0] = 0;
+            xbuffer[1] = 0;
+            ybuffer[1] = h;
+            xbuffer[2] = x;
+            ybuffer[2] = h;
+            xbuffer[3] = w;
+            ybuffer[3] = 0;
+            g2d.fillPolygon(xbuffer, ybuffer, 4);
+            g2d.drawLine(0, 0, w, h);
+            System.out.println("red");
+        }
+    }
+
+    /**
+     * 雨棚灯绿灯
+     */
+    public void setLightGreen() {
+        lightFlag = true;
+        repaint();
+    }
+
+    /**
+     * 雨棚灯红灯
+     */
+    public void setLightRed() {
+        lightFlag = false;
+        repaint();
+    }
+
+}

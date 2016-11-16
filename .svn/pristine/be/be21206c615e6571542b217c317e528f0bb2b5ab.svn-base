@@ -1,0 +1,461 @@
+package com.hgits.hardware.impl.printer;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.TooManyListenersException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import javax.comm.CommPortIdentifier;
+import javax.comm.NoSuchPortException;
+import javax.comm.PortInUseException;
+import javax.comm.SerialPort;
+import javax.comm.SerialPortEvent;
+import javax.comm.SerialPortEventListener;
+import javax.comm.UnsupportedCommOperationException;
+
+import com.hgits.hardware.Printer;
+import com.hgits.common.log.MTCLog;
+import com.hgits.util.HexUtils;
+import com.hgits.util.MyPropertiesUtils;
+import com.hgits.util.SetCOMs;
+import com.hgits.util.StringUtils;
+import com.hgits.vo.Constant;
+import com.sun.org.apache.xerces.internal.impl.dv.util.HexBin;
+
+public class GeaPrinter implements SerialPortEventListener, Printer {
+
+	public static SerialPort port;
+	// 端口输入流
+	private InputStream in;
+	// 端口输出流
+	private OutputStream out;
+	/**
+	 * 打印机状态
+	 */
+	private String printStatus = "";
+	/**
+	 * 打印机错误信息
+	 */
+	public String printError = "";
+	/**
+	 * 线程池
+	 */
+	private ExecutorService javaThreadPool = Executors.newFixedThreadPool(2);
+	private int times;
+	private String writerLog = "0";
+	private int printTimes = 0;
+
+	public OutputStream getOut() {
+		return out;
+	}
+
+	public GeaPrinter() {
+
+		try {
+			// 加载串口信息
+			String info = SetCOMs.getPrint();
+			String[] infos = info.split(",");
+			String com = infos[0];
+
+			int baudRate = Integer.parseInt(infos[1]);// 波特率
+			int dataBits = Integer.parseInt(infos[2]);// 数据位
+			int stopBits = Integer.parseInt(infos[3]);// 停止位
+			int parity = Integer.parseInt(infos[4]);// 校验位
+			writerLog = infos[6];
+			// 配置串口
+			CommPortIdentifier portName = CommPortIdentifier
+					.getPortIdentifier(com);
+			port = (SerialPort) portName.open("打印机", 2000);
+
+			port.setSerialPortParams(baudRate, dataBits, stopBits, parity);
+			port.setDTR(true);
+			port.setRTS(true);
+			port.addEventListener(this);
+			port.notifyOnDataAvailable(true);
+
+			in = port.getInputStream();
+			out = port.getOutputStream();
+
+			checkMyslfe();
+
+		} catch (NullPointerException e) {
+			MTCLog.log("构造器：NullPointerException", e);
+		} catch (PortInUseException e) {
+			MTCLog.log("构造器：PortInUseException", e);
+			printError = "打印机：串口被占用";
+		} catch (NoSuchPortException e) {
+			MTCLog.log("构造器：NoSuchPortException", e);
+			printError = "打印机：没有这个串口";
+		} catch (IOException e) {
+			MTCLog.log("构造器：IOException", e);
+			printError = "打印机：IO异常";
+		} catch (UnsupportedCommOperationException e) {
+			MTCLog.log("构造器：UnsupportedCommOperationException", e);
+			printError = "打印机：UnsupportedCommOperationException";
+		} catch (TooManyListenersException e) {
+			MTCLog.log("构造器：TooManyListenersException", e);
+			printError = "打印机：TooManyListenersException";
+		}
+	}
+
+	@Override
+	public void serialEvent(SerialPortEvent event) {
+		times = 0;
+		switch (event.getEventType()) {
+		case SerialPortEvent.BI:
+		case SerialPortEvent.OE:
+		case SerialPortEvent.FE:
+		case SerialPortEvent.PE:
+		case SerialPortEvent.CD:
+		case SerialPortEvent.CTS:
+		case SerialPortEvent.DSR:
+		case SerialPortEvent.RI:
+		case SerialPortEvent.OUTPUT_BUFFER_EMPTY:
+			break;
+		case SerialPortEvent.DATA_AVAILABLE:
+			byte[] b = null;
+			try {
+				while (in.available() > 0) {
+					byte[] buffer = new byte[in.available()];
+					in.read(buffer);
+					for (int a = 0; a < buffer.length; a++) {
+						printStatus = StringUtils.changeIntToHex(buffer[a], 2);
+					}
+				}
+			} catch (IOException ex) {
+				MTCLog.log("监听器：IOException", ex);
+			}
+			break;
+		}
+	}
+
+	/**
+     * 要打印的车辆信息
+     *
+     * @param limit_weight 限重
+     * @param weight 车重
+     * @param laneId 车道
+     * @param staffId 员工号
+     * @param type 车型
+     * @param cash 车费
+     * @param entrance 入口站
+     * @param exit 出口站
+     * @param city 城市
+     * @param cityFee 城市通行费
+     * @param plate 车牌
+     * @throws UnsupportedEncodingException
+     */
+    public void print(String limit_weight, String weight, String laneId,
+            String staffId, String type, String cash,
+            String entrance, String exit, String city, String cityFee, String plate) throws UnsupportedEncodingException {
+        if (out == null) {
+            MTCLog.log("打印机输出流为null");
+            return;
+        }
+        try {
+            writeLog("打印机正在打印...", "");
+            plate = HexBin.encode(plate.getBytes("gbk"));
+            double w = Double.parseDouble(limit_weight);
+            //车轴限重
+            limit_weight = HexBin.encode(limit_weight.getBytes());
+            //车身重量
+            weight = HexBin.encode(weight.getBytes());
+            String weight_str = "";
+            if (w > 0) {
+                weight_str = "2020202020202020202020" + limit_weight + "20202020202020202020202020" + weight;
+            }
+            //车道ID
+            laneId = HexBin.encode(laneId.getBytes());
+            //员工编号
+            staffId = HexBin.encode(staffId.getBytes());
+            //收费金额
+            cash = HexBin.encode(cash.getBytes());
+            //车辆所经入口
+            entrance = HexBin.encode(entrance.getBytes("gbk"));
+            //车辆所经出口
+            exit = HexBin.encode(exit.getBytes("gbk"));
+            //所在城市
+            city = HexBin.encode(city.trim().getBytes("gbk"));
+            String cityName = "2020202020202020" + city;//某某城市;
+            if ("".equals(city)) {
+                cityName = "";
+            }
+            //城市通行费
+            cityFee = HexBin.encode(cityFee.trim().getBytes());
+            String cityNameFee = "202020202020202020202020202020202020" + cityFee;//城市通行费
+            if ("".equals(city)) {
+                cityNameFee = "";
+            }
+            SimpleDateFormat sf = new SimpleDateFormat("yyyy/MM/dd HH:mm");
+            String printDate = HexBin.encode(sf.format(new Date()).getBytes());
+
+            String printMessage
+                    = "1B 41 01 1B 32 1B 4A 11 "
+                    + "1B 4A 18 "
+                    + "1B 4A 18 "
+                    + weight_str
+                    + "1B 4A 17"
+                    + "2020202020202020202020" + laneId + "20202020202020202020"//车道  X04
+                    + "202020202020202020202020202020202020202020202020202020202020202020202020"
+                    + "2020202020" + staffId //收费员 000018
+                    + "1B 4A 17"
+                    + "20202020202020202020202030 3" + type/*1*/ //车型 1
+                    + "20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 "
+                    + "20202020202020202020202020202020202020202020202020202020202020202020" + cash//通行费
+                    + "1B 4A 17 "//回车换行
+                    + "20202020202020202020"
+                    + entrance + " 20 20 2020202020202020" + exit
+                    + "14 1B 4A 17 "
+                    + cityName
+                    + cityNameFee
+                    //                                    + "2020202020202020"+city//某某城市
+                    //                                    +"202020202020202020202020202020202020202020202030"+cityFee//城市通行费
+                    + "1B 4A 28 "
+                    + "20202020202020202020202020" + printDate + plate//票据打印日期
+                    + "14 1B 4A 58";
+            String newPrintMessage = "1B 40 1B 44 0E 1E 00 0A 0A 0A 0A 0A 0A "
+                    + weight_str
+                    + "0A 0A 09 " + laneId + "09" + staffId
+                    + "0A 0A 09 3" + type + "09" + cash
+                    + "0A 0A 09 " + entrance + "09" + exit
+                    + "0A 0A 09 20 20"
+                    + printDate
+                    + "0A 0A 0D 09" + plate
+                    + "0A 0A 0A 0A 0A 0A 0A 0A";
+            String printflag = MyPropertiesUtils.getProperties(Constant.PROP_MTCLANE_FUNCTION,"printflag", null);
+            if (printflag.equals("1")) {
+//                printMessage = newPrintMessage;
+
+                newPrintMessage = newPrintMessage.replaceAll(" ", "");
+
+                write("发送打印指令", newPrintMessage);
+            } else {
+
+                printMessage = printMessage.replaceAll(" ", "");
+
+                write("发送打印指令", printMessage);
+                printTimes++;
+                if (printTimes >= 6) {
+                    feed();
+                    printTimes = 0;
+                }
+            }
+
+        } catch (Exception ex) {
+            MTCLog.log("打印机异常：", ex);
+        }
+    }
+
+	/**
+	 * 出纸
+	 */
+	private void feed() {
+		write("每打印6次出纸", "1B4A05");
+	}
+
+	/**
+	 * 打印机测试页面
+	 *
+	 * @throws Exception
+	 */
+	public static void printTestPage() throws Exception {
+		/**
+		 * 打印机测试指令
+		 */
+		String printTest = "1B 41 01 1B32 1B 4A 0A 1B 4A 0E"
+				+ "14 1B 4A 1B "
+				+ "20202020202020202020202020203020202020202020202020202020202020203020202020"
+				+ "14 1B 4A 1B "
+				+ "20 20 20 20 2020202020202020 583034 20 20 20 20 20 "// 车道 X04
+				+ "20202020202020202020 30 30 30 30 31 38 20 20 20 20 "// 收费员
+																		// 000018
+				+ "14 1B 4A 1B"
+				+ "20 20 20 2020 20 20 20202020202030 31"
+				+ "202020202020202020 20 20 20 20 20203230303030"
+				+ "14 1B 4A 1B "// 回车换行
+				+ "20202020202020 202020 "
+				+ "20202020D4C2D0CEC9BD 20 20 20 20 20 2020 20202020 b1 b1 be a9 b3 c7 "// 月形山
+																						// //雨花
+				+ "14 1B 4A 1B "
+				+ "202020202020202030 30"// 某某城市
+				+ "1B 4A 0E"
+				+ "202020202020202020202020202020202020202020202020202020203220202020"// 2日有效
+				+ "14 1B 4A 1B"
+				+ "2020202020202020202020202020202020 32 30 31 32 2F 31 31 2F 32 30 20 31 30 3A 30 32 1B 4A 0E"// 票据打印日期
+				+ "14 1B 4A 1B " + "1B 4A 0E" + "1B 4A 0E" + "14 1B 4A 1B ";
+		byte[] b = HexUtils.decode(printTest.replaceAll(" ", ""));
+		port.getOutputStream().write(b);
+	}
+
+	/**
+	 * 打印机自检
+	 */
+	private void checkMyslfe() {
+		javaThreadPool.execute(new Runnable() {
+			@Override
+			public void run() {
+				while (true) {
+					try {
+						Thread.sleep(1000);
+						String order = changOrder(printStatus);
+						String s = "";
+						String s1 = "";
+						try {
+							s = order.charAt(4) + "";
+
+							s1 = order.charAt(2) + "";
+						} catch (Exception e) {
+							times++;
+							if (times > 2) {
+								// 打印机通讯异常
+								printError = "17";// "打印机通讯异常";
+								continue;
+							}
+
+						}
+
+						if (s.equals("1")) {
+							// 打印机缺纸
+							printStatus = "";
+							printError = "18"; // "打印机缺纸";
+
+						} else {
+							printError = "";
+						}
+						if (s1.equals("1")) {
+							// 打印机正常
+							printStatus = "";
+						}
+					} catch (InterruptedException ex) {
+						MTCLog.log("InterruptedException", ex);
+					}
+				}
+			}
+		});
+		// 每1秒发送5，获取打印机的当前状态码
+		javaThreadPool.execute(new Runnable() {
+			@Override
+			public void run() {
+				while (true) {
+					try {
+						Thread.sleep(1000);
+					} catch (InterruptedException ex) {
+						MTCLog.log("打印机获取状态码异常线程", ex);
+					}
+					if (out != null) {
+						write("获取打印机的当前状态码", 5);
+					}
+
+				}
+			}
+		});
+	}
+
+	/**
+	 * 转换指令 将二进制第二位变成0
+	 *
+	 * @param hexString
+	 * @return
+	 */
+	private String changOrder(String hexString) {
+		if (hexString == null || hexString.equals("")) {
+			return "";
+		}
+		String bString = "", tmp;
+		for (int i = 0; i < hexString.length(); i++) {
+			tmp = "0000"
+					+ Integer.toBinaryString(Integer.parseInt(
+							hexString.substring(i, i + 1), 16));
+			bString += tmp.substring(tmp.length() - 4);
+		}
+		return bString;
+	}
+
+	/**
+	 * 变回指令
+	 *
+	 * @param bString
+	 * @return
+	 */
+	// private String backOrder(String bString) {
+	// if (bString == null || bString.equals("") || bString.length() % 8 != 0) {
+	// return null;
+	// }
+	// StringBuffer tmp = new StringBuffer();
+	// int iTmp = 0;
+	// for (int i = 0; i < bString.length(); i += 4) {
+	// iTmp = 0;
+	// for (int j = 0; j < 4; j++) {
+	// iTmp += Integer.parseInt(bString.substring(i + j, i + j + 1)) << (4 - j -
+	// 1);
+	// }
+	// tmp.append(Integer.toHexString(iTmp));
+	// }
+	// return tmp.toString();
+	// }
+	public static void main(String[] args) {
+		// Printer p = new Printer();
+
+	}
+
+	/**
+	 * 获取打印机错误信息
+	 *
+	 * @return 打印机错误信息
+	 */
+	public String getPrintError() {
+		String error = "";
+		if (printError.equals("")) {
+			error = null;
+		} else {
+			error = printError;
+		}
+		return error;
+	}
+
+	/**
+	 * 发送串口命令记录日志
+	 *
+	 * @param orderName
+	 * @param order
+	 */
+	private void writeLog(String orderName, String order) {
+		if ("1".equals(writerLog)) {
+			MTCLog.log("Printer " + orderName + ":" + order);
+		}
+	}
+
+	/**
+	 * 发送指令
+	 *
+	 * @param orderName
+	 *            指令描述
+	 * @param order
+	 *            指令
+	 */
+	private synchronized void write(String orderName, Object order) {
+		if (out == null) {
+			MTCLog.log("打印机输出流为null");
+			return;
+		}
+		try {
+			if (order instanceof String) {
+				out.write(HexUtils.decode((String) order));
+				out.flush();
+
+				writeLog(orderName, (String) order);
+			} else {
+				out.write((Integer) order);
+				out.flush();
+			}
+
+		} catch (IOException ex) {
+			MTCLog.log("打印机 :" + orderName, ex);
+		}
+	}
+}

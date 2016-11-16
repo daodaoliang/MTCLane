@@ -1,0 +1,91 @@
+package nc.ui.mes.video;
+
+import com.hgits.control.LogControl;
+import com.sun.jna.Native;
+import java.awt.Container;
+import java.awt.GridLayout;
+import java.awt.Panel;
+import java.io.File;
+import java.util.List;
+
+public class SAA7134 {
+
+    private Container parent;
+    private List<Panel> panelList;
+//    String jawtpath = System.getProperty("java.home") + System.getProperty("file.separator") + "bin" + System.getProperty("file.separator") + "jawt.dll";
+
+//    static {
+//        try {
+//            LogControl.logInfo(System.getProperty("java.library.path"));
+//            System.loadLibrary("saa7134");
+//        } catch (Exception e) {
+//            throw new RuntimeException("can not found saa7134.dll in java.libary.path");
+//        }
+//    }
+
+
+
+
+    public SAA7134(List<Panel> panelList, Panel parent) {
+        this.panelList = panelList;
+        this.parent = parent;
+        System.loadLibrary("saa7134");
+        init();
+    }
+
+    private void init() {
+        
+        long frameHwnd = Native.getComponentID(this.parent);
+        
+//        LogControl.logInfo("Frame 窗口句柄是：" + frameHwnd);
+        boolean ret = initSAA7134(frameHwnd);
+        int devNum = getDeviceNum();
+//        LogControl.logInfo("当前设备数：" + devNum);
+        for (int i = 0; i < devNum; i++) {
+            long hwnd = Native.getComponentID(this.panelList.get(i));
+//            LogControl.logInfo(i + "号窗口句柄：" + hwnd);
+            if (!start(hwnd, i)) {
+                throw new RuntimeException(" start captureDevice faild!");
+            }
+        }
+    }
+
+    private void setLayOut(int devNum) {
+        int size = devNum;
+        int columns;
+        int row;
+        if (size < 2) {
+            row = 1;
+            columns = 1;
+        } else {
+            row = 2;
+            columns = size / row;
+            if (size % row != 0) {
+                row++;
+            }
+        }
+        this.parent.setLayout(new GridLayout(row, columns, 5, 5));
+    }
+
+    public void grap() {
+        int devNum = getDeviceNum();
+        File dir = new File("temp");
+        if(!dir.exists()||!dir.isDirectory()){
+            dir.mkdirs();
+        }
+//        for (int i = 0; i < devNum; i++) {
+            String filename =dir.getAbsolutePath()+ File.separator+"videoTemp.jpg";
+            grap(filename, 0);
+//        }
+    }
+
+    private native int getDeviceNum();
+
+    private native boolean start(long paramLong, int paramInt);
+
+    private native boolean initSAA7134(long paramLong);
+
+    public native void closeSAA7134();
+
+    private native void grap(String paramString, int paramInt);
+}

@@ -1,0 +1,3 @@
+在命令中执行java -jar Restart.jar即可运行该程序，改程序主要是为了确保新建一个java虚拟机来重新运行指定程序
+Restart.jar可以通过restart.properties进行配置，指定需要重启的程序
+Restart.jar,restart.properties需要跟指定重启程序放在同一个目录下面

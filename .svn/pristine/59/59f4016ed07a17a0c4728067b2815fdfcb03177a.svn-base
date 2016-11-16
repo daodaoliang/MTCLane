@@ -1,0 +1,199 @@
+package com.hgits.control;
+
+import com.hgits.task.MyTask;
+import com.hgits.tool.socket.ImgLaneSocketChannel;
+import com.hgits.util.IntegerUtils;
+import com.hgits.util.MyPropertiesUtils;
+import com.hgits.vo.Constant;
+import java.net.InetSocketAddress;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import org.apache.log4j.Logger;
+
+/**
+ * 用于控制车道与服务器请求图片，支持同时与多个服务器请求图片
+ *
+ * @author WangGuodong
+ */
+public class ImgLaneServerControl  {
+
+    private int interval;//请求入口图片超时时间
+    private final List<ImgLaneSocketChannel> ilscList = Collections.synchronizedList(new ArrayList());
+    private boolean running = true;//运行标识
+    boolean requesting = false;//请求入口图片标识
+    private int maxImgSocketCnt = 10;//图片服务器最大数量
+    private final Logger logger = Logger.getLogger(ImgLaneServerControl.class);
+
+    public void init() {
+        ServerTask serverTask = new ServerTask();
+        ThreadPoolControl.getThreadPoolInstance().execute(serverTask);
+        MonitorTask monitorTask = new MonitorTask(serverTask);
+        ThreadPoolControl.getThreadPoolInstance().execute(monitorTask);
+    }
+
+    /**
+     * 请求获取入口图片,返回图片对应字节数组集合（可为多个）
+     *
+     * @param date 入口图片时间（写卡时间）
+     * @param entRoadid 入口路段号
+     * @param entStationid 入口收费站号
+     * @param entLane 入口车道号
+     * @return 入口图片数组集合（可为多个）
+     */
+    public List<byte[]> requestEntryImg(final Date date, final String entRoadid, final String entStationid, final String entLane) {
+        requesting = true;
+        final List<byte[]> imgList = new ArrayList();
+        synchronized (ilscList) {
+            for (int i = 0; i < ilscList.size(); i++) {
+                final ImgLaneSocketChannel ilc = ilscList.get(i);
+                ThreadPoolControl.getThreadPoolInstance().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        List<byte[]> tempList = ilc.requestEntryImg(date, entRoadid, entStationid, entLane);
+                        if (tempList != null && !tempList.isEmpty() && imgList.isEmpty()) {//首次获取入口图片信息
+                            imgList.addAll(tempList);
+                        }
+                    }
+                });
+            }
+        }
+        long start = System.currentTimeMillis();
+        while (running&&requesting) {
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException ex) {
+            }
+            long end = System.currentTimeMillis();
+            if(end<start){//当前时间小于开始时间，重新开始计时
+                start = end;
+            }
+            if (end - start > interval) {//超时
+                break;
+            }
+            if (!imgList.isEmpty()) {//获取到图片
+                break;
+            }
+        }
+        requesting = false;
+        return imgList;
+    }
+
+    /**
+     * 停止图片请求
+     */
+    public void stopRequestEntryImg(){
+        requesting = false;
+        synchronized(ilscList){
+            for (ImgLaneSocketChannel lsc : ilscList) {
+                if (lsc != null) {
+                    lsc.stopRequestEntryImg();
+                }
+            }
+        }
+    }
+
+    public List<byte[]> requestPlateBlackImg(String plateNum) {
+        return null;
+    }
+    class ServerTask extends MyTask {
+
+        @Override
+        public void run() {
+            try {
+                setAlive(true);
+                String port = MyPropertiesUtils.getProperties(Constant.PROP_SOCKET, "TCOImageSocket", "11117");
+                int imgPort = IntegerUtils.parseString(port);
+                String str = MyPropertiesUtils.getProperties(Constant.PROP_MTCLANE_CONSTANT, "getEntIMGInterval", "3000");
+                int getEntIMGInterval = IntegerUtils.parseString(str);
+                interval = getEntIMGInterval;
+                String roadid = MyPropertiesUtils.getProperties(Constant.PROP_MTCCONFIG, "roadId", "000");
+                String stationid = MyPropertiesUtils.getProperties(Constant.PROP_MTCCONFIG, "stationId", "000");
+                String laneid = MyPropertiesUtils.getProperties(Constant.PROP_MTCCONFIG, "laneNo", "000");
+                str = MyPropertiesUtils.getProperties(Constant.PROP_MTCLANE_CONSTANT, "maxImgSocketCnt", "10");
+                maxImgSocketCnt = IntegerUtils.parseString(str);
+                ServerSocketChannel ssc;
+                ssc = ServerSocketChannel.open();
+                ssc.bind(new InetSocketAddress(imgPort));
+                ssc.configureBlocking(false);
+                logger.warn("请求入口图片控制模块监听端口：" + ssc);
+                while (running) {
+                    Thread.sleep(10);
+                    if (ilscList.size() >= maxImgSocketCnt) {//连接数超限
+                        continue;
+                    }
+                    SocketChannel sc = ssc.accept();
+                    if (sc == null) {
+                        continue;
+                    }
+                    logger.warn("请求入口图片控制模块接收连接：" + sc);
+                    ImgLaneSocketChannel ilc = new ImgLaneSocketChannel(roadid, stationid, laneid, sc, getEntIMGInterval);
+                    ilscList.add(ilc);
+                    ThreadPoolControl.getThreadPoolInstance().execute(ilc);
+                }
+            } catch (Throwable ex) {
+                logger.error(ex, ex);
+            }
+            setAlive(false);
+        }
+    }
+
+    class MonitorTask extends MyTask {
+
+        private final ServerTask serverTask;
+
+        public MonitorTask(ServerTask serverTask) {
+            this.serverTask = serverTask;
+        }
+
+        @Override
+        public void run() {
+            try {
+                Outer:
+                while (running) {
+                    Thread.sleep(1000);
+                    if (!serverTask.isAlive()) {
+                        serverTask.setAlive(running);
+                        ThreadPoolControl.getThreadPoolInstance().execute(serverTask);
+                    }
+                    if (ilscList == null || ilscList.isEmpty()) {
+                        continue;
+                    }
+                    synchronized (ilscList) {
+                        for (ImgLaneSocketChannel lsc : ilscList) {
+                            if (lsc == null) {
+                                logger.warn("请求入口图片控制模块移除空连接");
+                                ilscList.remove(lsc);
+                                continue Outer;
+                            } else if (!lsc.isRunning()) {
+                                logger.warn("请求入口图片控制模块移除已关闭连接" + lsc.getRemoteAddress());
+                                ilscList.remove(lsc);
+                                continue Outer;
+                            }
+                        }
+                    }
+                }
+            } catch (Exception ex) {
+                logger.error(ex, ex);
+            }
+        }
+    }
+
+    /**
+     * 停止运行
+     */
+    public void stop() {
+        logger.warn("请求入口图片控制模块退出");
+        running = false;
+        synchronized (ilscList) {
+            for (ImgLaneSocketChannel lsc : ilscList) {
+                if (lsc != null) {
+                    lsc.stop();
+                }
+            }
+        }
+    }
+}

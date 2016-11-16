@@ -1,0 +1,196 @@
+package com.hgits.service;
+
+import ui.ExtJFrame;
+
+import com.hgits.control.CartControl;
+import com.hgits.control.M1Control;
+import com.hgits.hardware.CICM;
+import com.hgits.hardware.Keyboard;
+import com.hgits.util.CheckUtils;
+import com.hgits.util.MyPropertiesUtils;
+import com.hgits.util.StringUtils;
+import com.hgits.vo.Card;
+import com.hgits.vo.Constant;
+import com.hgits.vo.Lane;
+
+/**
+ * 卡机菜单服务类,服务于CartControl
+ *
+ * @author 王国栋
+ */
+public class CartControlService extends CartControl {
+
+    public CartControlService(ExtJFrame extJFrame, CICM cicm, M1Control m1Control, Keyboard keyboard) {
+        this.extJFrame = extJFrame;
+        this.cicm = cicm;
+        this.m1Control = m1Control;
+        this.keyboard = keyboard;
+    }
+
+    /**
+     * 等待与车道所属收费站相匹配的卡箱传递员身份卡
+     *
+     * @param lane 车道信息
+     * @return 卡箱传递员放入身份卡，null 取消此操作
+     */
+    public Card waitForStaffCard(Lane lane) {
+        Card idCard = null;
+        while (idCard == null) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException ex) {
+            }
+            if ("取消".equals(keyboard.getMessage())) {                         //用户取消装入卡箱操作
+                return null;
+            }
+            idCard = m1Control.getReadedCard();
+            if (idCard != null) {//卡箱传递员身份卡放到卡箱上
+                if (!Constant.CARD_TYPE_03.equals(idCard.getType())) {
+                    keyboard.sendAlert();
+                    idCard = null;
+                } else {
+                    break;
+                }
+            }
+        }
+        String staffid = StringUtils.encodeID(idCard.getId());
+        int i = CheckUtils.checkStaff(staffid, lane.getRoadId(), lane.getStationId());//验证卡箱传递员身份卡可在本站使用
+        if (i != 0) {
+            idCard = null;
+            extJFrame.updateInfo("", "非本站卡箱传递员，无权在本站操作");
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException ex) {
+            }
+            extJFrame.updateInfo("等待出示卡箱传递员身份卡", "将卡箱传递员的身份卡放到天线上");
+            return waitForStaffCard(lane);
+        }
+        return idCard;
+    }
+
+    /**
+     * 等待与车道所属收费站相匹配的卡箱标签卡
+     *
+     * @param lane 车道
+     * @return 放入符合规定的卡箱标签卡 null 取消此操作
+     */
+    public Card waitForCartCard(Lane lane) {
+        Card cart = null;
+        while (cart == null) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException ex) {
+            }
+            if ("取消".equals(keyboard.getMessage())) {                         //用户取消装入卡箱操作
+                return null;
+            }
+            cart = m1Control.getReadedCard();
+            if (cart != null && Constant.CARD_TYPE_04.equals(cart.getType())) { //卡箱标签卡放到天线上
+                break;
+            } else {
+                cart = null;
+            }
+        }
+
+//        if (!CheckUtils.checkCardForStation(cart, lane)) {                                 //验证卡箱标签卡可在本站使用
+        if (!CheckUtils.checkAuthStation(cart, lane)) {
+            cart = null;
+            extJFrame.updateInfo("", "非本站卡箱标签卡，请放入符合要求的卡箱");
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException ex) {
+            }
+            extJFrame.updateInfo("等待出示卡箱标签", "将卡箱标签卡放到天线上");
+            return waitForCartCard(lane);
+        }
+        return cart;
+    }
+
+    /**
+     * 等待卡机收发头合上
+     */
+    public void waitForReceiveHeadCovered() {
+        while (cicm.checkReceiveHead()) {                                       //合上卡机收发头
+            if (keyboard.getMessage() != null) {
+                keyboard.sendAlert();
+            }
+            try {
+                Thread.sleep(200);
+            } catch (InterruptedException ex) {
+            }
+        }
+    }
+
+    /**
+     * 等待卡机收发头抬起
+     */
+    public void waitForReceiveHeadUncovered() {
+        while (!cicm.checkReceiveHead()) {                                      //卡机收发头抬起
+            if (keyboard.getMessage() != null) {
+                keyboard.sendAlert();
+            }
+            try {
+                Thread.sleep(200);
+            } catch (InterruptedException ex) {
+            }
+        }
+    }
+
+    /**
+     * 等待合上卡机保护盖
+     */
+    public void waitForProtectCoverLocked() {
+        while (cicm.checkProtectCover()) {                                      //检测卡机保护盖状态
+            if (keyboard.getMessage() != null) {
+                keyboard.sendAlert();
+            }
+            try {
+                Thread.sleep(200);
+            } catch (InterruptedException ex) {
+            }
+        }
+    }
+
+    /**
+     * 等待打开卡机保护盖
+     *
+     * @return true卡机保护盖打开 false用户取消操作
+     */
+    public boolean waitForProtectCoverUnlocked() {
+        String str;
+        while (!cicm.checkProtectCover()) {                                     //检测卡机保护盖状态
+            String temp = MyPropertiesUtils.getProperties(Constant.PROP_MTCLANE_TEST, "cartTestCode", "1");
+            if ("0".equals(temp)) {
+                break;
+            }
+            str = keyboard.getMessage();
+            if ("取消".equals(str)) {
+                return false;
+            } else if (str != null) {
+                keyboard.sendAlert();
+            }
+            try {
+                Thread.sleep(200);
+            } catch (InterruptedException ex) {
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 等待卡机收发针降到底
+     */
+    public void waitForReceivePinBottom() {
+        while (cicm.checkReceivePin() != 0) {                                   //检测收发针状态
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException ex) {
+            }
+        }
+    }
+
+    public boolean checkStation(String curStation, String cartStation) {
+
+        return false;
+    }
+}

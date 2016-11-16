@@ -1,0 +1,394 @@
+/**
+ *
+ */
+package com.hgits.util.file;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.net.URL;
+import java.net.URLDecoder;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Vector;
+
+import org.apache.log4j.Logger;
+
+import com.hgits.service.constant.BaseConstant;
+import com.hgits.service.constant.MtcConstant;
+import com.hgits.util.MyPropertiesUtils;
+import com.hgits.vo.Constant;
+
+/**
+ * 文件处理公共类
+ *
+ * @author wh
+ *
+ */
+public class FileUtils extends org.apache.commons.io.FileUtils {
+
+    private static Logger logger = Logger.getLogger(FileUtils.class);
+    
+    public static String dataEncodeMode = MyPropertiesUtils.getProperties(Constant.PROP_MTCLANE_FUNCTION, "dataEncodeMode", "0");
+
+    /**
+     * 获取编码方式
+     * @return
+     */
+    public static String encode(){
+    	if("0".equals(dataEncodeMode)){
+    		return MtcConstant.ENCODE_UTF_8;
+    	}else{
+    		return MtcConstant.ENCODE_GBK;
+    	}
+    }
+    
+    /**
+     * 写文件的方法
+     *
+     * @param fileName 文件名
+     * @param content 内容
+     * @param append 是否追加
+     * @throws Exception 
+     */
+    public static void write(String fileName, String content, boolean append) throws Exception {
+    	write(fileName, append, false, content);
+    }
+    
+    /**
+     * 写文件的方法
+     *
+     * @param fileName 文件名
+     * @param append 是否追加
+     * @param isLock 是否加锁
+     * @param content 内容，允许多行
+     * @throws Exception 
+     */
+    public synchronized static void write(String fileName, boolean append, boolean isLock, String ... content) throws Exception {
+    	FileOutputStream fos = null;
+    	FileChannel fc = null;
+    	FileLock flout = null;
+    	ByteBuffer buf = null;
+    	int i = 0;
+    	String errorMessage = null;
+    	while (true) {
+    		if(i >= 3){ //重试次数大于等于3，则退出
+    			logger.error("重写文件异常，重试次数超过"+i+"次，不再重写文件，错误原因：" + errorMessage);
+    			StringBuilder contentBuilder = new StringBuilder();
+    			for (String string : content) {
+    				contentBuilder.append(string).append(BaseConstant.WRAP_STRING);
+				}
+    			logger.info("文件内容:"+contentBuilder.toString());
+    			throw new Exception("写流水异常，请检查");
+    		}
+    		try {
+    			File file = new File(fileName);
+
+    			// 如果父目录不存在，则创建父目录
+    			if (!file.getParentFile().exists()) {
+    				createDir(file.getParent());
+    			}
+    			// 如果文件不存在，则创建文件
+    			if (!file.exists()) {
+    				file.createNewFile();
+    			}
+
+    			while (true) {// 增加文件被占用时，异常处理
+    				try {
+    					fos = new FileOutputStream(fileName, append);
+    					fc = fos.getChannel();
+    					break;
+    				} catch (FileNotFoundException e) {
+    					Thread.sleep(2000);// 休眠2秒
+    				}
+    			}
+    			
+    			if(isLock){
+    				while (true) {
+    					try {
+    						flout = fc.tryLock(); //加锁
+    						if(flout != null){
+    							break;
+    						}
+    						Thread.sleep(2000);// 休眠2秒
+    					} catch (Exception e) {
+    						try {
+    							Thread.sleep(2000);// 休眠2秒
+    						} catch (InterruptedException e1) {
+    						}
+    					}
+    				}
+    			}
+
+    			byte[] contentByte = null;
+    			for (String c : content) { //增加多行记录写入
+    				contentByte = (c + BaseConstant.WRAP_STRING).getBytes(encode());
+    				buf = ByteBuffer.allocate(contentByte.length);
+    				buf.clear();
+    				buf.put(contentByte);
+    				buf.flip();
+    				while (buf.hasRemaining()) {
+    					fc.write(buf);
+    					fc.force(true);
+    				}
+    			}
+    			break; //如果没有任何异常
+
+    		} catch (Exception e) {
+    			logger.error("写文件异常，错误原因：" + e.getMessage(), e);
+    			if(errorMessage == null){
+    				errorMessage = e.getMessage();
+    			}
+    			i++;
+    			try {
+					Thread.sleep(1000);//休眠1秒
+				} catch (InterruptedException e1) {
+				} 
+                continue;
+            }
+            finally{
+            	try {
+    				fc.close();
+    				buf.clear();
+    				fos.flush();
+    				fos.close();
+    				if(flout != null){
+    					flout.release();
+    				}
+    			} catch (Exception e) {
+    				
+    			}
+            }
+		}
+    }
+    
+    /**
+     * 写文件的方法，支持多行记录，不加锁
+     *
+     * @param fileName 文件名
+     * @param content 内容
+     * @param append 是否追加
+     * @throws Exception 
+     */
+    public static void write(String fileName, boolean append,String ... content) throws Exception {
+    	write(fileName, append, false, content);
+    }
+
+    /**
+     * 剔除不需要的文件在文件列表中
+     *
+     * @param files 文件列表
+     * @param files2 需要剔除的文件列表
+     * @return
+     */
+    public static void remove(Vector<File> files, Vector<File> files2) {
+        for (File file2 : files2) {
+            for (File file : files) {
+                if (file.getName().equalsIgnoreCase(file2.getName())) {
+                    files.remove(file);
+                    break;
+                }
+            }
+        }
+    }
+
+    /**
+     * 判断一个文件是否存在
+     *
+     * @param filePath 文件路径
+     * @return 存在返回true，否则返回false
+     */
+    public static boolean isExist(String filePath) {
+        return new File(filePath).exists();
+    }
+
+    /**
+     * 创建目录
+     *
+     * @param destDirName 目录名
+     * @return
+     */
+    public static boolean createDir(String destDirName) {
+        File dir = new File(destDirName);
+        if (dir.exists()) {
+            logger.info("创建目录" + destDirName + "失败，目标目录已经存在");
+            return false;
+        }
+        if (!destDirName.endsWith(File.separator)) {
+            destDirName = destDirName + File.separator;
+        }
+        //创建目录
+        if (dir.mkdirs()) {
+            logger.info("创建目录" + destDirName + "成功！");
+            return true;
+        } else {
+            logger.info("创建目录" + destDirName + "失败！");
+            return false;
+        }
+    }
+
+    /**
+     * 创建文件
+     *
+     * @param destFileName 文件名
+     * @return
+     */
+    public static boolean createFile(String destFileName) {
+        File file = new File(destFileName);
+        if (file.exists()) {
+            logger.info("创建单个文件" + destFileName + "失败，目标文件已存在！");
+            return false;
+        }
+        if (destFileName.endsWith(File.separator)) {
+            logger.info("创建单个文件" + destFileName + "失败，目标文件不能为目录！");
+            return false;
+        }
+        //判断目标文件所在的目录是否存在
+        if (!file.getParentFile().exists()) {
+            //如果目标文件所在的目录不存在，则创建父目录
+            logger.info("目标文件所在目录不存在，准备创建它！");
+            if (!file.getParentFile().mkdirs()) {
+                logger.error("创建目标文件所在目录失败！");
+                return false;
+            }
+        }
+        //创建目标文件
+        try {
+            if (file.createNewFile()) {
+                logger.info("创建单个文件" + destFileName + "成功！");
+                return true;
+            } else {
+                logger.info("创建单个文件" + destFileName + "失败！");
+                return false;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            logger.error("创建单个文件" + destFileName + "失败！" + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 删除文件
+     *
+     * @param pathname 文件路径名
+     */
+    public static void deleteFile(String pathname) {
+        File file2 = new File(pathname);
+        if (file2.exists()) { //判断文件是否为空
+            file2.delete(); //删除文件
+        }
+    }
+
+    /*
+     * 通过递归得到某一路径下所有的目录及其文件
+     */
+    public static Map<String, List<String>> getFiles(String filePath) {
+        File root = new File(filePath);
+        File[] files = root.listFiles();
+        Map<String, List<String>> retMap = new HashMap<String, List<String>>();
+        List<String> filelist = new ArrayList<String>();
+        List<String> folderList = new ArrayList<String>();
+        if(files != null){
+             for (File file : files) {
+                 if (file.isDirectory()) {
+                     /*
+                      * 递归调用
+                      */
+                     getFiles(file.getAbsolutePath());
+                     folderList.add(file.getAbsolutePath());
+                     //System.out.println("显示" + filePath + "下所有子目录及其文件" + file.getAbsolutePath());
+                 } else {
+                     // System.out.println("显示" + filePath + "下所有子目录" + file.getAbsolutePath());
+                     filelist.add(file.getAbsolutePath());
+                 }
+             }
+        }
+       
+        retMap.put("file", filelist);
+        retMap.put("folder", folderList);
+        return retMap;
+    }
+    
+    /**
+     * 拷贝文件
+     * @param scrFilePath 文件原始路径
+     * @param targetFilePath 文件copy路径
+     * @param isSrcDelete  是否需要删除原始文件
+     * @throws IOException
+     */
+    public static void copy(String scrFilePath,String targetFilePath,boolean isSrcDelete) throws IOException{
+		FileUtils.copyFileToDirectory(new File(scrFilePath), new File(targetFilePath));
+		if(isSrcDelete){
+			FileUtils.deleteFile(scrFilePath);
+		}
+    }
+    
+    /**
+     * 修改文件名
+     * @param srcFilePath 文件名
+     * @param suffix 后缀名
+     */
+    public static String rename(String srcFilePath,String targetFilePath){
+    	if(srcFilePath == null){
+    		return null;
+    	}
+    	
+    	File tempFile = new File(srcFilePath);
+    	if(tempFile.exists() && tempFile.isDirectory()){//检查要重命名的文件是否存在，是否是文件
+    		return null;
+    	}
+    	tempFile.renameTo(new File(targetFilePath));  //修改文件名
+    	return targetFilePath;
+    }
+    
+    /**
+     * 获取工程根目录
+     * @return
+     */
+	public static String getRootPath() {
+		URL url = FileUtils.class.getProtectionDomain().getCodeSource()
+				.getLocation();
+		String path = null;
+		try {
+			path = URLDecoder.decode(url.getPath(), "utf-8");// 转化为utf-8编码
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		if (path.endsWith(".jar")) {// 可执行jar包运行的结果里包含".jar"
+			if(path.indexOf("lib") != -1){
+				path = path.substring(0, path.lastIndexOf("lib"));
+			}else{
+				// 截取路径中的jar包名
+				path = path.substring(0, path.lastIndexOf("/") + 1);
+			}
+		}else if(path.indexOf("bin") != -1){
+			path = path.substring(0, path.lastIndexOf("bin"));
+		}else if(path.indexOf("build") != -1){
+			path = path.substring(0, path.lastIndexOf("build"));
+		}
+
+		File file = new File(path);
+
+		path = file.getAbsolutePath();// 得到windows下的正确路径
+		return path;
+	}
+
+    public static void main(String[] args) {
+//        for (int i = 0; i < 100; i++) {
+//            FileUtils.write("C:\\a.txt", String.valueOf(i));
+//        }
+        try {
+			FileUtils.write("c:\\a\\b\\c\\dd\\1.txt", "1111111111",true);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    }
+}

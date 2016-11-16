@@ -1,0 +1,80 @@
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package com.hgits.vo;
+
+import com.hgits.util.DateUtils;
+
+/**
+ * 车牌黑白灰名单确认模块
+ *
+ * @author wh
+ */
+public class VehPlateBWGConfirm {
+
+	private String plate;// 车牌
+	private String time;// 请求时间
+	private String lane;// 请求车道
+	private String tollUser;// 收费员
+	private String carStatues;// 车辆状态，黑白灰
+
+	public String getPlate() {
+		return plate;
+	}
+
+	public void setPlate(String plate) {
+		this.plate = plate;
+	}
+
+	public String getTime() {
+		return time;
+	}
+
+	public void setTime(String time) {
+		this.time = time;
+	}
+
+	public String getLane() {
+		return lane;
+	}
+
+	public void setLane(String lane) {
+		this.lane = lane;
+	}
+
+	public String getTollUser() {
+		return tollUser;
+	}
+
+	public void setTollUser(String tollUser) {
+		this.tollUser = tollUser;
+	}
+
+	public String getCarStatues() {
+		return carStatues;
+	}
+
+	public void setCarStatues(String carStatues) {
+		this.carStatues = carStatues;
+	}
+
+	@Override
+	public String toString() {
+		return "{\"plate\":\"" + plate + "\",\"time\":\"" + time
+				+ "\",\"lane\":\"" + lane + "\",\"tollUser\":\"" + tollUser
+				+ "\",\"carStatues\":\"" + carStatues + "\"}";
+	}
+
+	public static void main(String[] args) {
+		VehPlateBWGConfirm vehPlateBWGConfirm = new VehPlateBWGConfirm();
+		vehPlateBWGConfirm.setPlate("湘A12345");
+		vehPlateBWGConfirm.setTime(DateUtils.formatDateToString(DateUtils
+				.getCurrentDate()));
+		vehPlateBWGConfirm.setLane("X02");
+		vehPlateBWGConfirm.setTollUser("000018");
+		vehPlateBWGConfirm.setCarStatues("黑名单");
+//		System.out.println(vehPlateBWGConfirm.toString());
+	}
+
+}

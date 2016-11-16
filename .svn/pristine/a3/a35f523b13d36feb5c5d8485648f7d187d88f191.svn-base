@@ -1,0 +1,131 @@
+package com.hgits.util;
+
+import com.hgits.util.file.UnicodeReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import org.apache.log4j.Logger;
+
+/**
+ * 属性文件加载工具类
+ *
+ * @author Wang Guodong
+ */
+public class MyPropertiesUtils {
+
+    private static final String charset = "utf-8";//读取文件默认的编码格式
+    private static final Map<String, String> propMap = new HashMap();//属性集合
+    private static final List<File> propList = new ArrayList();//属性文件集合
+    private static final String splitMark = "：";
+    private static final Logger logger = Logger.getLogger(MyPropertiesUtils.class.getName());
+
+    /**
+     * 加载指定文件
+     *
+     * @param list 需要加载的指定文件集合
+     */
+    public static void loadProperties(List<String> list) {
+        for (String str : list) {
+            File file = new File(str);
+            loadProperties(file);
+        }
+    }
+
+    /**
+     * 加载文件中的属性到内存中
+     *
+     * @param file 需要加载的文件
+     */
+    private static void loadProperties(File file) {
+        if (!file.exists() || !file.isFile() || file.isHidden()) {
+            return;
+        }
+        propList.add(file);
+        String filePath = file.getAbsolutePath();
+        FileInputStream fis = null;
+//        InputStreamReader isr = null;
+        UnicodeReader isr = null;
+        try {
+            fis = new FileInputStream(file);
+            isr = new UnicodeReader(fis, charset);
+            Properties prop = new Properties();
+            prop.load(isr);
+            Set<String> set = prop.stringPropertyNames();
+            for (String str : set) {
+                String value = prop.getProperty(str).trim();
+                propMap.put(filePath + splitMark + str, value);
+            }
+        } catch (FileNotFoundException ex) {
+            logger.error(ex, ex);
+        } catch (IOException ex) {
+            logger.error(ex, ex);
+        } finally {
+            if (fis != null) {
+                try {
+                    fis.close();
+                } catch (IOException ex) {
+                    logger.error(ex, ex);
+                }
+            }
+            if (isr != null) {
+                try {
+                    isr.close();
+                } catch (IOException ex) {
+                    logger.error(ex, ex);
+                }
+            }
+        }
+    }
+
+    /**
+     * 从指定的配置文件获取指定的属性，若无配置文件或配置文件中未配置指定值，返回默认值 <br>
+     * 若配置文件未加载过，加载配置文件并获取属性<br>
+     * 若配置文件已加载过，不再重复加载配置文件<br>
+     *
+     * @param fileName 配置文件路径
+     * @param key 属性名
+     * @param defaultValue 默认属性值
+     * @return 配置文件中的属性值
+     */
+    public static String getProperties(String fileName, String key, String defaultValue) {
+        File file = new File(fileName);
+        if (!file.exists() || !file.isFile() || file.isHidden()) {
+            return defaultValue;
+        }
+        if (!propList.contains(file)) {
+            loadProperties(file);
+        }
+        String path = file.getAbsolutePath();
+        String value = propMap.get(path + splitMark + key);
+        if (value == null || value.trim().isEmpty()) {
+            value = defaultValue;
+        }
+        return value;
+    }
+
+    /**
+     * 获取已加载的属性和值
+     *
+     * @return 已加载的属性和值
+     */
+    public static Map<String, String> getPropMap() {
+        return propMap;
+    }
+
+    /**
+     * 获取已加载的配置文件集合
+     *
+     * @return 已加载的配置文件集合
+     */
+    public static List<File> getPropList() {
+        return propList;
+    }
+
+}

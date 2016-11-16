@@ -1,0 +1,2 @@
+WeightOverRatio1	WeightOverRatio2	WeightOverRatio3	Times1	Times2	Times3	version	startTime
+30	100	100	4	4	10	13	2016-04-28 00:00:00

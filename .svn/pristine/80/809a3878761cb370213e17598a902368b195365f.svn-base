@@ -1,0 +1,803 @@
+package com.hgits.hardware.impl.cpucardreader;
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.List;
+import com.hgits.common.log.MTCLog;
+import com.hgits.control.ThreadPoolControl;
+import com.hgits.hardware.CpuCardReader;
+import com.hgits.tool.driver.MiFareService;
+import com.hgits.util.HexUtils;
+import com.hgits.util.IntegerUtils;
+import com.hgits.util.LongUtils;
+import com.hgits.util.ParseUtil;
+import com.hgits.util.StringUtils;
+import com.hgits.vo.Card;
+import com.hgits.vo.Constant;
+import com.hgits.vo.CpuCard;
+import com.hgits.vo.Lane;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JTextField;
+
+public class MyCpuCardReader implements Runnable, CpuCardReader {
+
+    private boolean running = true;
+    private MiFareService etcrw;
+    private final int NO_ERROR = 0;//对于发出的指令读写器执行的结果
+    private String cardNo;//用于接收的卡号
+    private boolean hasCard;//标识天线上是否有卡
+    private CpuCard cpuCard;//CPU卡
+    private Card m1Card;//M1卡
+    private String cardInfo;//读取到的卡片信息
+    private boolean readyToWrite;//标识卡片准备写入
+    private boolean cardIsRead;//标识卡已被读
+    private boolean cardIsWriten;//标识卡已被写入
+    private String[] info;//返回的指令响应状态码信息 
+    private String sw12;//返回的指令响应状态码信息    
+    private long money;//卡片余额
+    private String errorMsg;//错误信息
+    private int ret;
+    private boolean readAfterWrite;
+    private String psamSerial;//PSAM卡序列号
+    private int cardFlag;// 0 ETC卡；1 M1卡
+    private boolean sec5Flag;//M1卡05块读写标识
+    private boolean sec6Flag;//M1卡06块读写标识
+    private boolean sec8Flag;//M1卡08块读写标识
+    private boolean sec9Flag;//M1卡09块读写标识
+    private final int KEYA = 0;//密钥A
+    private final int KEYB = 4;//密钥B
+    private static final String KEY_BLOCK01_00 = "583524386E39";
+    private static final String KEY_BLOCK01_04 = "3E7935487970";
+    private static final String KEY_BLOCK01_01 = "FFFFFFFFFFFF";
+    private static final String KEY_BLOCK01_05 = "FFFFFFFFFFFF";
+    private static final String KEY_BLOCK01_02 = "A0A1A2A3A4A5";
+    private static final String KEY_BLOCK01_06 = "B0B1B2B3B4B5";
+    private static final String KEY_BLOCK02_00 = "583524386E39";
+    private static final String KEY_BLOCK02_04 = "3E7935487970";
+    private static final String KEY_BLOCK02_01 = "503753627168";
+    private static final String KEY_BLOCK02_05 = "22782E443F43";
+    private static final String KEY_BLOCK02_02 = "FFFFFFFFFFFF";
+    private static final String KEY_BLOCK02_06 = "FFFFFFFFFFFF";
+    private static final List<String> key01AList = new ArrayList();//01扇区A密钥
+    private static final List<String> key01BList = new ArrayList();//01扇区B密钥
+    private static final List<String> key02AList = new ArrayList();//02扇区A密钥
+    private static final List<String> key02BList = new ArrayList();//02扇区B密钥
+
+    @Override
+    public void run() {
+        etcrw = new MiFareService();
+        int i = etcrw.initParam();
+        if (i != 0) {//ETC读写器初始化失败
+            return;
+        }
+        i = etcrw.openReader();
+        if (i == NO_ERROR) {
+            psamSerial = etcrw.getPsam();//获取PSAM卡序列号
+            MTCLog.log("ETC:" + "psam序列号：" + psamSerial);
+            running = true;
+            etcrw.setGreenLight();//蜂鸣器绿灯闪烁
+        } else {
+            running = false;
+            if (Lane.getInstance().isEntry()) {
+                errorMsg = "34";//入口ETC卡读卡器通信故障
+            } else {
+                errorMsg = "1";
+            }
+            MTCLog.log("ETC:" + "打开ETC读写器失败,错误代码为：" + i);
+        }
+        int cardType;
+        while (running) {
+            try {
+                Thread.sleep(200);
+                ret = etcrw.resetRF();               //射频复位（操作每张卡之前均要先做此操作）
+                if (ret != NO_ERROR) {
+                    MTCLog.log("ETC:" + "ETC读写器射频复位失败，错误代码为" + ret);
+                    break;
+                } else {
+                    errorMsg = null;
+                }
+                cardNo = etcrw.openCard();            //寻卡（当有卡时返回卡的序列号cardNo）
+                info = cardNo.split(",");
+                ret = IntegerUtils.parseString(info[0]);
+                if (ret != NO_ERROR) {                          //只有当返回的操作代码为0时，表示有卡在读写器上
+                    cpuCard = null;
+                    m1Card = null;
+                    hasCard = false;
+                    cardIsRead = false;
+                    continue;
+                } else {
+                    cardNo = info[1];
+//                    MTCLog.log("ETC:" + "寻卡成功：" + Arrays.toString(info));
+                    cardType = etcrw.getCardType();
+                    switch (cardType) {
+                        case 0://MiFare One卡
+                            if (m1Card == null || !cardNo.equals(m1Card.getCardSerial())) {
+                                hasCard = true;
+                                cardIsRead = false;
+                                cardIsWriten = false;
+                                m1Card = new Card();
+                                m1Card.setCardSerial(cardNo);
+                            } else {
+                                cardIsRead = true;
+                            }
+                            break;
+                        case 1://MiFare Pro卡
+                            if (cpuCard == null || !cardNo.equals(cpuCard.getCpuNum())) {       //如果卡片未被实例化或者是卡片的卡号与已读到的卡号是不相等的
+                                hasCard = true;
+                                cardIsRead = false;
+                                cardIsWriten = false;
+                                cpuCard = new CpuCard();
+                                cpuCard.setCpuNum(cardNo);
+                            } else {
+                                cardIsRead = true;
+                            }
+                            break;
+                        default:
+                            MTCLog.log("ETC:" + "未知卡片类型:" + cardType);
+                            break;
+                    }
+
+                }
+
+                if (hasCard && !cardIsRead) {
+                    if (cardType == 0) {//MiFare One卡
+                        i = readM1Card();
+                        if (i != 0) {//读卡失败
+                            m1Card = null;
+                            hasCard = false;
+                            cardIsRead = false;
+                        }
+                    } else if (cardType == 1) {//MiFare Pro卡
+                        readCpuCard();
+                    } else {
+                        MTCLog.log("ETC:" + "未知卡片类型:" + cardType);
+                    }
+                }
+                if (hasCard && cardIsRead && readyToWrite) {
+                    if (cardFlag == 0) {
+                        readAfterWrite = false;
+                        i = write19();
+                        if (i == 0) {
+                            i = readCpuCard();
+                            readAfterWrite = i == 0;
+                        }
+                    } else if (cardFlag == 1) {
+                        readAfterWrite = false;
+                        i = writeM1Card();
+                        if (i == 0) {
+                            i = readM1Card();
+                            readAfterWrite = i == 0;
+                        }
+                    }
+                }
+                Thread.sleep(Constant.SLEEP_TIME);
+            } catch (InterruptedException ex) {
+            } catch (NumberFormatException ex) {
+                etcrw.closeReader();
+                MTCLog.log("ETC:" + "ETC读写器异常", ex);
+            }
+        }
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException ex) {
+        }
+        i = closeReader();
+        MTCLog.log("ETC:" + "关闭ETC读写器：" + i);
+        ThreadPoolControl.getThreadPoolInstance().execute(this);
+    }
+
+    /**
+     * 写M1卡
+     *
+     * @return 0 成功 1 无卡 -1写卡失败
+     */
+    private int writeM1Card() {
+        if (m1Card == null) {
+            return 1;
+        }
+        int result4 = 0;
+        int result5 = 0;
+        int result6 = 0;
+        int result8 = 0;
+        int result9 = 0;
+        if (sec5Flag) {
+            result5 = writeBlock(5, ParseUtil.unParse05(m1Card));
+        }
+        if (sec6Flag) {
+            result6 = writeBlock(6, ParseUtil.unParse06(m1Card));
+        }
+        if (sec8Flag) {
+            result8 = writeBlock(8, ParseUtil.unParse08(m1Card));
+        }
+        if (sec9Flag) {
+            result9 = writeBlock(9, ParseUtil.unParse09(m1Card));
+        }
+        if (result4 == 0 && result5 == 0 && result6 == 0 && result8 == 0 && result9 == 0) {
+            cardIsWriten = true;
+            return 0;
+        } else {
+            return -1;
+        }
+    }
+
+    /**
+     * 写卡内某个区域
+     *
+     * @param block 需写卡的区
+     * @param data 需要写的数据
+     * @return 若返回值等于0，则为写入成功；若返回值不等于0，则写入失败
+     */
+    private int writeBlock(int block, String data) {
+        List<String> keyAList = new ArrayList();
+        List<String> keyBList = new ArrayList();
+        if (block >= 4 && block <= 7) {//所需读取块为01扇区
+            keyAList = new ArrayList(key01AList);
+            keyBList = new ArrayList(key01BList);
+        } else if (block >= 8 && block <= 11) {//所需读取块为02扇区
+            keyAList = new ArrayList(key02AList);
+            keyBList = new ArrayList(key02BList);
+        }
+        int result = 0;
+        //遍历B密钥，进行写卡
+        int bLen = keyBList.size();
+        for (int i = 0; i < bLen; i++) {
+            result = etcrw.writeBlockEx(block, KEYB, keyBList.get(i), data);
+            if (result == 0) {
+                break;
+            }
+        }
+        if (result == 0) {
+            return result;
+        }
+        //遍历A密钥，进行写卡
+        int aLen = keyAList.size();
+        for (int i = 0; i < aLen; i++) {
+            result = etcrw.writeBlockEx(block, KEYA, keyAList.get(i), data);
+            if (result == 0) {
+                break;
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 关闭读写器
+     *
+     * @return 操作的结果
+     */
+    public int closeReader() {
+        int i = 0;
+        running = false;
+        if (etcrw != null) {
+            etcrw.setMMI(0x00, 0x80, 0x80);
+            i = etcrw.closeReader();
+        }
+        return i;
+    }
+
+    /**
+     * 读取ETC卡的内容含卡号，切换目录，15文件，19文件，卡片余额等
+     *
+     * @return 0读卡成功 -1出现异常 其他参见ETC卡协议错误指令集
+     */
+    private int readCpuCard() {
+        String errorInfo = "";
+        int result = -1;
+        try {
+            result = etcrw.getCardType();
+            if (result != 1) {                         //非pro卡
+                errorInfo = "当前ETC卡非PRO卡,当前卡片类型为：" + result;
+                return result = -277;
+            }
+            cpuCard.setType(result + "");          //将读取到的卡类型放入ETC卡卡片实体类
+            result = etcrw.resetCPU();       //每次操作ETC卡之前都要先复位一次CPU
+            if (result != NO_ERROR) {
+                errorInfo = "ETC卡CPU复位失败，错误代码为" + result;
+                return result;
+            }
+            cardInfo = etcrw.commandPROEx1("00A40000021001");   //当打开卡片时，是在MF目录下，但是要读取的信息是在DF目录下，所以要先切入到DF目录下
+            info = cardInfo.split(",");
+            result = IntegerUtils.parseString(info[0]);
+            if (result != NO_ERROR) {
+                errorInfo = "ETC卡切换到DF目录下失败，错误代码为" + result;
+                return result;
+            }
+            cardInfo = info[1];
+            sw12 = new String(HexUtils.decode(info[2])).trim();
+            if (!"9000".equals(sw12)) {                 //当返回的指令响应状态码不为“9000”，则说明返回的数据可能存在问题
+                errorInfo = "ETC卡切换到DF返回的指令响应状态码错误，错误代码为" + sw12;
+                return result = IntegerUtils.parseHexString(sw12);
+            }
+            cardInfo = etcrw.commandPROEx1("00B095002B");      //在DF目录下的15文件存放的是卡片发行基本数据文件
+            info = cardInfo.split(",");
+            result = IntegerUtils.parseString(info[0]);
+            if (result != NO_ERROR) {
+                errorInfo = "读取ETC卡15文件指令未正常执行，错误代码为" + result;
+                return result;
+            }
+            cardInfo = info[1];
+            sw12 = new String(HexUtils.decode(info[2])).trim();
+            if (!"9000".equals(sw12)) {                 //当返回的指令响应状态码不为“9000”，则说明返回的数据可能存在问题
+                errorInfo = "读取ETC卡15文件出错，返回的指令响应状态码为" + sw12;
+                return result = IntegerUtils.parseHexString(sw12);
+            }
+            cpuCard.setInfo15(new String(HexUtils.decode(cardInfo)));
+            ParseUtil.pare15(cpuCard);
+            cardInfo = etcrw.commandPROEx1("00B201CC2B");    //在DF目录下的19文件存放的时记录收费所需的入口信息
+            info = cardInfo.split(",");
+            result = IntegerUtils.parseString(info[0]);
+            if (result != NO_ERROR) {
+                errorInfo = "读取ETC卡19文件指令未正常执行，错误代码为" + result;
+                return result;
+            }
+            cardInfo = info[1];
+            sw12 = new String(HexUtils.decode(info[2])).trim();
+            if (!"9000".equals(sw12)) {                 //当返回的指令响应状态码不为“9000”，则说明返回的数据可能存在问题
+                errorInfo = "读取ETC卡19文件出错，返回的指令响应状态码为" + sw12;
+                return result = IntegerUtils.parseHexString(sw12);
+            }
+            cpuCard.setInfo19(new String(HexUtils.decode(cardInfo)));
+            ParseUtil.pare19(cpuCard);
+            cardInfo = etcrw.commandPROEx1("805C000204");   //读取电子钱包的余额信息
+            info = cardInfo.split(",");
+            result = IntegerUtils.parseString(info[0]);
+            if (result != NO_ERROR) {
+                errorInfo = "读取ETC卡余额指令未正常执行，错误代码为" + result;
+                return result;
+            }
+            cardInfo = info[1];
+            sw12 = new String(HexUtils.decode(info[2])).trim();
+            if (!"9000".equals(sw12)) {                 //当返回的指令响应状态码不为“9000”，则说明返回的数据可能存在问题
+                errorInfo = "读取ETC卡余额出错，返回的指令响应状态码为" + sw12;
+                return result = IntegerUtils.parseHexString(sw12);
+            }
+            String str = new String(HexUtils.decode(cardInfo.substring(0, cardInfo.length() - 4)));
+            money = LongUtils.parseHexString(str);
+            cpuCard.setBalance(money / 100.00);
+            cpuCard.setMoney(0);
+            cpuCard.setPsamNum(psamSerial);//设置PSAM卡序列号
+//            String transNum = etcrw.getTransNum();//获取卡片脱机交易序列号
+            String transNum = etcrw.getTransNum(psamSerial);//获取卡片脱机交易序列号
+            if (transNum != null) {
+                cpuCard.setTradeNo(transNum);
+                String tac = etcrw.getTac(transNum);//获取TAC码
+                if (tac != null) {
+                    cpuCard.setTacCode(tac);
+                }
+            }
+            cardIsRead = true;
+            return result = 0;
+        } catch (Exception ex) {
+            MTCLog.log("ETC:" + "读取ETC通行卡异常", ex);
+            return result = -1;
+        } finally {
+            if (result != 0) {
+                MTCLog.log("ETC:" + errorInfo);
+                hasCard = false;
+                cpuCard = null;
+            }
+        }
+    }
+
+    /**
+     * 写卡
+     *
+     * @param card 装载信息的卡片实体类
+     * @return 写卡结果 0则成功，非0则失败
+     */
+    public int write(CpuCard card) {
+        this.cpuCard = new CpuCard(card);
+        readyToWrite = true;
+        cardFlag = 0;
+        long start = System.currentTimeMillis();
+        while (true) {
+            long now = System.currentTimeMillis();
+            if (now < start) {//当前时间小于开始时间，重新开始计时
+                start = now;
+            }
+            if (now - start >= 2000) { //2秒后还无法得到正确的结果则跳出循环
+                readyToWrite = false;
+                if (Lane.getInstance().isEntry()) {
+                    errorMsg = "35";
+                } else {
+                    errorMsg = "2";
+                }
+                MTCLog.log("ETC:" + "ETC卡写入超时，未正常执行完成");
+                return -1;
+            }
+            if (cardIsWriten && readAfterWrite) {//写卡成功
+                etcrw.beepTwice();//蜂鸣器鸣叫一秒提醒写卡成功
+                readyToWrite = false;
+                cardIsWriten = false;
+                return 0;
+            } else {
+                try {
+                    Thread.sleep(Constant.SLEEP_TIME);
+                } catch (InterruptedException ex) {
+                }
+            }
+        }
+    }
+
+    /**
+     * 写M1卡指定区域
+     *
+     * @param card 装载信息的卡片实体类
+     * @param section5Flag 05区域写卡标识
+     * @param section6Flag 06区域写卡标识
+     * @param section8Flag 08区域写卡标识
+     * @param section9Flag 09区域写卡标识
+     * @return 写卡结果 0则成功，非0则失败
+     */
+    public int writeM1Card(Card card, boolean section5Flag, boolean section6Flag, boolean section8Flag, boolean section9Flag) {
+        this.m1Card = new Card(card);
+        this.sec5Flag = section5Flag;
+        this.sec6Flag = section6Flag;
+        this.sec8Flag = section8Flag;
+        this.sec9Flag = section9Flag;
+        readyToWrite = true;
+        cardFlag = 1;
+        long start = System.currentTimeMillis();
+        while (true) {
+            long now = System.currentTimeMillis();
+            if (now < start) {//当前时间小于开始时间，重新开始计时
+                start = now;
+            }
+            if (now - start >= 2000) { //2秒后还无法得到正确的结果则跳出循环
+                readyToWrite = false;
+                if (Lane.getInstance().isEntry()) {
+                    errorMsg = "35";
+                } else {
+                    errorMsg = "2";
+                }
+                MTCLog.log("ETC:" + "ETC卡写入超时，未正常执行完成");
+                return -1;
+            }
+            if (cardIsWriten && readAfterWrite) {//写卡成功
+                etcrw.beepTwice();//蜂鸣器鸣叫一秒提醒写卡成功
+                readyToWrite = false;
+                cardIsWriten = false;
+                return 0;
+            } else {
+                try {
+                    Thread.sleep(Constant.SLEEP_TIME);
+                } catch (InterruptedException ex) {
+                }
+            }
+        }
+    }
+
+    /**
+     * 向ETC卡中写文件，调用的是卡的复合消费的函数， 在使用复合消费函数时最重要的参数是ETC卡的0019号文件的内容，0019文件总长度43字节，
+     * 包含：复合应用类型标识符、记录长度、应用的锁定标识、入口的路段和站，入口车道、入口时间
+     * 车型、卡流通状态，标识站，入口收费员工号，入口班次，车牌，出口收费路段和站
+     *
+     * @return 执行的结果 0则写卡成功，非0则写卡失败
+     */
+    private int write19() {
+        try {
+            StringBuilder sb = new StringBuilder(cpuCard.getInfo19());
+            if (cpuCard.getLaneId().startsWith("E") || cpuCard.getLaneId().startsWith("e")) {
+                //如果是入口道
+                String laneNo = cpuCard.getLaneId().substring(1);
+                int i = IntegerUtils.parseString(laneNo);
+                laneNo = StringUtils.changeIntToHex(i, 2);//需要将车道号转换为对应的16进制字符串
+                //            sb.replace(8, 10, cpuCard.getRoadid());  //将入口路段替换成需写入的
+                sb.replace(10, 14, cpuCard.getRoadid() + cpuCard.getStationid());   //车道的后两位数字带入，因为卡内部只预留了1个字节
+                sb.replace(14, 16, laneNo);    //车道的后两位数字带入，因为卡内部只预留了1个字节
+                String str = Long.toHexString(cpuCard.getDhm().getTime() / 1000);
+                sb.replace(16, 24, str.toUpperCase()); //将时间带入，因为是Unix时间，所以要将毫秒转成秒
+                sb.replace(24, 26, StringUtils.toLength(cpuCard.getVehClass(), 2));//车型
+                sb.replace(26, 28, "01");     //将流通状态改为MTC封闭式入口道
+                sb.replace(28, 46, "000000000000000000");
+                sb.replace(46, 52, staffidToHex(cpuCard.getStaffId(), 6));  //将员工号带入,注意需要将员工号转换为16进制
+                sb.replace(52, 54, cpuCard.getEnJobNum());  //将入口道的工班带入
+                sb.replace(78, 86, "00000000");           //将之前的出口信息擦拭掉
+            } else if (cpuCard.getLaneId().startsWith("X") || cpuCard.getLaneId().startsWith("x")) {    //若是出口道，之前的入口信息不进行改变
+                String str = Long.toHexString(cpuCard.getDhm().getTime() / 1000);
+                sb.replace(16, 24, str.toUpperCase()); //将时间带入，因为是Unix时间，所以要将毫秒转成秒
+                sb.replace(24, 26, StringUtils.toLength(cpuCard.getVehClass(), 2));//车型
+                sb.replace(26, 28, "02");   // //将流通状态改为MTC封闭式出口道
+//                sb.replace(28, 46, "000000000000000000");
+//                sb.replace(46, 52, "000000");  //出口员工号不做记录
+                sb.replace(80, 82, cpuCard.getRoadid());     //将出口路段带入
+                sb.replace(82, 86, cpuCard.getRoadid() + cpuCard.getStationid());  //将出口站带入
+            }
+            String plateNum = cpuCard.getFullVehPlateNum();//车牌号码
+            String plate = plateNum == null ? "" : plateNum.trim();
+            byte[] buffer = plate.getBytes("gbk");
+            byte[] plateBuffer = new byte[12];
+            if (buffer.length > 12) {
+                System.arraycopy(buffer, 0, plateBuffer, 0, 12);
+            } else {
+                System.arraycopy(buffer, 0, plateBuffer, 0, buffer.length);
+            }
+            sb.replace(54, 78, HexUtils.encode(plateBuffer));//车牌号码
+            SimpleDateFormat sdf = new SimpleDateFormat(Constant.FULL_TIME_PATTERN);
+            String time = sdf.format(cpuCard.getDhm());
+            String str = sb.substring(6, sb.length()).trim();
+            cardInfo = etcrw.comsumeMoney(time, cpuCard.getMoney(), str);
+            MTCLog.log("ETC:" + "ETC卡复合消费结果：" + cardInfo);
+            info = cardInfo.split(",");
+            int ret = IntegerUtils.parseString(info[0]);
+            if (ret == NO_ERROR) {
+                cardIsWriten = true;
+                cpuCard.setTermTradNo(info[1]);     // 终端脱机交易序号
+                cpuCard.setTradeNo(info[2]);        // 卡片交易序号
+                cpuCard.setTacCode(info[3]);           // 复合消费Tac码
+                cpuCard.setIbalance1(LongUtils.parseString(info[4]));  // 卡片消费前余额
+                cpuCard.setIbalance2(LongUtils.parseString(info[5]));  // 卡片消费后余额
+            } else {
+                if (Lane.getInstance().isEntry()) {
+                    errorMsg = "35";
+                } else {
+                    errorMsg = "2";
+                }
+                MTCLog.log("ETC:" + "ETC卡写入信息失败，错误代码为" + Integer.toHexString(ret));
+            }
+            return ret;
+        } catch (Exception ex) {
+            MTCLog.log("ETC:" + "0019文件写卡异常", ex);
+            return 1;
+        }
+    }
+
+    static {
+        key01AList.add(KEY_BLOCK01_00);
+        key01AList.add(KEY_BLOCK01_01);
+        key01AList.add(KEY_BLOCK01_02);
+        key01BList.add(KEY_BLOCK01_04);
+        key01BList.add(KEY_BLOCK01_05);
+        key01BList.add(KEY_BLOCK01_06);
+        key02AList.add(KEY_BLOCK02_00);
+        key02AList.add(KEY_BLOCK02_01);
+        key02AList.add(KEY_BLOCK02_02);
+        key02BList.add(KEY_BLOCK02_04);
+        key02BList.add(KEY_BLOCK02_05);
+        key02BList.add(KEY_BLOCK02_06);
+    }
+
+    /**
+     * 读取MIFARE ONE卡
+     *
+     * @return 0 读取成功<br>
+     * 其他 读取失败
+     */
+    public int readM1Card() {
+        try {
+            String str = readBlock(4);//读取04块数据
+            if (str == null) {
+                return -1;
+            }
+            m1Card.setSection_04_info(str);
+            str = readBlock(5);//读取05块数据
+            if (str == null) {
+                return -1;
+            }
+            m1Card.setSection_05_info(str);
+            str = readBlock(6);//读取06块数据
+            if (str == null) {
+                return -1;
+            }
+            m1Card.setSection_06_info(str);
+            ParseUtil.parse04(m1Card);
+            ParseUtil.parse05(m1Card);
+            ParseUtil.parse06(m1Card);
+            String cardType = m1Card.getType();
+            if (Constant.CARD_TYPE_01.equals(cardType)) {//通行卡才对08，09区数据进行读取
+                str = readBlock(8);//读取08块数据
+                if (str == null) {
+                    return -1;
+                }
+                m1Card.setSection_08_info(str);
+                str = readBlock(9);//读取09块数据
+                if (str == null) {
+                    return -1;
+                }
+                m1Card.setSection_09_info(str);
+                ParseUtil.parse08(m1Card);
+                ParseUtil.parse09(m1Card);
+            }
+            cardIsRead = true;
+            hasCard = true;
+            return 0;
+        } catch (Exception ex) {
+            MTCLog.log("ETC:" + "读取M1卡异常", ex);
+            m1Card = null;
+            return -1;
+        }
+    }
+
+    /**
+     * 读取指定区域数据
+     *
+     * @param block 指定区域
+     * @param key 密钥
+     * @return 数据
+     */
+    private String readBlock(int block) {
+        List<String> keyAList = new ArrayList();
+        List<String> keyBList = new ArrayList();
+        if (block >= 4 && block <= 7) {//所需读取块为01扇区
+            keyAList = new ArrayList(key01AList);
+            keyBList = new ArrayList(key01BList);
+        } else if (block >= 8 && block <= 11) {//所需读取块为02扇区
+            keyAList = new ArrayList(key02AList);
+            keyBList = new ArrayList(key02BList);
+        }
+        String str = null;
+
+        //遍历B密钥，读卡
+        int lenB = keyBList.size();
+        for (int i = 0; i < lenB; i++) {
+            str = etcrw.readBlockEx(block, KEYB, keyBList.get(i));
+            if (str != null) {
+                break;
+            } else {
+                etcrw.openCard();
+            }
+        }
+        if (str != null) {
+            return str;
+        }
+        //遍历A密钥，读卡
+        int lenA = keyAList.size();
+        for (int i = 0; i < lenA; i++) {
+            str = etcrw.readBlockEx(block, KEYA, keyAList.get(i));
+            if (str != null) {
+                break;
+            } else {
+                etcrw.openCard();
+            }
+        }
+        return str;
+    }
+
+    /**
+     * 将10进制的员工号转换为16进制员工号
+     *
+     * @param staffid 十进制员工号
+     * @param len 转换后的16进制员工号长度，长度不足前面补零
+     * @return 16进制员工号
+     */
+    private String staffidToHex(String staffid, int len) {
+        int i = IntegerUtils.parseString(staffid);
+        String str = Integer.toHexString(i);
+        String hexStaffid = StringUtils.toLength(str, len);
+        return hexStaffid;
+    }
+
+    public MyCpuCardReader() {
+        ThreadPoolControl.getThreadPoolInstance().execute(this);
+    }
+
+    public MiFareService getEtcrw() {
+        return etcrw;
+    }
+
+    public void setEtcrw(MiFareService etcrw) {
+        this.etcrw = etcrw;
+    }
+
+    /**
+     * 获取CPU卡信息
+     *
+     * @return CPU卡信息，无卡返回null
+     */
+    public CpuCard getCpuCard() {
+        if (hasCard && cardIsRead && cpuCard != null) {
+            return new CpuCard(cpuCard);
+        } else {
+            return null;
+        }
+    }
+
+    public boolean isCardIsRead() {
+        return cardIsRead;
+    }
+
+    public String getErrorMsg() {
+        String error = "";
+        if ("".equals(errorMsg)) {
+            error = null;
+        } else {
+            error = errorMsg;
+        }
+        return error;
+    }
+
+    /**
+     * 获取M1卡信息
+     *
+     * @return M2卡
+     */
+    public Card getM1Card() {
+        if (hasCard && cardIsRead && m1Card != null) {
+            return new Card(m1Card);
+        } else {
+            return null;
+        }
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        final MyCpuCardReader mccr = new MyCpuCardReader();
+        JFrame frame = new JFrame();
+        frame.setSize(400, 300);
+        frame.setLayout(new GridLayout(6, 1));
+        final JTextField label1 = new JTextField();
+        final JTextField label2 = new JTextField();
+        final JTextField label3 = new JTextField();
+        final JTextField label4 = new JTextField();
+        final JTextField label5 = new JTextField();
+        frame.add(label1);
+        frame.add(label2);
+        frame.add(label3);
+        frame.add(label4);
+        frame.add(label5);
+        JButton button = new JButton("写卡");
+        frame.add(button);
+        button.addActionListener(new ActionListener() {
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+
+                Card card = mccr.getM1Card();
+
+                card.setRoadid("10");
+                card.setStationid("11");
+                card.setLaneId("X99");
+                card.setFullVehPlateNum("abcdef");
+//                card.setSection_04_info(label1.getText());
+//                card.setSection_05_info(label2.getText());
+//                card.setSection_06_info(label3.getText());
+//                card.setSection_08_info(label4.getText());
+//                card.setSection_09_info(label5.getText());
+                mccr.writeM1Card(card, true, true, true, true);
+            }
+        });
+        frame.setVisible(true);
+
+        while (true) {
+            Thread.sleep(100);
+            CpuCard ccard = mccr.getCpuCard();
+            if (ccard != null) {
+                System.out.println(ccard);
+            }
+
+            Card card = mccr.getM1Card();
+            if (card == null) {
+                label1.setText(null);
+                label2.setText(null);
+                label3.setText(null);
+                label4.setText(null);
+                label5.setText(null);
+                continue;
+            }
+            String str = card.getSection_04_info();
+            str = str == null ? str : str.toUpperCase();
+            label1.setText(str);
+            str = card.getSection_05_info();
+            str = str == null ? str : str.toUpperCase();
+            label2.setText(str);
+            str = card.getSection_06_info();
+            str = str == null ? str : str.toUpperCase();
+            label3.setText(str);
+            str = card.getSection_08_info();
+            str = str == null ? str : str.toUpperCase();
+            label4.setText(str);
+            str = card.getSection_09_info();
+            str = str == null ? str : str.toUpperCase();
+            label5.setText(str);
+        }
+    }
+}

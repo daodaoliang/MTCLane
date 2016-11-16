@@ -1,0 +1,650 @@
+package com.hgits.tool.socket;
+
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.SocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
+import java.util.Arrays;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
+import org.apache.log4j.Logger;
+
+import com.hgits.control.FlowControl;
+import com.hgits.control.ThreadPoolControl;
+import com.hgits.task.MyTask;
+import com.hgits.tool.socket.entity.EnInfo;
+import com.hgits.tool.socket.entity.ExitInfo;
+import com.hgits.util.IntegerUtils;
+import com.hgits.util.MyPropertiesUtils;
+import com.hgits.vo.Constant;
+import com.hgits.vo.Lane;
+
+/**
+ * 车道客户端 用于实时监控车道报警、交易、等待监控员确认等信息 监控室返回信息N表示拒绝修改（用于车辆修改确认）
+ * 发送给监控室的信息由命令字+序列号+命令内容组成，监控室返回的信息命令字+序列号+命令内容组成，命令内容分为入口确认，车辆确认和黑名单确认三种
+ *
+ * @author Wang Guodong
+ */
+public class LaneSocketChannel implements Runnable {
+
+    private int monitorLevel;//监控室级别 1-收费站 2-分中心 3-省中心
+    private final String laneid;//路段号+收费站号+车道编号，如4914X02
+    private final String HeartBeatCommand = "1";//心跳检测指令
+    private final String EntryConfirmCommand = "2";//需要监控室确认入口信息
+    private final String InfoConfirmCommand = "3";//发送车道实时信息指令
+    private final String VehConfirmCommand = "4";//车辆确认信息指令
+    private final String BlackListConfirmCommand = "5";//车辆黑名单确认指令
+    private final String ConfirmDoneCommand = "6";//请求确认结束指令
+    private final String LaneInfoCommand = "7";//发送车道信息指令（CPU，内存等）
+    private final String MonitorLevelCommand = "8";//监控室级别指令
+    private final String SimuPassCommand = "9";//模拟通行请求确认指令
+    private final String HeartBeatMessage = "1";//心跳检测内容
+    private final String ConfirmDoneMessage = "done";//请求信息已确认
+    private byte serial;//序列号
+    private final ConcurrentHashMap<String, String> map = new ConcurrentHashMap();//记录命令序列号以及对应命令的返回结果
+    private boolean requestFlag = true;//是否记录监控室确认信息标志
+    private final ConcurrentLinkedQueue<String> sendQueue = new ConcurrentLinkedQueue<>();//向监控室发送信息的队列
+    private final ConcurrentLinkedQueue<byte[]> recvQueue = new ConcurrentLinkedQueue<>();
+    private final int maxQueueSize = 20;//信息队列最多保留20条信息
+    private boolean running = true;//客户端运行标识
+    private int heartBeatInterval = 2000;//心跳检测的时间间隔
+    private final SocketChannel socketChannel;
+    private final int maxBufferSize = 1024 * 1024 * 10;//接收监控室信息等待解析的最大缓存数量
+    private SocketAddress remoteAddress;//监控室地址
+    private static final Logger logger = Logger.getLogger(LaneSocketChannel.class);
+    private int logLevel = 0;//日志级别 0普通 1详细 2 非常详细
+    private final Object obj = new Object();
+
+    public LaneSocketChannel(SocketChannel socketChannel, String laneid) {
+        this.socketChannel = socketChannel;
+        try {
+            this.socketChannel.configureBlocking(false);//设置为非阻塞模式
+            remoteAddress = this.socketChannel.getRemoteAddress();
+        } catch (IOException ex) {
+            logger.error(ex, ex);
+        }
+        this.laneid = laneid;
+    }
+
+    /**
+     * 是否运行中
+     *
+     * @return true/false
+     */
+    public boolean isRunning() {
+        return running;
+    }
+
+    @Override
+    public void run() {
+        String str = MyPropertiesUtils.getProperties(Constant.PROP_MTCLANE_CONSTANT, "heartBeatInterval", "2000");
+        heartBeatInterval = IntegerUtils.parseString(str);
+        if (heartBeatInterval < 0) {
+            heartBeatInterval = 2000;
+        }
+        logger.warn("与监控室" + remoteAddress + "通信心跳检测时间间隔" + heartBeatInterval + "毫秒");
+        str = MyPropertiesUtils.getProperties(Constant.PROP_MTCLANE_CONSTANT, "monitorLogLevel", "1");
+        logLevel = IntegerUtils.parseString(str);
+        logger.warn("与监控室" + remoteAddress + "通信日志级别为" + logLevel);
+        //向监控室发送信息的线程
+        SendTask sendTask = new SendTask();
+        ThreadPoolControl.getThreadPoolInstance().execute(sendTask);
+        //接收监控室信息的线程
+        RecvTask receiveTask = new RecvTask();
+        ThreadPoolControl.getThreadPoolInstance().execute(receiveTask);
+        //解析监控室信息的线程
+        ParseTask parseTask = new ParseTask();
+        ThreadPoolControl.getThreadPoolInstance().execute(parseTask);
+        //监控线程
+        MonitorTask monitorTask = new MonitorTask(sendTask, receiveTask, parseTask);
+        ThreadPoolControl.getThreadPoolInstance().execute(monitorTask);
+    }
+
+    /**
+     * 解析监控室返回的信息
+     *
+     * @param str 返回信息所对应的指令代码<br>
+     * 1 心跳检测指令恢复<br>
+     * 2 入口确认信息回复<br>
+     * 4 车辆确认信息回复<br>
+     * 5 黑名单确认信息回复<br>
+     * 8 监控室级别
+     */
+    private String parseMonitorMsg(String str) {
+        String result = "0";
+        String command = str.substring(0, 1);
+        String ser;
+        String confirm;
+        switch (command) {
+            case HeartBeatCommand://心跳检测指令回复
+                if (str.length() < 5) {
+                    logger.warn("监控室" + remoteAddress + "心跳信息长度错误：" + str);
+                } else {
+                    String temp = str.substring(4, 5);
+					if ("1".equals(temp) || "2".equals(temp)
+							|| "0".equals(temp)) {
+                        result = HeartBeatCommand;
+                    } else {
+                        logger.warn("监控室" + remoteAddress + "心跳检测返回信息异常" + str);
+                    }
+                }
+                break;
+            case EntryConfirmCommand://入口确认信息回复
+                if (str.length() < 8) {
+                    logger.warn("监控室" + remoteAddress + "入口确认信息长度错误：" + str);
+                } else {
+                    logger.warn("监控室" + remoteAddress + "入口确认：" + str);
+                    ser = str.substring(1, 4);
+                    confirm = str.substring(4, 8);
+                    if (requestFlag) {
+                        map.put(ser, confirm);
+                    }
+                    result = EntryConfirmCommand;
+                }
+                break;
+            case VehConfirmCommand://车辆确认信息回复
+                if (str.length() < 5) {
+                    logger.warn("监控室" + remoteAddress + "车辆确认信息长度错误：" + str);
+                } else {
+                    logger.warn("监控室" + remoteAddress + "车辆确认：" + str);
+                    ser = str.substring(1, 4);
+                    confirm = str.substring(4);
+                    if (requestFlag) {
+                        map.put(ser, confirm);
+                    }
+                    result = VehConfirmCommand;
+                }
+                break;
+            case BlackListConfirmCommand://黑名单确认信息回复
+                if (str.length() < 5) {
+                    logger.warn("监控室" + remoteAddress + "心跳信息长度错误：" + str);
+                } else {
+                    logger.warn("监控室" + remoteAddress + "黑名单确认：" + str);
+                    ser = str.substring(1, 4);
+                    confirm = str.substring(4);
+                    if (requestFlag) {
+                        map.put(ser, confirm);
+                    }
+                    result = BlackListConfirmCommand;
+                }
+                break;
+            case MonitorLevelCommand://监控室级别
+                if (str.length() < 15) {
+                    logger.warn("监控室" + remoteAddress + "级别信息长度错误：" + str);
+                } else {
+                    String temp = str.substring(14, 15);
+                    monitorLevel = IntegerUtils.parseString(temp);
+                    logger.warn("监控室" + remoteAddress + "级别：" + monitorLevel);
+                }
+                result = MonitorLevelCommand;
+                break;
+            case SimuPassCommand://模拟通行监控室确认回复
+                if (str.length() < 5) {
+                    logger.warn("监控室" + remoteAddress + "模拟通行监控室确认信息长度错误：" + str);
+                } else {
+                    ser = str.substring(1, 4);
+                    confirm = str.substring(4);
+                    if (requestFlag) {
+                        map.put(ser, confirm);
+                    }
+                    result = SimuPassCommand;
+                }
+                break;
+            default:
+                break;
+        }
+        return result;
+    }
+
+    /**
+     * 发送指令
+     *
+     * @param order 需要发送的指令
+     */
+    private synchronized void send(String order) {
+        if (order != null && !order.isEmpty()) {
+            sendQueue.add(order);
+        }
+        synchronized (obj) {
+            obj.notify();
+        }
+    }
+
+    /**
+     * ASCII字符串转换成十六进制字符串
+     *
+     * @param str 待转换的ASCII字符串
+     * @return String 每个Byte之间空格分隔，如: [61 6C 6B]
+     */
+    private String str2HexStr(String str) {
+        if (str == null) {
+            return null;
+        }
+        char[] chars = "0123456789ABCDEF".toCharArray();
+        StringBuilder sb = new StringBuilder("");
+        byte[] bs = null;
+        try {
+            bs = str.getBytes("gbk");
+        } catch (UnsupportedEncodingException ex) {
+        }
+        int bit;
+        if (bs == null) {
+            return null;
+        }
+        for (int i = 0; i < bs.length; i++) {
+            bit = (bs[i] & 0x0f0) >> 4;
+            sb.append(chars[bit]);
+            bit = bs[i] & 0x0f;
+            sb.append(chars[bit]);
+            sb.append(' ');
+        }
+        return sb.toString().replaceAll(" ", "");
+    }
+
+    /**
+     * 发送需要确认的信息给监控室
+     *
+     * @param command 信息类型
+     * @param msg 需要确认的信息
+     * @return 所发指令的序列号
+     */
+    private String sendConfirmMessage(String command, String msg) {
+        if (!running) {
+            return null;
+        }
+        requestFlag = true;
+        String ser = getSerial();
+        map.remove(ser);//发送指令之前先从缓存中清除指令序列号对应的记录
+        if (monitorLevel == 3) {//监控室级别为省中心,不发送请求监控室确认信息
+            return ser;
+        }
+        String order = command + ser + msg;//指令内容由指令标识+指令序列号+指令内容组成
+        send(order);
+        return ser;
+    }
+
+    /**
+     * 向监控室发送入口确认请求
+     *
+     * @param entryInfo 入口信息
+     * @return 请求所对应的序列号，与监控室断开连接返回null
+     */
+    public String sendEntryInfo(String entryInfo) {
+        return sendConfirmMessage(EntryConfirmCommand, entryInfo);
+    }
+
+    /**
+     * 发送车辆确认请求
+     *
+     * @param vehInfo 车辆信息
+     * @return 请求所对应的序列号,若与监控室连接中断，返回null
+     */
+    public String sendVehInfo(String vehInfo) {
+        return sendConfirmMessage(VehConfirmCommand, vehInfo);
+    }
+
+    /**
+     * 发送黑名单请求
+     *
+     * @param bckListInfo 黑名单信息
+     * @return 请求所对应的序列号，若与监控室连接中断，返回null
+     */
+    public String sendBCKListInfo(String bckListInfo) {
+        return sendConfirmMessage(BlackListConfirmCommand, bckListInfo);
+    }
+
+    /**
+     * 获取监控室确认结果
+     *
+     * @param ser 请求所对应的序列号
+     * @return 返回监控室确认信息，监控室拒绝修改返回N,无结果返回null
+     */
+    public String getConfirmResult(String ser) {
+        return map.remove(ser);
+    }
+
+    /**
+     * 发送车道实时信息给监控室
+     *
+     * @param info 车道实时信息
+     */
+    public void sendInfoMessage(String info) {
+        if (!running) {
+            return;
+        }
+        String order = InfoConfirmCommand + getSerial() + info;//指令内容由指令标识+指令序列号+指令内容组成
+        send(order);
+    }
+
+    /**
+     * 发送车道硬件信息给监控室
+     *
+     * @param laneInfo 车道硬件信息（如CPU,内存等）
+     */
+    public void sendLaneInfo(String laneInfo) {
+        if (!running) {
+            return;
+        }
+        String order = LaneInfoCommand + getSerial() + laneInfo;//指令内容由指令标识+指令序列号+指令内容组成
+        send(order);
+    }
+
+    /**
+     * 发送模拟通行请求监控室确认信息
+     *
+     * @param info 模拟通行请求监控室确认信息
+     * @return 请求对应序列号
+     */
+    public String sendSimuPassInfo(String info) {
+        return sendConfirmMessage(SimuPassCommand, info);
+    }
+
+    /**
+     * 向监控室发送请求确认结束指令
+     *
+     */
+    public void sendConfirmDone() {
+        if (!running) {
+            return;
+        }
+        if (monitorLevel == 3) {//监控室级别为省中心时，不必发送确认结束指令
+            return;
+        }
+        requestFlag = false;
+        if (serial == 127 || serial <= 0) {
+            serial = 1;
+        } else {
+            serial++;
+        }
+        String str = serial + "";
+        if (serial < 10) {
+            str = "00" + serial;
+        } else if (serial < 100) {
+            str = "0" + serial;
+        }
+        String order = ConfirmDoneCommand + str + ConfirmDoneMessage;//指令内容由指令标识+指令序列号+指令内容组成
+        send(order);
+    }
+
+    /**
+     * 获取当前序列号
+     *
+     * @return 当前序列号
+     */
+    private synchronized String getSerial() {
+        if (serial >= Byte.MAX_VALUE || serial <= 0) {
+            serial = 1;
+        } else {
+            serial++;
+        }
+        StringBuilder sb = new StringBuilder();
+        if (serial < 10) {
+            sb.append("00").append(serial);
+        } else if (serial < 100) {
+            sb.append(0).append(serial);
+        } else {
+            sb.append(serial);
+        }
+        return sb.toString();
+    }
+
+    /**
+     * 返回当前监控室是否为局中心
+     *
+     * @return true/false
+     */
+    public boolean isInBureau() {
+        return monitorLevel == 3;
+    }
+
+    //向监控室发送信息的线程
+    class SendTask extends MyTask {
+
+        @Override
+        public void run() {
+            try {
+                logger.warn("向监控室" + remoteAddress + "发送信息的线程启动");
+                setAlive(true);
+                //modify by wanghao 第一次启动通讯的时候，把车道状态发送到服务器。
+                String str = firstMessage();
+                sendInfoMessage(str);
+                
+//                String str = HeartBeatCommand + getSerial() + FlowControl.getCanopyFlag();//指令内容由指令标识+指令序列号+指令内容组成
+//                send(str);
+                long start = System.currentTimeMillis();
+                while (running) {
+                    try {
+                        synchronized (obj) {
+                            if (sendQueue.isEmpty()) {
+                                obj.wait(1000);
+                            }
+                        }
+                    } catch (InterruptedException ex) {
+                    }
+                    String order = sendQueue.poll();//先进先出
+                    if (order != null) {
+                        if (logLevel >= 1) {
+                            logger.warn("send to " + remoteAddress + ":" + order);
+                        }
+                        byte[] buffer = (str2HexStr(order) + "\r\n").getBytes();
+                        ByteBuffer bb = ByteBuffer.wrap(buffer);
+                        socketChannel.write(bb);
+                    }
+                    long now = System.currentTimeMillis();
+                    if (now < start) {//当前时间小于开始时间，重新开始计时
+                        start = now;
+                    } else if (now - start > heartBeatInterval) {//每隔两秒发送一次心跳检测信息
+                        start = now;
+                        order = HeartBeatCommand + getSerial() + FlowControl.getCanopyFlag();//指令内容由指令标识+指令序列号+指令内容组成
+                        send(order);
+                    }
+
+                }
+            } catch (Throwable ex) {
+                logger.warn("向监控室" + remoteAddress + "发送信息时出现异常", ex);
+            }
+            logger.warn("向监控室" + remoteAddress + "发送信息的线程退出");
+            stop();
+            setAlive(false);
+        }
+        
+        /**
+         * 第一次心跳消息，把车道收费员，雨棚灯状态、车道、出口站信息发到监控室
+         * @return
+         */
+        private String firstMessage(){
+        	Lane lane = Lane.getInstance();
+        	String message = "";
+        	if (lane.isEntry()) {//入口
+                EnInfo ei = new EnInfo();
+                ei.setEnStation(lane.getRoadId() + lane.getStationId());
+                ei.setLane(lane.getLaneId());
+                ei.setAlarmType("0");
+                ei.setCanopyLight(String.valueOf(FlowControl.getCanopyFlag()));
+                ei.setUserId(FlowControl.staff == null ? "" : FlowControl.staff .getStaffId());
+                message = ei.toString();
+            } else if (lane.isExit()) {//出口
+                ExitInfo exi = new ExitInfo();
+                exi.setAlarmType("0");
+                exi.setLane(lane.getLaneId());
+                exi.setExStation(lane.getRoadId() + lane.getStationId());
+                exi.setCanopyLight(String.valueOf(FlowControl.getCanopyFlag()));
+                exi.setUserId(FlowControl.staff  == null ? "" : FlowControl.staff .getStaffId());
+                message =  exi.toString();
+            }
+        	return message;
+        }
+    }
+
+    //接收监控室信息的线程
+    class RecvTask extends MyTask {
+
+        @Override
+        public void run() {
+            logger.warn("接收监控室" + remoteAddress + "信息的线程启动");
+            setAlive(true);
+            try {
+                byte[] buffer = new byte[1024];
+                ByteBuffer bb = ByteBuffer.wrap(buffer);
+                long start = System.currentTimeMillis();
+                while (running) {
+                    Thread.sleep(1);
+                    long now = System.currentTimeMillis();
+                    if (now < start) {//当前时间小于开始时间，重新开始计时
+                        start = now;
+                    } else if (now - start > heartBeatInterval * 3) {
+                        logger.warn("等待监控室" + remoteAddress + "信息超时");
+                        break;
+                    }
+                    int len = socketChannel.read(bb);
+                    if (len == -1) {
+                        logger.warn("`````````````````````````````````````监控室" + remoteAddress + "关闭`````````````````````````````````");
+                        break;
+                    } else if (len == 0) {
+                        continue;
+                    } else {
+                        byte[] tempBuffer = Arrays.copyOf(buffer, len);
+                        if (logLevel >= 1) {
+                            logger.warn("recv from " + remoteAddress + ":" + new String(tempBuffer));
+                        }
+                        recvQueue.add(tempBuffer);
+                        start = now;
+                        bb.clear();
+                    }
+
+                }
+            } catch (Throwable ex) {//最大限度地捕获异常，防止出现意料之外的情况
+                logger.warn("获取监控室" + remoteAddress + "返回信息时出现异常", ex);
+            } finally {
+                try {
+                    if (socketChannel != null) {
+                        socketChannel.close();
+                    }
+                } catch (IOException ex) {
+                    logger.warn("关闭socket流时出现异常", ex);
+                }
+            }
+            logger.warn("接收监控室" + remoteAddress + "信息的线程退出");
+            stop();
+            setAlive(false);
+        }
+    }
+
+    //解析监控室信息的线程
+    class ParseTask extends MyTask {
+
+        @Override
+        public void run() {
+            try {
+                logger.warn("解析监控室" + remoteAddress + "信息的线程启动");
+                setAlive(true);
+                StringBuilder sb = new StringBuilder();
+                while (running) {
+                    Thread.sleep(1);
+                    if (sb.length() > maxBufferSize) {
+                        logger.warn("监控室" + remoteAddress + "发送信息异常，待解析缓存数超过" + maxBufferSize + "，删除缓存");
+                        break;
+                    }
+                    if (recvQueue != null && !recvQueue.isEmpty()) {
+                        byte[] buffer = recvQueue.poll();
+                        String str = new String(buffer);
+                        str = str.replaceAll("\r\n|\n\r|\r|\n", "\r\n");
+                        sb.append(str);
+                    }
+                    int index = sb.indexOf("\r\n");
+                    if (index == 0) {
+                        sb.delete(0, 2);
+                    } else if (index > 0) {
+                        String str = sb.substring(0, index);//获取需要解析的数据
+                        sb.delete(0, index + 2);//从缓存中移除已获取的数据
+                        String result = parseMonitorMsg(str);
+                        if ("2".equals(result)) {
+                            String order = laneid + "00";//告诉监控室确认成功
+                            send(order);
+                        } else if ("CLOSE".equalsIgnoreCase(result)) {
+                            logger.warn("收到监控室" + remoteAddress + "关闭消息" + str);
+                            break;
+                        }
+                    }
+
+                }
+            } catch (Throwable ex) {
+                logger.warn(ex.toString(), ex);
+            }
+            logger.warn("解析监控室" + remoteAddress + "信息的线程退出");
+            setAlive(false);
+        }
+    }
+
+    /**
+     * 监控信息队列内容是否超过了指定容量
+     */
+    class MonitorTask extends MyTask {
+
+        public MonitorTask(SendTask sendTask, RecvTask recvTask, ParseTask parseTask) {
+            this.sendTask = sendTask;
+            this.recvTask = recvTask;
+            this.parseTask = parseTask;
+        }
+
+        private final SendTask sendTask;
+        private final RecvTask recvTask;
+        private final ParseTask parseTask;
+
+        @Override
+        public void run() {
+            logger.warn("监控监控室" + remoteAddress + "信息的线程启动");
+            while (running) {
+                if (!sendTask.isAlive()) {
+                    sendTask.setAlive(true);
+                    ThreadPoolControl.getThreadPoolInstance().execute(sendTask);
+                }
+                if (!recvTask.isAlive()) {
+                    recvTask.setAlive(true);
+                    ThreadPoolControl.getThreadPoolInstance().execute(recvTask);
+                }
+                if (!parseTask.isAlive()) {
+                    parseTask.setAlive(true);
+                    ThreadPoolControl.getThreadPoolInstance().execute(parseTask);
+                }
+                if (sendQueue.size() > maxQueueSize) {//信息队列超过了最大数量
+                    logger.warn("发送给监控室" + remoteAddress + "的信息缓存超过了最大值" + maxQueueSize);
+                    sendQueue.poll();
+                }
+                if (map.size() > Byte.MAX_VALUE) {//记录监控室回应信息的集合超过了最大数量
+                    logger.warn("记录监控室" + remoteAddress + "回应信息的集合超过了最大数量" + maxQueueSize);
+                    map.clear();
+                }
+//                if(!map.isEmpty()){
+//                    logger.warn("监控室map:"+map);
+//                }
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ex) {
+                }
+            }
+            logger.warn("监控监控室" + remoteAddress + "信息的线程退出");
+            stop();
+        }
+    }
+
+    /**
+     * 停止运行
+     */
+    public void stop() {
+        logger.warn("退出与监控室" + remoteAddress + "的连接");
+        running = false;
+    }
+
+    /**
+     * 获取远程连接地址
+     *
+     * @return 远程连接地址
+     */
+    public SocketAddress getRemoteAddress() {
+        return remoteAddress;
+    }
+
+}

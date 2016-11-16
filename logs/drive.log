@@ -1,0 +1,1211 @@
+2016-11-15 10:52:55 404 开始加载视频...
+2016-11-15 10:52:56 417 TFI未启用
+2016-11-15 10:52:56 443 CICM版本：V1.1.3
+2016-11-15 10:52:56 455 NullPointerException
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cicm.GeaCICM.getConnection(GeaCICM.java:93)
+	at com.hgits.hardware.impl.cicm.GeaCICM$1.run(GeaCICM.java:74)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+	at java.lang.Thread.run(Thread.java:745)
+2016-11-15 10:52:56 467 CXP：执行构造器出现空指针异常：
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.initiallize(GeaCXP.java:125)
+	at com.hgits.hardware.impl.cxp.GeaCXP.run(GeaCXP.java:110)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+	at java.lang.Thread.run(Thread.java:745)
+2016-11-15 10:52:56 539 未启用收费键盘
+2016-11-15 10:52:56 570 未启用天线
+2016-11-15 10:52:56 596 构造器：NullPointerException
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.printer.GeaPrinter.<init>(GeaPrinter.java:61)
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:62)
+	at sun.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.lang.reflect.Constructor.newInstance(Constructor.java:408)
+	at com.hgits.util.hardware.HardwareHelper.initHardware(HardwareHelper.java:300)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:157)
+2016-11-15 10:52:56 621 串口未配置：
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.weighsystem.GeaWeighSystem.<init>(GeaWeighSystem.java:72)
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:62)
+	at sun.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.lang.reflect.Constructor.newInstance(Constructor.java:408)
+	at com.hgits.util.hardware.HardwareHelper.initHardware(HardwareHelper.java:300)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:160)
+2016-11-15 10:52:56 864 LPR:lprPlateMode=0
+2016-11-15 10:52:56 864 LPR:lprPlateCnt=3
+2016-11-15 10:52:56 864 LPR:lprInterval=1秒
+2016-11-15 10:52:56 865 LPR:logLevel=0
+2016-11-15 10:52:56 865 LPR:车牌识别线程开始运行
+2016-11-15 10:52:56 865 LPR:加锁模式
+2016-11-15 10:52:56 939 启用电脑键盘
+2016-11-15 10:52:56 957 未启用字符叠加器
+2016-11-15 10:52:57 135 启用ETC卡读写器:COM4,115200,7,2,1,1,1
+2016-11-15 10:52:57 343 ETC:ETC卡读卡器终端机：014300013CAD
+2016-11-15 10:52:57 344 ETC:psam序列号：014300013CAD
+2016-11-15 10:52:58 806 加载视频结束
+2016-11-15 10:53:00 695 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeCanopyLightRed(GeaCXP.java:581)
+	at com.hgits.control.FlowControl.run(FlowControl.java:326)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:53:00 696 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.lowerRailing(GeaCXP.java:610)
+	at com.hgits.control.FlowControl.run(FlowControl.java:328)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:53:00 696 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeCanopyLightRed(GeaCXP.java:581)
+	at com.hgits.control.FlowControl.run(FlowControl.java:330)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:53:00 697 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.stopAlarm(GeaCXP.java:667)
+	at com.hgits.control.FlowControl.run(FlowControl.java:332)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:53:01 999 LPR:车牌识别初始化失败，初始化结果为0
+2016-11-15 10:53:03 421 加载resource/tb_alarmcode.txt
+2016-11-15 10:53:03 467 车牌识别设备异常:56
+2016-11-15 10:53:03 697 产生报警流水:com.hgits.vo.LaneAlarm[ laneAlarmPK=com.hgits.vo.LaneAlarmPK[ roadId=49, stationId=14, laneNo=E02, opTime=Tue Nov 15 10:53:03 CST 2016 ] ]
+2016-11-15 10:53:03 698 卡机异常:44
+2016-11-15 10:53:03 804 产生报警流水:com.hgits.vo.LaneAlarm[ laneAlarmPK=com.hgits.vo.LaneAlarmPK[ roadId=49, stationId=14, laneNo=E02, opTime=Tue Nov 15 10:53:03 CST 2016 ] ]
+2016-11-15 10:53:04 175 电脑键盘：16,Shift
+2016-11-15 10:53:04 475 电脑键盘：66,B
+2016-11-15 10:53:05 371 电脑键盘：49,1
+2016-11-15 10:53:05 780 电脑键盘：50,2
+2016-11-15 10:53:06 086 电脑键盘：51,3
+2016-11-15 10:53:06 355 电脑键盘：52,4
+2016-11-15 10:53:06 460 LPR:车牌识别初始化失败，初始化结果为0
+2016-11-15 10:53:06 629 电脑键盘：53,5
+2016-11-15 10:53:06 902 电脑键盘：54,6
+2016-11-15 10:53:07 166 电脑键盘：55,7
+2016-11-15 10:53:07 410 电脑键盘：56,8
+2016-11-15 10:53:08 492 电脑键盘：80,P
+2016-11-15 10:53:09 201 电脑键盘：49,1
+2016-11-15 10:53:09 965 电脑键盘：80,P
+2016-11-15 10:53:10 232 电脑键盘：68,D
+2016-11-15 10:53:10 232 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeCanopyLightGreen(GeaCXP.java:591)
+	at com.hgits.control.FlowControl.runChangeCanopyGreen(FlowControl.java:5126)
+	at com.hgits.service.KeyBoardService.canopyLlightHandle(KeyBoardService.java:97)
+	at com.hgits.service.KeyBoardService.specialHand(KeyBoardService.java:70)
+	at com.hgits.tool.driver.MyKeyAdapter.keyPressed(MyKeyAdapter.java:91)
+	at java.awt.Component.processKeyEvent(Component.java:6483)
+	at java.awt.Component.processEvent(Component.java:6302)
+	at java.awt.Container.processEvent(Container.java:2234)
+	at java.awt.Window.processEvent(Window.java:2029)
+	at java.awt.Component.dispatchEventImpl(Component.java:4881)
+	at java.awt.Container.dispatchEventImpl(Container.java:2292)
+	at java.awt.Window.dispatchEventImpl(Window.java:2739)
+	at java.awt.Component.dispatchEvent(Component.java:4703)
+	at java.awt.KeyboardFocusManager.redispatchEvent(KeyboardFocusManager.java:1954)
+	at java.awt.DefaultKeyboardFocusManager.dispatchKeyEvent(DefaultKeyboardFocusManager.java:806)
+	at java.awt.DefaultKeyboardFocusManager.preDispatchKeyEvent(DefaultKeyboardFocusManager.java:1074)
+	at java.awt.DefaultKeyboardFocusManager.typeAheadAssertions(DefaultKeyboardFocusManager.java:945)
+	at java.awt.DefaultKeyboardFocusManager.dispatchEvent(DefaultKeyboardFocusManager.java:771)
+	at java.awt.Component.dispatchEventImpl(Component.java:4752)
+	at java.awt.Container.dispatchEventImpl(Container.java:2292)
+	at java.awt.Window.dispatchEventImpl(Window.java:2739)
+	at java.awt.Component.dispatchEvent(Component.java:4703)
+	at java.awt.EventQueue.dispatchEventImpl(EventQueue.java:746)
+	at java.awt.EventQueue.access$400(EventQueue.java:97)
+	at java.awt.EventQueue$3.run(EventQueue.java:697)
+	at java.awt.EventQueue$3.run(EventQueue.java:691)
+	at java.security.AccessController.doPrivileged(Native Method)
+	at java.security.ProtectionDomain$1.doIntersectionPrivilege(ProtectionDomain.java:75)
+	at java.security.ProtectionDomain$1.doIntersectionPrivilege(ProtectionDomain.java:86)
+	at java.awt.EventQueue$4.run(EventQueue.java:719)
+	at java.awt.EventQueue$4.run(EventQueue.java:717)
+	at java.security.AccessController.doPrivileged(Native Method)
+	at java.security.ProtectionDomain$1.doIntersectionPrivilege(ProtectionDomain.java:75)
+	at java.awt.EventQueue.dispatchEvent(EventQueue.java:716)
+	at java.awt.EventDispatchThread.pumpOneEventForFilters(EventDispatchThread.java:201)
+	at java.awt.EventDispatchThread.pumpEventsForFilter(EventDispatchThread.java:116)
+	at java.awt.EventDispatchThread.pumpEventsForHierarchy(EventDispatchThread.java:105)
+	at java.awt.EventDispatchThread.pumpEvents(EventDispatchThread.java:101)
+	at java.awt.EventDispatchThread.pumpEvents(EventDispatchThread.java:93)
+	at java.awt.EventDispatchThread.run(EventDispatchThread.java:82)
+2016-11-15 10:53:10 236 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeCanopyLightGreen(GeaCXP.java:591)
+	at com.hgits.control.FlowControl.runAfterBoj(FlowControl.java:1157)
+	at com.hgits.control.FlowControl.run(FlowControl.java:435)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:53:10 568 电脑键盘：49,1
+2016-11-15 10:53:10 917 LPR:车牌识别初始化失败，初始化结果为0
+2016-11-15 10:53:11 185 电脑键盘：80,P
+2016-11-15 10:53:11 759 电脑键盘：52,4
+2016-11-15 10:53:11 949 电脑键盘：48,0
+2016-11-15 10:53:12 267 电脑键盘：49,1
+2016-11-15 10:53:12 681 电脑键盘：52,4
+2016-11-15 10:53:13 175 电脑键盘：50,2
+2016-11-15 10:53:13 332 电脑键盘：57,9
+2016-11-15 10:53:13 502 电脑键盘：49,1
+2016-11-15 10:53:13 731 电脑键盘：50,2
+2016-11-15 10:53:13 908 电脑键盘：48,0
+2016-11-15 10:53:14 105 电脑键盘：48,0
+2016-11-15 10:53:14 305 电脑键盘：48,0
+2016-11-15 10:53:14 524 电脑键盘：48,0
+2016-11-15 10:53:14 802 电脑键盘：48,0
+2016-11-15 10:53:15 000 电脑键盘：50,2
+2016-11-15 10:53:15 193 电脑键盘：80,P
+2016-11-15 10:53:15 372 LPR:车牌识别初始化失败，初始化结果为0
+2016-11-15 10:53:17 007 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:53:17 052 ETC:send timecose-00A40000021001
+2016-11-15 10:53:17 062 ETC:recv timecose res-0,36463044383430394130303030303030303338363938303730314135303000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000,3930303000
+2016-11-15 10:53:17 063 ETC:send timecose-00B095002B
+2016-11-15 10:53:17 078 ETC:recv timecose res-0,42414645433443463433303130303031313631303433303131333339323230313030303032323232323031303031303132303330303130314346453634353534343333303330333230303030303030303043303130300000,3930303000
+2016-11-15 10:53:17 095 ETC:send timecose-00B201CC2B
+2016-11-15 10:53:17 110 ETC:recv timecose res-0,41413239303034333031343931343032353832354241383130313032303030303030303030303030303030303030303030303132303143464536343535343433333033303332303030303030303034333031343931340000,3930303000
+2016-11-15 10:53:17 111 ETC:send timecose-805C000204
+2016-11-15 10:53:17 118 ETC:recv timecose res-0,30303031354539390000,3930303000
+2016-11-15 10:53:17 130 ETC:Command_init_CAPP_Purchase:805003020B0100000000014300013CAD指令执行结果：0,响应状态码：9000,response:00015E9939F000000001007A9D5D04
+2016-11-15 10:53:17 138 ETC:Command_Get_Transaction_Prove:805A00090239F0指令执行结果：0,响应状态码：9000,response:983F0115A32492A1
+2016-11-15 10:53:17 389 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:53:17 613 ETC:ETC卡复合消费time=20161115105317,消费金额=0,0019=4301491402582AE91D010100000000000000000000001201CFE64554433030320000000000000000,结果：0,00004D62,39F0,9428CAAF,89753,89753
+2016-11-15 10:53:17 614 ETC:终端脱机交易序号=00004D62，卡片交易序号=39F0，复合消费Tac码=9428CAAF，卡片消费前余额=89753，卡片消费后余额=89753
+2016-11-15 10:53:17 658 ETC:send timecose-00A40000021001
+2016-11-15 10:53:17 669 ETC:recv timecose res-0,36463044383430394130303030303030303338363938303730314135303000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000,3930303000
+2016-11-15 10:53:17 669 ETC:send timecose-00B095002B
+2016-11-15 10:53:17 685 ETC:recv timecose res-0,42414645433443463433303130303031313631303433303131333339323230313030303032323232323031303031303132303330303130314346453634353534343333303330333230303030303030303043303130300000,3930303000
+2016-11-15 10:53:17 685 ETC:send timecose-00B201CC2B
+2016-11-15 10:53:17 701 ETC:recv timecose res-0,41413239303034333031343931343032353832414539314430313031303030303030303030303030303030303030303030303132303143464536343535343433333033303332303030303030303030303030303030300000,3930303000
+2016-11-15 10:53:17 701 ETC:send timecose-805C000204
+2016-11-15 10:53:17 708 ETC:recv timecose res-0,30303031354539390000,3930303000
+2016-11-15 10:53:17 721 ETC:Command_init_CAPP_Purchase:805003020B0100000000014300013CAD指令执行结果：0,响应状态码：9000,response:00015E9939F1000000010095174E30
+2016-11-15 10:53:17 729 ETC:Command_Get_Transaction_Prove:805A00090239F1指令执行结果：0,响应状态码：9000,response:1BAB96959428CAAF
+2016-11-15 10:53:17 980 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:53:18 231 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:53:18 483 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:53:19 318 电脑键盘：80,P
+2016-11-15 10:53:19 398 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.liftRailing(GeaCXP.java:600)
+	at com.hgits.control.FlowControl.runWhileVehLeaveNew(FlowControl.java:3459)
+	at com.hgits.control.FlowControl.runAfterBoj(FlowControl.java:1296)
+	at com.hgits.control.FlowControl.run(FlowControl.java:435)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:53:19 399 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeTrafficLightGreen(GeaCXP.java:621)
+	at com.hgits.control.FlowControl.runWhileVehLeaveNew(FlowControl.java:3460)
+	at com.hgits.control.FlowControl.runAfterBoj(FlowControl.java:1296)
+	at com.hgits.control.FlowControl.run(FlowControl.java:435)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:53:19 701 电脑键盘：80,P
+2016-11-15 10:53:19 829 LPR:车牌识别初始化失败，初始化结果为0
+2016-11-15 10:53:19 921 电脑键盘：80,P
+2016-11-15 10:53:20 208 电脑键盘：70,F
+2016-11-15 10:53:20 544 电脑键盘：80,P
+2016-11-15 10:53:20 755 电脑键盘：80,P
+2016-11-15 10:53:20 932 电脑键盘：80,P
+2016-11-15 10:53:21 489 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeTrafficLightRed(GeaCXP.java:632)
+	at com.hgits.control.FlowControl.runWhileVehLeaveNew(FlowControl.java:3653)
+	at com.hgits.control.FlowControl.runAfterBoj(FlowControl.java:1296)
+	at com.hgits.control.FlowControl.run(FlowControl.java:435)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:53:21 502 电脑键盘：69,E
+2016-11-15 10:53:21 503 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeCanopyLightRed(GeaCXP.java:581)
+	at com.hgits.control.FlowControl.runChangeCanopyRed(FlowControl.java:5115)
+	at com.hgits.service.KeyBoardService.canopyLlightHandle(KeyBoardService.java:99)
+	at com.hgits.service.KeyBoardService.specialHand(KeyBoardService.java:70)
+	at com.hgits.tool.driver.MyKeyAdapter.keyPressed(MyKeyAdapter.java:91)
+	at java.awt.Component.processKeyEvent(Component.java:6483)
+	at java.awt.Component.processEvent(Component.java:6302)
+	at java.awt.Container.processEvent(Container.java:2234)
+	at java.awt.Window.processEvent(Window.java:2029)
+	at java.awt.Component.dispatchEventImpl(Component.java:4881)
+	at java.awt.Container.dispatchEventImpl(Container.java:2292)
+	at java.awt.Window.dispatchEventImpl(Window.java:2739)
+	at java.awt.Component.dispatchEvent(Component.java:4703)
+	at java.awt.KeyboardFocusManager.redispatchEvent(KeyboardFocusManager.java:1954)
+	at java.awt.DefaultKeyboardFocusManager.dispatchKeyEvent(DefaultKeyboardFocusManager.java:806)
+	at java.awt.DefaultKeyboardFocusManager.preDispatchKeyEvent(DefaultKeyboardFocusManager.java:1074)
+	at java.awt.DefaultKeyboardFocusManager.typeAheadAssertions(DefaultKeyboardFocusManager.java:945)
+	at java.awt.DefaultKeyboardFocusManager.dispatchEvent(DefaultKeyboardFocusManager.java:771)
+	at java.awt.Component.dispatchEventImpl(Component.java:4752)
+	at java.awt.Container.dispatchEventImpl(Container.java:2292)
+	at java.awt.Window.dispatchEventImpl(Window.java:2739)
+	at java.awt.Component.dispatchEvent(Component.java:4703)
+	at java.awt.EventQueue.dispatchEventImpl(EventQueue.java:746)
+	at java.awt.EventQueue.access$400(EventQueue.java:97)
+	at java.awt.EventQueue$3.run(EventQueue.java:697)
+	at java.awt.EventQueue$3.run(EventQueue.java:691)
+	at java.security.AccessController.doPrivileged(Native Method)
+	at java.security.ProtectionDomain$1.doIntersectionPrivilege(ProtectionDomain.java:75)
+	at java.security.ProtectionDomain$1.doIntersectionPrivilege(ProtectionDomain.java:86)
+	at java.awt.EventQueue$4.run(EventQueue.java:719)
+	at java.awt.EventQueue$4.run(EventQueue.java:717)
+	at java.security.AccessController.doPrivileged(Native Method)
+	at java.security.ProtectionDomain$1.doIntersectionPrivilege(ProtectionDomain.java:75)
+	at java.awt.EventQueue.dispatchEvent(EventQueue.java:716)
+	at java.awt.EventDispatchThread.pumpOneEventForFilters(EventDispatchThread.java:201)
+	at java.awt.EventDispatchThread.pumpEventsForFilter(EventDispatchThread.java:116)
+	at java.awt.EventDispatchThread.pumpEventsForHierarchy(EventDispatchThread.java:105)
+	at java.awt.EventDispatchThread.pumpEvents(EventDispatchThread.java:101)
+	at java.awt.EventDispatchThread.pumpEvents(EventDispatchThread.java:93)
+	at java.awt.EventDispatchThread.run(EventDispatchThread.java:82)
+2016-11-15 10:53:21 504 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.lowerRailing(GeaCXP.java:610)
+	at com.hgits.control.FlowControl$6.run(FlowControl.java:3675)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+	at java.lang.Thread.run(Thread.java:745)
+2016-11-15 10:53:21 527 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeCanopyLightRed(GeaCXP.java:581)
+	at com.hgits.control.FlowControl.runChangeCanopyRed(FlowControl.java:5115)
+	at com.hgits.control.FlowControl.runGetVehClass(FlowControl.java:1671)
+	at com.hgits.control.FlowControl.runBeforeReadCard(FlowControl.java:1351)
+	at com.hgits.control.FlowControl.runAfterBoj(FlowControl.java:1182)
+	at com.hgits.control.FlowControl.run(FlowControl.java:435)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:53:21 825 电脑键盘：67,C
+2016-11-15 10:53:21 990 电脑键盘：80,P
+2016-11-15 10:53:24 285 LPR:车牌识别初始化失败，初始化结果为0
+2016-11-15 10:53:38 427 开始加载视频...
+2016-11-15 10:53:39 000 构造器：NullPointerException
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.printer.GeaPrinter.<init>(GeaPrinter.java:61)
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:62)
+	at sun.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.lang.reflect.Constructor.newInstance(Constructor.java:408)
+	at com.hgits.util.hardware.HardwareHelper.initHardware(HardwareHelper.java:300)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:157)
+2016-11-15 10:53:39 007 串口未配置：
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.weighsystem.GeaWeighSystem.<init>(GeaWeighSystem.java:72)
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:62)
+	at sun.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.lang.reflect.Constructor.newInstance(Constructor.java:408)
+	at com.hgits.util.hardware.HardwareHelper.initHardware(HardwareHelper.java:300)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:160)
+2016-11-15 10:53:39 011 LPR:lprPlateMode=0
+2016-11-15 10:53:39 012 LPR:lprPlateCnt=3
+2016-11-15 10:53:39 021 启用电脑键盘
+2016-11-15 10:53:39 025 未启用字符叠加器
+2016-11-15 10:53:39 079 LPR:lprInterval=1秒
+2016-11-15 10:53:39 079 LPR:logLevel=0
+2016-11-15 10:53:39 079 LPR:车牌识别线程开始运行
+2016-11-15 10:53:39 079 LPR:加锁模式
+2016-11-15 10:53:39 080 未启用天线
+2016-11-15 10:53:39 082 CXP：执行构造器出现空指针异常：
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.initiallize(GeaCXP.java:125)
+	at com.hgits.hardware.impl.cxp.GeaCXP.run(GeaCXP.java:110)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+	at java.lang.Thread.run(Thread.java:745)
+2016-11-15 10:53:39 082 CICM版本：V1.1.3
+2016-11-15 10:53:39 084 NullPointerException
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cicm.GeaCICM.getConnection(GeaCICM.java:93)
+	at com.hgits.hardware.impl.cicm.GeaCICM$1.run(GeaCICM.java:74)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+	at java.lang.Thread.run(Thread.java:745)
+2016-11-15 10:53:39 084 TFI未启用
+2016-11-15 10:53:39 151 未启用收费键盘
+2016-11-15 10:53:39 217 启用ETC卡读写器:COM4,115200,7,2,1,1,1
+2016-11-15 10:53:39 544 ETC:ETC卡读卡器终端机：014300013CAD
+2016-11-15 10:53:39 545 ETC:psam序列号：014300013CAD
+2016-11-15 10:53:39 725 加载视频结束
+2016-11-15 10:53:41 931 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeCanopyLightRed(GeaCXP.java:581)
+	at com.hgits.control.FlowControl.run(FlowControl.java:326)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:53:41 932 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.lowerRailing(GeaCXP.java:610)
+	at com.hgits.control.FlowControl.run(FlowControl.java:328)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:53:41 932 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeCanopyLightRed(GeaCXP.java:581)
+	at com.hgits.control.FlowControl.run(FlowControl.java:330)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:53:41 933 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.stopAlarm(GeaCXP.java:667)
+	at com.hgits.control.FlowControl.run(FlowControl.java:332)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:53:43 606 LPR:车牌识别初始化失败，初始化结果为0
+2016-11-15 10:53:43 890 电脑键盘：16,Shift
+2016-11-15 10:53:44 138 电脑键盘：66,B
+2016-11-15 10:53:44 708 电脑键盘：49,1
+2016-11-15 10:53:44 760 加载resource/tb_alarmcode.txt
+2016-11-15 10:53:44 765 车牌识别设备异常:33
+2016-11-15 10:53:44 853 产生报警流水:com.hgits.vo.LaneAlarm[ laneAlarmPK=com.hgits.vo.LaneAlarmPK[ roadId=49, stationId=14, laneNo=X02, opTime=Tue Nov 15 10:53:44 CST 2016 ] ]
+2016-11-15 10:53:44 854 卡机异常:24
+2016-11-15 10:53:44 936 产生报警流水:com.hgits.vo.LaneAlarm[ laneAlarmPK=com.hgits.vo.LaneAlarmPK[ roadId=49, stationId=14, laneNo=X02, opTime=Tue Nov 15 10:53:44 CST 2016 ] ]
+2016-11-15 10:53:45 014 电脑键盘：50,2
+2016-11-15 10:53:45 366 电脑键盘：51,3
+2016-11-15 10:53:45 659 电脑键盘：52,4
+2016-11-15 10:53:45 976 电脑键盘：53,5
+2016-11-15 10:53:46 250 电脑键盘：54,6
+2016-11-15 10:53:46 526 电脑键盘：55,7
+2016-11-15 10:53:46 789 电脑键盘：56,8
+2016-11-15 10:53:47 402 电脑键盘：80,P
+2016-11-15 10:53:48 062 LPR:车牌识别初始化失败，初始化结果为0
+2016-11-15 10:53:48 268 电脑键盘：49,1
+2016-11-15 10:53:48 428 电脑键盘：80,P
+2016-11-15 10:53:48 672 电脑键盘：68,D
+2016-11-15 10:53:48 673 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeCanopyLightGreen(GeaCXP.java:591)
+	at com.hgits.control.FlowControl.runChangeCanopyGreen(FlowControl.java:5126)
+	at com.hgits.service.KeyBoardService.canopyLlightHandle(KeyBoardService.java:97)
+	at com.hgits.service.KeyBoardService.specialHand(KeyBoardService.java:70)
+	at com.hgits.tool.driver.MyKeyAdapter.keyPressed(MyKeyAdapter.java:91)
+	at java.awt.Component.processKeyEvent(Component.java:6483)
+	at java.awt.Component.processEvent(Component.java:6302)
+	at java.awt.Container.processEvent(Container.java:2234)
+	at java.awt.Window.processEvent(Window.java:2029)
+	at java.awt.Component.dispatchEventImpl(Component.java:4881)
+	at java.awt.Container.dispatchEventImpl(Container.java:2292)
+	at java.awt.Window.dispatchEventImpl(Window.java:2739)
+	at java.awt.Component.dispatchEvent(Component.java:4703)
+	at java.awt.KeyboardFocusManager.redispatchEvent(KeyboardFocusManager.java:1954)
+	at java.awt.DefaultKeyboardFocusManager.dispatchKeyEvent(DefaultKeyboardFocusManager.java:806)
+	at java.awt.DefaultKeyboardFocusManager.preDispatchKeyEvent(DefaultKeyboardFocusManager.java:1074)
+	at java.awt.DefaultKeyboardFocusManager.typeAheadAssertions(DefaultKeyboardFocusManager.java:945)
+	at java.awt.DefaultKeyboardFocusManager.dispatchEvent(DefaultKeyboardFocusManager.java:771)
+	at java.awt.Component.dispatchEventImpl(Component.java:4752)
+	at java.awt.Container.dispatchEventImpl(Container.java:2292)
+	at java.awt.Window.dispatchEventImpl(Window.java:2739)
+	at java.awt.Component.dispatchEvent(Component.java:4703)
+	at java.awt.EventQueue.dispatchEventImpl(EventQueue.java:746)
+	at java.awt.EventQueue.access$400(EventQueue.java:97)
+	at java.awt.EventQueue$3.run(EventQueue.java:697)
+	at java.awt.EventQueue$3.run(EventQueue.java:691)
+	at java.security.AccessController.doPrivileged(Native Method)
+	at java.security.ProtectionDomain$1.doIntersectionPrivilege(ProtectionDomain.java:75)
+	at java.security.ProtectionDomain$1.doIntersectionPrivilege(ProtectionDomain.java:86)
+	at java.awt.EventQueue$4.run(EventQueue.java:719)
+	at java.awt.EventQueue$4.run(EventQueue.java:717)
+	at java.security.AccessController.doPrivileged(Native Method)
+	at java.security.ProtectionDomain$1.doIntersectionPrivilege(ProtectionDomain.java:75)
+	at java.awt.EventQueue.dispatchEvent(EventQueue.java:716)
+	at java.awt.EventDispatchThread.pumpOneEventForFilters(EventDispatchThread.java:201)
+	at java.awt.EventDispatchThread.pumpEventsForFilter(EventDispatchThread.java:116)
+	at java.awt.EventDispatchThread.pumpEventsForHierarchy(EventDispatchThread.java:105)
+	at java.awt.EventDispatchThread.pumpEvents(EventDispatchThread.java:101)
+	at java.awt.EventDispatchThread.pumpEvents(EventDispatchThread.java:93)
+	at java.awt.EventDispatchThread.run(EventDispatchThread.java:82)
+2016-11-15 10:53:48 676 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeCanopyLightGreen(GeaCXP.java:591)
+	at com.hgits.control.FlowControl.runAfterBoj(FlowControl.java:1157)
+	at com.hgits.control.FlowControl.run(FlowControl.java:435)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:53:49 063 电脑键盘：49,1
+2016-11-15 10:53:49 410 电脑键盘：80,P
+2016-11-15 10:53:49 955 电脑键盘：52,4
+2016-11-15 10:53:50 159 电脑键盘：48,0
+2016-11-15 10:53:50 348 电脑键盘：49,1
+2016-11-15 10:53:50 608 电脑键盘：52,4
+2016-11-15 10:53:50 902 电脑键盘：50,2
+2016-11-15 10:53:51 116 电脑键盘：57,9
+2016-11-15 10:53:51 307 电脑键盘：49,1
+2016-11-15 10:53:51 528 电脑键盘：50,2
+2016-11-15 10:53:51 683 电脑键盘：48,0
+2016-11-15 10:53:51 906 电脑键盘：48,0
+2016-11-15 10:53:52 111 电脑键盘：48,0
+2016-11-15 10:53:52 339 电脑键盘：48,0
+2016-11-15 10:53:52 519 LPR:车牌识别初始化失败，初始化结果为0
+2016-11-15 10:53:52 660 电脑键盘：48,0
+2016-11-15 10:53:52 975 电脑键盘：50,2
+2016-11-15 10:53:53 108 电脑键盘：80,P
+2016-11-15 10:53:55 276 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:53:55 322 ETC:send timecose-00A40000021001
+2016-11-15 10:53:55 342 ETC:recv timecose res-0,36463044383430394130303030303030303338363938303730314135303000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000,3930303000
+2016-11-15 10:53:55 343 ETC:send timecose-00B095002B
+2016-11-15 10:53:55 358 ETC:recv timecose res-0,42414645433443463433303130303031313631303433303131333339323230313030303032323232323031303031303132303330303130314346453634353534343333303330333230303030303030303043303130300000,3930303000
+2016-11-15 10:53:55 362 ETC:send timecose-00B201CC2B
+2016-11-15 10:53:55 378 ETC:recv timecose res-0,41413239303034333031343931343032353832414539314430313031303030303030303030303030303030303030303030303132303143464536343535343433333033303332303030303030303030303030303030300000,3930303000
+2016-11-15 10:53:55 379 ETC:send timecose-805C000204
+2016-11-15 10:53:55 385 ETC:recv timecose res-0,30303031354539390000,3930303000
+2016-11-15 10:53:55 398 ETC:Command_init_CAPP_Purchase:805003020B0100000000014300013CAD指令执行结果：0,响应状态码：9000,response:00015E9939F10000000100524F6477
+2016-11-15 10:53:55 406 ETC:Command_Get_Transaction_Prove:805A00090239F1指令执行结果：0,响应状态码：9000,response:1BAB96959428CAAF
+2016-11-15 10:53:55 658 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:53:55 887 ETC:ETC卡复合消费time=20161115105355,消费金额=0,0019=4301491402582AE943010200000000000000000000001201CFE64554433030320000000043014914,结果：0,00004D63,39F1,68621697,89753,89753
+2016-11-15 10:53:55 888 ETC:终端脱机交易序号=00004D63，卡片交易序号=39F1，复合消费Tac码=68621697，卡片消费前余额=89753，卡片消费后余额=89753
+2016-11-15 10:53:55 933 ETC:send timecose-00A40000021001
+2016-11-15 10:53:55 943 ETC:recv timecose res-0,36463044383430394130303030303030303338363938303730314135303000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000,3930303000
+2016-11-15 10:53:55 943 ETC:send timecose-00B095002B
+2016-11-15 10:53:55 959 ETC:recv timecose res-0,42414645433443463433303130303031313631303433303131333339323230313030303032323232323031303031303132303330303130314346453634353534343333303330333230303030303030303043303130300000,3930303000
+2016-11-15 10:53:55 959 ETC:send timecose-00B201CC2B
+2016-11-15 10:53:55 974 ETC:recv timecose res-0,41413239303034333031343931343032353832414539343330313032303030303030303030303030303030303030303030303132303143464536343535343433333033303332303030303030303034333031343931340000,3930303000
+2016-11-15 10:53:55 975 ETC:send timecose-805C000204
+2016-11-15 10:53:55 982 ETC:recv timecose res-0,30303031354539390000,3930303000
+2016-11-15 10:53:55 995 ETC:Command_init_CAPP_Purchase:805003020B0100000000014300013CAD指令执行结果：0,响应状态码：9000,response:00015E9939F20000000100DBDE803E
+2016-11-15 10:53:56 003 ETC:Command_Get_Transaction_Prove:805A00090239F2指令执行结果：0,响应状态码：9000,response:8019F58E68621697
+2016-11-15 10:53:56 254 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:53:56 505 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:53:56 757 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:53:56 975 LPR:车牌识别初始化失败，初始化结果为0
+2016-11-15 10:53:57 008 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:53:57 259 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:53:57 510 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:53:57 760 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:53:58 011 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:53:58 262 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:53:58 512 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:53:58 763 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:53:58 993 电脑键盘：80,P
+2016-11-15 10:53:59 012 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:53:59 262 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:53:59 514 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:53:59 765 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:54:00 017 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:54:00 246 电脑键盘：80,P
+2016-11-15 10:54:00 268 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:54:00 492 ETC:ETC卡复合消费time=20161115105355,消费金额=9,0019=4301491402582AE943010200000000000000000000001201CFE64554433030320000000043014914,结果：0,00004D64,39F2,7E256839,89753,89744
+2016-11-15 10:54:00 492 ETC:终端脱机交易序号=00004D64，卡片交易序号=39F2，复合消费Tac码=7E256839，卡片消费前余额=89753，卡片消费后余额=89744
+2016-11-15 10:54:00 537 ETC:send timecose-00A40000021001
+2016-11-15 10:54:00 547 ETC:recv timecose res-0,36463044383430394130303030303030303338363938303730314135303000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000,3930303000
+2016-11-15 10:54:00 547 ETC:send timecose-00B095002B
+2016-11-15 10:54:00 563 ETC:recv timecose res-0,42414645433443463433303130303031313631303433303131333339323230313030303032323232323031303031303132303330303130314346453634353534343333303330333230303030303030303043303130300000,3930303000
+2016-11-15 10:54:00 563 ETC:send timecose-00B201CC2B
+2016-11-15 10:54:00 579 ETC:recv timecose res-0,41413239303034333031343931343032353832414539343330313032303030303030303030303030303030303030303030303132303143464536343535343433333033303332303030303030303034333031343931340000,3930303000
+2016-11-15 10:54:00 579 ETC:send timecose-805C000204
+2016-11-15 10:54:00 586 ETC:recv timecose res-0,30303031354539300000,3930303000
+2016-11-15 10:54:00 599 ETC:Command_init_CAPP_Purchase:805003020B0100000000014300013CAD指令执行结果：0,响应状态码：9000,response:00015E9039F3000000010075C907B9
+2016-11-15 10:54:00 607 ETC:Command_Get_Transaction_Prove:805A00090239F3指令执行结果：0,响应状态码：9000,response:12A915607E256839
+2016-11-15 10:54:00 858 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:54:01 111 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:54:01 361 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:54:01 432 LPR:车牌识别初始化失败，初始化结果为0
+2016-11-15 10:54:01 612 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:54:01 864 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:54:02 114 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:54:02 364 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:54:02 614 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:54:02 866 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:54:03 117 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:54:05 209 电脑键盘：80,P
+2016-11-15 10:54:05 452 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.liftRailing(GeaCXP.java:600)
+	at com.hgits.control.FlowControl.runWhileVehLeaveNew(FlowControl.java:3459)
+	at com.hgits.control.FlowControl.runAfterBoj(FlowControl.java:1296)
+	at com.hgits.control.FlowControl.run(FlowControl.java:435)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:54:05 453 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeTrafficLightGreen(GeaCXP.java:621)
+	at com.hgits.control.FlowControl.runWhileVehLeaveNew(FlowControl.java:3460)
+	at com.hgits.control.FlowControl.runAfterBoj(FlowControl.java:1296)
+	at com.hgits.control.FlowControl.run(FlowControl.java:435)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:54:05 731 电脑键盘：80,P
+2016-11-15 10:54:05 889 LPR:车牌识别初始化失败，初始化结果为0
+2016-11-15 10:54:05 959 电脑键盘：80,P
+2016-11-15 10:54:06 132 电脑键盘：70,F
+2016-11-15 10:54:06 546 电脑键盘：80,P
+2016-11-15 10:54:06 903 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeTrafficLightRed(GeaCXP.java:632)
+	at com.hgits.control.FlowControl.runWhileVehLeaveNew(FlowControl.java:3653)
+	at com.hgits.control.FlowControl.runAfterBoj(FlowControl.java:1296)
+	at com.hgits.control.FlowControl.run(FlowControl.java:435)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:54:06 905 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.lowerRailing(GeaCXP.java:610)
+	at com.hgits.control.FlowControl$6.run(FlowControl.java:3675)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+	at java.lang.Thread.run(Thread.java:745)
+2016-11-15 10:54:06 953 电脑键盘：80,P
+2016-11-15 10:54:10 346 LPR:车牌识别初始化失败，初始化结果为0
+2016-11-15 10:55:38 605 开始加载视频...
+2016-11-15 10:55:39 285 构造器：NullPointerException
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.printer.GeaPrinter.<init>(GeaPrinter.java:61)
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:62)
+	at sun.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.lang.reflect.Constructor.newInstance(Constructor.java:408)
+	at com.hgits.util.hardware.HardwareHelper.initHardware(HardwareHelper.java:300)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:157)
+2016-11-15 10:55:39 294 串口未配置：
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.weighsystem.GeaWeighSystem.<init>(GeaWeighSystem.java:72)
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:62)
+	at sun.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.lang.reflect.Constructor.newInstance(Constructor.java:408)
+	at com.hgits.util.hardware.HardwareHelper.initHardware(HardwareHelper.java:300)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:160)
+2016-11-15 10:55:39 299 LPR:lprPlateMode=0
+2016-11-15 10:55:39 299 LPR:lprPlateCnt=3
+2016-11-15 10:55:39 315 启用电脑键盘
+2016-11-15 10:55:39 412 未启用字符叠加器
+2016-11-15 10:55:39 432 LPR:lprInterval=1秒
+2016-11-15 10:55:39 433 未启用天线
+2016-11-15 10:55:39 433 CXP：执行构造器出现空指针异常：
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.initiallize(GeaCXP.java:125)
+	at com.hgits.hardware.impl.cxp.GeaCXP.run(GeaCXP.java:110)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+	at java.lang.Thread.run(Thread.java:745)
+2016-11-15 10:55:39 433 LPR:logLevel=0
+2016-11-15 10:55:39 433 LPR:车牌识别线程开始运行
+2016-11-15 10:55:39 434 LPR:加锁模式
+2016-11-15 10:55:39 438 CICM版本：V1.1.3
+2016-11-15 10:55:39 439 NullPointerException
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cicm.GeaCICM.getConnection(GeaCICM.java:93)
+	at com.hgits.hardware.impl.cicm.GeaCICM$1.run(GeaCICM.java:74)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+	at java.lang.Thread.run(Thread.java:745)
+2016-11-15 10:55:39 439 TFI未启用
+2016-11-15 10:55:39 449 未启用收费键盘
+2016-11-15 10:55:39 648 启用ETC卡读写器:COM4,115200,7,2,1,1,1
+2016-11-15 10:55:40 007 ETC:ETC卡读卡器终端机：014300013CAD
+2016-11-15 10:55:40 009 ETC:psam序列号：014300013CAD
+2016-11-15 10:55:40 299 加载视频结束
+2016-11-15 10:55:42 926 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeCanopyLightRed(GeaCXP.java:581)
+	at com.hgits.control.FlowControl.run(FlowControl.java:326)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:55:42 927 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.lowerRailing(GeaCXP.java:610)
+	at com.hgits.control.FlowControl.run(FlowControl.java:328)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:55:42 927 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeCanopyLightRed(GeaCXP.java:581)
+	at com.hgits.control.FlowControl.run(FlowControl.java:330)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:55:42 928 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.stopAlarm(GeaCXP.java:667)
+	at com.hgits.control.FlowControl.run(FlowControl.java:332)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:55:43 371 电脑键盘：16,Shift
+2016-11-15 10:55:43 647 电脑键盘：66,B
+2016-11-15 10:55:44 014 LPR:车牌识别初始化失败，初始化结果为0
+2016-11-15 10:55:44 501 电脑键盘：49,1
+2016-11-15 10:55:44 774 电脑键盘：50,2
+2016-11-15 10:55:45 065 电脑键盘：51,3
+2016-11-15 10:55:45 292 加载resource/tb_alarmcode.txt
+2016-11-15 10:55:45 296 车牌识别设备异常:33
+2016-11-15 10:55:45 337 电脑键盘：52,4
+2016-11-15 10:55:45 404 产生报警流水:com.hgits.vo.LaneAlarm[ laneAlarmPK=com.hgits.vo.LaneAlarmPK[ roadId=49, stationId=14, laneNo=X02, opTime=Tue Nov 15 10:55:45 CST 2016 ] ]
+2016-11-15 10:55:45 405 卡机异常:24
+2016-11-15 10:55:45 453 产生报警流水:com.hgits.vo.LaneAlarm[ laneAlarmPK=com.hgits.vo.LaneAlarmPK[ roadId=49, stationId=14, laneNo=X02, opTime=Tue Nov 15 10:55:45 CST 2016 ] ]
+2016-11-15 10:55:45 590 电脑键盘：53,5
+2016-11-15 10:55:45 870 电脑键盘：54,6
+2016-11-15 10:55:46 149 电脑键盘：55,7
+2016-11-15 10:55:46 355 电脑键盘：56,8
+2016-11-15 10:55:46 643 电脑键盘：80,P
+2016-11-15 10:55:47 302 电脑键盘：49,1
+2016-11-15 10:55:47 493 电脑键盘：80,P
+2016-11-15 10:55:47 714 电脑键盘：68,D
+2016-11-15 10:55:47 715 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeCanopyLightGreen(GeaCXP.java:591)
+	at com.hgits.control.FlowControl.runChangeCanopyGreen(FlowControl.java:5126)
+	at com.hgits.service.KeyBoardService.canopyLlightHandle(KeyBoardService.java:97)
+	at com.hgits.service.KeyBoardService.specialHand(KeyBoardService.java:70)
+	at com.hgits.tool.driver.MyKeyAdapter.keyPressed(MyKeyAdapter.java:91)
+	at java.awt.Component.processKeyEvent(Component.java:6483)
+	at java.awt.Component.processEvent(Component.java:6302)
+	at java.awt.Container.processEvent(Container.java:2234)
+	at java.awt.Window.processEvent(Window.java:2029)
+	at java.awt.Component.dispatchEventImpl(Component.java:4881)
+	at java.awt.Container.dispatchEventImpl(Container.java:2292)
+	at java.awt.Window.dispatchEventImpl(Window.java:2739)
+	at java.awt.Component.dispatchEvent(Component.java:4703)
+	at java.awt.KeyboardFocusManager.redispatchEvent(KeyboardFocusManager.java:1954)
+	at java.awt.DefaultKeyboardFocusManager.dispatchKeyEvent(DefaultKeyboardFocusManager.java:806)
+	at java.awt.DefaultKeyboardFocusManager.preDispatchKeyEvent(DefaultKeyboardFocusManager.java:1074)
+	at java.awt.DefaultKeyboardFocusManager.typeAheadAssertions(DefaultKeyboardFocusManager.java:945)
+	at java.awt.DefaultKeyboardFocusManager.dispatchEvent(DefaultKeyboardFocusManager.java:771)
+	at java.awt.Component.dispatchEventImpl(Component.java:4752)
+	at java.awt.Container.dispatchEventImpl(Container.java:2292)
+	at java.awt.Window.dispatchEventImpl(Window.java:2739)
+	at java.awt.Component.dispatchEvent(Component.java:4703)
+	at java.awt.EventQueue.dispatchEventImpl(EventQueue.java:746)
+	at java.awt.EventQueue.access$400(EventQueue.java:97)
+	at java.awt.EventQueue$3.run(EventQueue.java:697)
+	at java.awt.EventQueue$3.run(EventQueue.java:691)
+	at java.security.AccessController.doPrivileged(Native Method)
+	at java.security.ProtectionDomain$1.doIntersectionPrivilege(ProtectionDomain.java:75)
+	at java.security.ProtectionDomain$1.doIntersectionPrivilege(ProtectionDomain.java:86)
+	at java.awt.EventQueue$4.run(EventQueue.java:719)
+	at java.awt.EventQueue$4.run(EventQueue.java:717)
+	at java.security.AccessController.doPrivileged(Native Method)
+	at java.security.ProtectionDomain$1.doIntersectionPrivilege(ProtectionDomain.java:75)
+	at java.awt.EventQueue.dispatchEvent(EventQueue.java:716)
+	at java.awt.EventDispatchThread.pumpOneEventForFilters(EventDispatchThread.java:201)
+	at java.awt.EventDispatchThread.pumpEventsForFilter(EventDispatchThread.java:116)
+	at java.awt.EventDispatchThread.pumpEventsForHierarchy(EventDispatchThread.java:105)
+	at java.awt.EventDispatchThread.pumpEvents(EventDispatchThread.java:101)
+	at java.awt.EventDispatchThread.pumpEvents(EventDispatchThread.java:93)
+	at java.awt.EventDispatchThread.run(EventDispatchThread.java:82)
+2016-11-15 10:55:47 721 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeCanopyLightGreen(GeaCXP.java:591)
+	at com.hgits.control.FlowControl.runAfterBoj(FlowControl.java:1157)
+	at com.hgits.control.FlowControl.run(FlowControl.java:435)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:55:48 048 电脑键盘：49,1
+2016-11-15 10:55:48 284 电脑键盘：80,P
+2016-11-15 10:55:48 469 LPR:车牌识别初始化失败，初始化结果为0
+2016-11-15 10:55:49 124 电脑键盘：52,4
+2016-11-15 10:55:49 373 电脑键盘：48,0
+2016-11-15 10:55:49 585 电脑键盘：49,1
+2016-11-15 10:55:49 857 电脑键盘：52,4
+2016-11-15 10:55:50 169 电脑键盘：50,2
+2016-11-15 10:55:50 391 电脑键盘：57,9
+2016-11-15 10:55:50 573 电脑键盘：49,1
+2016-11-15 10:55:50 760 电脑键盘：50,2
+2016-11-15 10:55:50 925 电脑键盘：48,0
+2016-11-15 10:55:51 146 电脑键盘：48,0
+2016-11-15 10:55:51 341 电脑键盘：48,0
+2016-11-15 10:55:51 542 电脑键盘：48,0
+2016-11-15 10:55:51 780 电脑键盘：48,0
+2016-11-15 10:55:52 055 电脑键盘：50,2
+2016-11-15 10:55:52 260 电脑键盘：80,P
+2016-11-15 10:55:52 926 LPR:车牌识别初始化失败，初始化结果为0
+2016-11-15 10:55:54 415 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:55:54 460 ETC:send timecose-00A40000021001
+2016-11-15 10:55:54 470 ETC:recv timecose res-0,36463044383430394130303030303030303338363938303730314135303000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000,3930303000
+2016-11-15 10:55:54 471 ETC:send timecose-00B095002B
+2016-11-15 10:55:54 486 ETC:recv timecose res-0,42414645433443463433303130303031313631303433303131333339323230313030303032323232323031303031303132303330303130314346453634353534343333303330333230303030303030303043303130300000,3930303000
+2016-11-15 10:55:54 490 ETC:send timecose-00B201CC2B
+2016-11-15 10:55:54 506 ETC:recv timecose res-0,41413239303034333031343931343032353832414539343330313032303030303030303030303030303030303030303030303132303143464536343535343433333033303332303030303030303034333031343931340000,3930303000
+2016-11-15 10:55:54 507 ETC:send timecose-805C000204
+2016-11-15 10:55:54 514 ETC:recv timecose res-0,30303031354539300000,3930303000
+2016-11-15 10:55:54 527 ETC:Command_init_CAPP_Purchase:805003020B0100000000014300013CAD指令执行结果：0,响应状态码：9000,response:00015E9039F300000001000E3994F3
+2016-11-15 10:55:54 535 ETC:Command_Get_Transaction_Prove:805A00090239F3指令执行结果：0,响应状态码：9000,response:12A915607E256839
+2016-11-15 10:55:54 786 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:55:55 020 ETC:ETC卡复合消费time=20161115105554,消费金额=0,0019=4301491402582AE9BA010200000000000000000000001201CFE64554433030320000000043014914,结果：0,00004D65,39F3,4BB0E149,89744,89744
+2016-11-15 10:55:55 021 ETC:终端脱机交易序号=00004D65，卡片交易序号=39F3，复合消费Tac码=4BB0E149，卡片消费前余额=89744，卡片消费后余额=89744
+2016-11-15 10:55:55 065 ETC:send timecose-00A40000021001
+2016-11-15 10:55:55 075 ETC:recv timecose res-0,36463044383430394130303030303030303338363938303730314135303000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000,3930303000
+2016-11-15 10:55:55 076 ETC:send timecose-00B095002B
+2016-11-15 10:55:55 091 ETC:recv timecose res-0,42414645433443463433303130303031313631303433303131333339323230313030303032323232323031303031303132303330303130314346453634353534343333303330333230303030303030303043303130300000,3930303000
+2016-11-15 10:55:55 092 ETC:send timecose-00B201CC2B
+2016-11-15 10:55:55 107 ETC:recv timecose res-0,41413239303034333031343931343032353832414539424130313032303030303030303030303030303030303030303030303132303143464536343535343433333033303332303030303030303034333031343931340000,3930303000
+2016-11-15 10:55:55 108 ETC:send timecose-805C000204
+2016-11-15 10:55:55 115 ETC:recv timecose res-0,30303031354539300000,3930303000
+2016-11-15 10:55:55 127 ETC:Command_init_CAPP_Purchase:805003020B0100000000014300013CAD指令执行结果：0,响应状态码：9000,response:00015E9039F400000001004F990B48
+2016-11-15 10:55:55 136 ETC:Command_Get_Transaction_Prove:805A00090239F4指令执行结果：0,响应状态码：9000,response:45CA47824BB0E149
+2016-11-15 10:55:55 386 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:55:55 639 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:55:55 890 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:55:56 142 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:55:56 393 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:55:56 502 电脑键盘：80,P
+2016-11-15 10:55:56 644 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:55:56 895 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:55:57 147 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:55:57 388 LPR:车牌识别初始化失败，初始化结果为0
+2016-11-15 10:55:57 397 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:55:57 638 电脑键盘：80,P
+2016-11-15 10:55:57 648 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:55:57 874 ETC:ETC卡复合消费time=20161115105554,消费金额=9,0019=4301491402582AE9BA010200000000000000000000001201CFE64554433030320000000043014914,结果：0,00004D66,39F4,E15283F3,89744,89735
+2016-11-15 10:55:57 874 ETC:终端脱机交易序号=00004D66，卡片交易序号=39F4，复合消费Tac码=E15283F3，卡片消费前余额=89744，卡片消费后余额=89735
+2016-11-15 10:55:57 919 ETC:send timecose-00A40000021001
+2016-11-15 10:55:57 929 ETC:recv timecose res-0,36463044383430394130303030303030303338363938303730314135303000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000,3930303000
+2016-11-15 10:55:57 929 ETC:send timecose-00B095002B
+2016-11-15 10:55:57 945 ETC:recv timecose res-0,42414645433443463433303130303031313631303433303131333339323230313030303032323232323031303031303132303330303130314346453634353534343333303330333230303030303030303043303130300000,3930303000
+2016-11-15 10:55:57 945 ETC:send timecose-00B201CC2B
+2016-11-15 10:55:57 961 ETC:recv timecose res-0,41413239303034333031343931343032353832414539424130313032303030303030303030303030303030303030303030303132303143464536343535343433333033303332303030303030303034333031343931340000,3930303000
+2016-11-15 10:55:57 961 ETC:send timecose-805C000204
+2016-11-15 10:55:57 968 ETC:recv timecose res-0,30303031354538370000,3930303000
+2016-11-15 10:55:57 980 ETC:Command_init_CAPP_Purchase:805003020B0100000000014300013CAD指令执行结果：0,响应状态码：9000,response:00015E8739F500000001002E09BA32
+2016-11-15 10:55:57 989 ETC:Command_Get_Transaction_Prove:805A00090239F5指令执行结果：0,响应状态码：9000,response:413F53F6E15283F3
+2016-11-15 10:55:58 241 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:55:58 493 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:55:58 745 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:55:58 996 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:55:59 247 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:55:59 499 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:55:59 751 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:56:00 002 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:56:00 252 ETC:寻卡成功：[0, 1888204879]
+2016-11-15 10:56:01 187 电脑键盘：80,P
+2016-11-15 10:56:01 450 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.liftRailing(GeaCXP.java:600)
+	at com.hgits.control.FlowControl.runWhileVehLeaveNew(FlowControl.java:3459)
+	at com.hgits.control.FlowControl.runAfterBoj(FlowControl.java:1296)
+	at com.hgits.control.FlowControl.run(FlowControl.java:435)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:56:01 451 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeTrafficLightGreen(GeaCXP.java:621)
+	at com.hgits.control.FlowControl.runWhileVehLeaveNew(FlowControl.java:3460)
+	at com.hgits.control.FlowControl.runAfterBoj(FlowControl.java:1296)
+	at com.hgits.control.FlowControl.run(FlowControl.java:435)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:56:01 504 电脑键盘：80,P
+2016-11-15 10:56:01 730 电脑键盘：80,P
+2016-11-15 10:56:01 847 LPR:车牌识别初始化失败，初始化结果为0
+2016-11-15 10:56:01 923 电脑键盘：80,P
+2016-11-15 10:56:02 787 电脑键盘：68,D
+2016-11-15 10:56:02 787 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeCanopyLightGreen(GeaCXP.java:591)
+	at com.hgits.control.FlowControl.runChangeCanopyGreen(FlowControl.java:5126)
+	at com.hgits.service.KeyBoardService.canopyLlightHandle(KeyBoardService.java:97)
+	at com.hgits.service.KeyBoardService.specialHand(KeyBoardService.java:70)
+	at com.hgits.tool.driver.MyKeyAdapter.keyPressed(MyKeyAdapter.java:91)
+	at java.awt.Component.processKeyEvent(Component.java:6483)
+	at java.awt.Component.processEvent(Component.java:6302)
+	at java.awt.Container.processEvent(Container.java:2234)
+	at java.awt.Window.processEvent(Window.java:2029)
+	at java.awt.Component.dispatchEventImpl(Component.java:4881)
+	at java.awt.Container.dispatchEventImpl(Container.java:2292)
+	at java.awt.Window.dispatchEventImpl(Window.java:2739)
+	at java.awt.Component.dispatchEvent(Component.java:4703)
+	at java.awt.KeyboardFocusManager.redispatchEvent(KeyboardFocusManager.java:1954)
+	at java.awt.DefaultKeyboardFocusManager.dispatchKeyEvent(DefaultKeyboardFocusManager.java:806)
+	at java.awt.DefaultKeyboardFocusManager.preDispatchKeyEvent(DefaultKeyboardFocusManager.java:1074)
+	at java.awt.DefaultKeyboardFocusManager.typeAheadAssertions(DefaultKeyboardFocusManager.java:945)
+	at java.awt.DefaultKeyboardFocusManager.dispatchEvent(DefaultKeyboardFocusManager.java:771)
+	at java.awt.Component.dispatchEventImpl(Component.java:4752)
+	at java.awt.Container.dispatchEventImpl(Container.java:2292)
+	at java.awt.Window.dispatchEventImpl(Window.java:2739)
+	at java.awt.Component.dispatchEvent(Component.java:4703)
+	at java.awt.EventQueue.dispatchEventImpl(EventQueue.java:746)
+	at java.awt.EventQueue.access$400(EventQueue.java:97)
+	at java.awt.EventQueue$3.run(EventQueue.java:697)
+	at java.awt.EventQueue$3.run(EventQueue.java:691)
+	at java.security.AccessController.doPrivileged(Native Method)
+	at java.security.ProtectionDomain$1.doIntersectionPrivilege(ProtectionDomain.java:75)
+	at java.security.ProtectionDomain$1.doIntersectionPrivilege(ProtectionDomain.java:86)
+	at java.awt.EventQueue$4.run(EventQueue.java:719)
+	at java.awt.EventQueue$4.run(EventQueue.java:717)
+	at java.security.AccessController.doPrivileged(Native Method)
+	at java.security.ProtectionDomain$1.doIntersectionPrivilege(ProtectionDomain.java:75)
+	at java.awt.EventQueue.dispatchEvent(EventQueue.java:716)
+	at java.awt.EventDispatchThread.pumpOneEventForFilters(EventDispatchThread.java:201)
+	at java.awt.EventDispatchThread.pumpEventsForFilter(EventDispatchThread.java:116)
+	at java.awt.EventDispatchThread.pumpEventsForHierarchy(EventDispatchThread.java:105)
+	at java.awt.EventDispatchThread.pumpEvents(EventDispatchThread.java:101)
+	at java.awt.EventDispatchThread.pumpEvents(EventDispatchThread.java:93)
+	at java.awt.EventDispatchThread.run(EventDispatchThread.java:82)
+2016-11-15 10:56:03 331 电脑键盘：70,F
+2016-11-15 10:56:04 029 电脑键盘：80,P
+2016-11-15 10:56:04 246 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeTrafficLightRed(GeaCXP.java:632)
+	at com.hgits.control.FlowControl.runWhileVehLeaveNew(FlowControl.java:3653)
+	at com.hgits.control.FlowControl.runAfterBoj(FlowControl.java:1296)
+	at com.hgits.control.FlowControl.run(FlowControl.java:435)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:56:04 247 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.lowerRailing(GeaCXP.java:610)
+	at com.hgits.control.FlowControl$6.run(FlowControl.java:3675)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+	at java.lang.Thread.run(Thread.java:745)
+2016-11-15 10:56:04 322 电脑键盘：80,P
+2016-11-15 10:56:04 837 电脑键盘：49,1
+2016-11-15 10:56:05 239 电脑键盘：48,0
+2016-11-15 10:56:05 840 电脑键盘：80,P
+2016-11-15 10:56:06 200 电脑键盘：48,0
+2016-11-15 10:56:06 302 LPR:车牌识别初始化失败，初始化结果为0
+2016-11-15 10:56:06 716 电脑键盘：48,0
+2016-11-15 10:56:07 340 电脑键盘：53,5
+2016-11-15 10:56:07 458 电脑键盘：48,0
+2016-11-15 10:56:08 173 电脑键盘：57,9
+2016-11-15 10:56:08 358 电脑键盘：57,9
+2016-11-15 10:56:09 889 电脑键盘：79,O
+2016-11-15 10:56:10 167 电脑键盘：79,O
+2016-11-15 10:56:10 402 电脑键盘：79,O
+2016-11-15 10:56:10 660 电脑键盘：79,O
+2016-11-15 10:56:10 760 LPR:车牌识别初始化失败，初始化结果为0
+2016-11-15 10:56:11 713 电脑键盘：55,7
+2016-11-15 10:56:11 923 电脑键盘：48,0
+2016-11-15 10:56:12 238 电脑键盘：49,1
+2016-11-15 10:56:12 545 电脑键盘：50,2
+2016-11-15 10:56:12 855 电脑键盘：80,P
+2016-11-15 10:56:14 289 电脑键盘：80,P
+2016-11-15 10:56:15 215 LPR:车牌识别初始化失败，初始化结果为0
+2016-11-15 10:56:17 315 电脑键盘：80,P
+2016-11-15 10:56:19 674 LPR:车牌识别初始化失败，初始化结果为0
+2016-11-15 10:56:24 130 LPR:车牌识别初始化失败，初始化结果为0
+2016-11-15 10:56:44 789 电脑键盘：80,P
+2016-11-15 10:56:44 824 打印机输出流为null
+2016-11-15 10:56:45 174 电脑键盘：80,P
+2016-11-15 10:56:45 327 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.liftRailing(GeaCXP.java:600)
+	at com.hgits.control.FlowControl.runWhileVehLeaveNew(FlowControl.java:3459)
+	at com.hgits.control.FlowControl.runAfterBoj(FlowControl.java:1296)
+	at com.hgits.control.FlowControl.run(FlowControl.java:435)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:56:45 327 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeTrafficLightGreen(GeaCXP.java:621)
+	at com.hgits.control.FlowControl.runWhileVehLeaveNew(FlowControl.java:3460)
+	at com.hgits.control.FlowControl.runAfterBoj(FlowControl.java:1296)
+	at com.hgits.control.FlowControl.run(FlowControl.java:435)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:56:45 413 电脑键盘：80,P
+2016-11-15 10:56:45 626 电脑键盘：80,P
+2016-11-15 10:56:45 845 电脑键盘：80,P
+2016-11-15 10:56:46 021 电脑键盘：70,F
+2016-11-15 10:56:46 220 电脑键盘：80,P
+2016-11-15 10:56:46 386 电脑键盘：80,P
+2016-11-15 10:56:46 404 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeTrafficLightRed(GeaCXP.java:632)
+	at com.hgits.control.FlowControl.runWhileVehLeaveNew(FlowControl.java:3653)
+	at com.hgits.control.FlowControl.runAfterBoj(FlowControl.java:1296)
+	at com.hgits.control.FlowControl.run(FlowControl.java:435)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:56:46 404 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.lowerRailing(GeaCXP.java:610)
+	at com.hgits.control.FlowControl$6.run(FlowControl.java:3675)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+	at java.lang.Thread.run(Thread.java:745)
+2016-11-15 10:57:05 607 电脑键盘：49,1
+2016-11-15 10:57:06 225 电脑键盘：80,P
+2016-11-15 10:57:11 319 电脑键盘：48,0
+2016-11-15 10:57:11 585 电脑键盘：53,5
+2016-11-15 10:57:11 764 电脑键盘：48,0
+2016-11-15 10:57:12 029 电脑键盘：54,6
+2016-11-15 10:57:12 170 电脑键盘：48,0
+2016-11-15 10:57:12 541 电脑键盘：56,8
+2016-11-15 10:57:12 763 电脑键盘：80,P
+2016-11-15 10:57:13 978 电脑键盘：48,0
+2016-11-15 10:57:15 012 电脑键盘：55,7
+2016-11-15 10:57:15 198 电脑键盘：48,0
+2016-11-15 10:57:15 569 电脑键盘：49,1
+2016-11-15 10:57:15 840 电脑键盘：50,2
+2016-11-15 10:57:16 251 电脑键盘：80,P
+2016-11-15 10:57:17 258 电脑键盘：80,P
+2016-11-15 10:57:18 098 电脑键盘：80,P
+2016-11-15 10:57:20 320 ETC:寻卡成功：[0, 3700634286]
+2016-11-15 10:57:20 333 ETC:readBLockEx:用时13豪秒,i=0,block=4,keyType=0,key=,info=050101427a000020527000000000003f                                
+2016-11-15 10:57:20 346 ETC:readBLockEx:用时13豪秒,i=0,block=5,keyType=0,key=,info=00427aaaa5010200000000180000022e                                
+2016-11-15 10:57:20 359 ETC:readBLockEx:用时13豪秒,i=0,block=6,keyType=0,key=,info=0000000000000000003536382020201b                                
+2016-11-15 10:57:20 605 ETC:寻卡成功：[0, 3700634286]
+2016-11-15 10:57:20 850 ETC:寻卡成功：[0, 3700634286]
+2016-11-15 10:57:21 095 ETC:寻卡成功：[0, 3700634286]
+2016-11-15 10:57:21 340 ETC:寻卡成功：[0, 3700634286]
+2016-11-15 10:57:23 213 电脑键盘：80,P
+2016-11-15 10:57:23 466 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.liftRailing(GeaCXP.java:600)
+	at com.hgits.control.FlowControl.runWhileVehLeaveNew(FlowControl.java:3459)
+	at com.hgits.control.FlowControl.runAfterBoj(FlowControl.java:1296)
+	at com.hgits.control.FlowControl.run(FlowControl.java:435)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:57:23 466 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeTrafficLightGreen(GeaCXP.java:621)
+	at com.hgits.control.FlowControl.runWhileVehLeaveNew(FlowControl.java:3460)
+	at com.hgits.control.FlowControl.runAfterBoj(FlowControl.java:1296)
+	at com.hgits.control.FlowControl.run(FlowControl.java:435)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:57:24 476 电脑键盘：80,P
+2016-11-15 10:57:24 876 电脑键盘：80,P
+2016-11-15 10:57:25 108 电脑键盘：80,P
+2016-11-15 10:57:25 290 电脑键盘：80,P
+2016-11-15 10:57:25 496 电脑键盘：80,P
+2016-11-15 10:57:25 666 电脑键盘：70,F
+2016-11-15 10:57:25 981 电脑键盘：80,P
+2016-11-15 10:57:26 189 电脑键盘：80,P
+2016-11-15 10:57:26 203 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeTrafficLightRed(GeaCXP.java:632)
+	at com.hgits.control.FlowControl.runWhileVehLeaveNew(FlowControl.java:3653)
+	at com.hgits.control.FlowControl.runAfterBoj(FlowControl.java:1296)
+	at com.hgits.control.FlowControl.run(FlowControl.java:435)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:57:26 204 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.lowerRailing(GeaCXP.java:610)
+	at com.hgits.control.FlowControl$6.run(FlowControl.java:3675)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+	at java.lang.Thread.run(Thread.java:745)
+2016-11-15 10:57:26 917 电脑键盘：69,E
+2016-11-15 10:57:26 918 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeCanopyLightRed(GeaCXP.java:581)
+	at com.hgits.control.FlowControl.runChangeCanopyRed(FlowControl.java:5115)
+	at com.hgits.service.KeyBoardService.canopyLlightHandle(KeyBoardService.java:99)
+	at com.hgits.service.KeyBoardService.specialHand(KeyBoardService.java:70)
+	at com.hgits.tool.driver.MyKeyAdapter.keyPressed(MyKeyAdapter.java:91)
+	at java.awt.Component.processKeyEvent(Component.java:6483)
+	at java.awt.Component.processEvent(Component.java:6302)
+	at java.awt.Container.processEvent(Container.java:2234)
+	at java.awt.Window.processEvent(Window.java:2029)
+	at java.awt.Component.dispatchEventImpl(Component.java:4881)
+	at java.awt.Container.dispatchEventImpl(Container.java:2292)
+	at java.awt.Window.dispatchEventImpl(Window.java:2739)
+	at java.awt.Component.dispatchEvent(Component.java:4703)
+	at java.awt.KeyboardFocusManager.redispatchEvent(KeyboardFocusManager.java:1954)
+	at java.awt.DefaultKeyboardFocusManager.dispatchKeyEvent(DefaultKeyboardFocusManager.java:806)
+	at java.awt.DefaultKeyboardFocusManager.preDispatchKeyEvent(DefaultKeyboardFocusManager.java:1074)
+	at java.awt.DefaultKeyboardFocusManager.typeAheadAssertions(DefaultKeyboardFocusManager.java:945)
+	at java.awt.DefaultKeyboardFocusManager.dispatchEvent(DefaultKeyboardFocusManager.java:771)
+	at java.awt.Component.dispatchEventImpl(Component.java:4752)
+	at java.awt.Container.dispatchEventImpl(Container.java:2292)
+	at java.awt.Window.dispatchEventImpl(Window.java:2739)
+	at java.awt.Component.dispatchEvent(Component.java:4703)
+	at java.awt.EventQueue.dispatchEventImpl(EventQueue.java:746)
+	at java.awt.EventQueue.access$400(EventQueue.java:97)
+	at java.awt.EventQueue$3.run(EventQueue.java:697)
+	at java.awt.EventQueue$3.run(EventQueue.java:691)
+	at java.security.AccessController.doPrivileged(Native Method)
+	at java.security.ProtectionDomain$1.doIntersectionPrivilege(ProtectionDomain.java:75)
+	at java.security.ProtectionDomain$1.doIntersectionPrivilege(ProtectionDomain.java:86)
+	at java.awt.EventQueue$4.run(EventQueue.java:719)
+	at java.awt.EventQueue$4.run(EventQueue.java:717)
+	at java.security.AccessController.doPrivileged(Native Method)
+	at java.security.ProtectionDomain$1.doIntersectionPrivilege(ProtectionDomain.java:75)
+	at java.awt.EventQueue.dispatchEvent(EventQueue.java:716)
+	at java.awt.EventDispatchThread.pumpOneEventForFilters(EventDispatchThread.java:201)
+	at java.awt.EventDispatchThread.pumpEventsForFilter(EventDispatchThread.java:116)
+	at java.awt.EventDispatchThread.pumpEventsForHierarchy(EventDispatchThread.java:105)
+	at java.awt.EventDispatchThread.pumpEvents(EventDispatchThread.java:101)
+	at java.awt.EventDispatchThread.pumpEvents(EventDispatchThread.java:93)
+	at java.awt.EventDispatchThread.run(EventDispatchThread.java:82)
+2016-11-15 10:57:27 010 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeCanopyLightRed(GeaCXP.java:581)
+	at com.hgits.control.FlowControl.runChangeCanopyRed(FlowControl.java:5115)
+	at com.hgits.control.FlowControl.runGetVehClass(FlowControl.java:1671)
+	at com.hgits.control.FlowControl.runBeforeReadCard(FlowControl.java:1351)
+	at com.hgits.control.FlowControl.runAfterBoj(FlowControl.java:1182)
+	at com.hgits.control.FlowControl.run(FlowControl.java:435)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 10:57:27 213 电脑键盘：67,C
+2016-11-15 10:57:27 330 电脑键盘：80,P
+2016-11-15 11:36:55 564 开始加载视频...
+2016-11-15 11:36:56 174 未启用天线
+2016-11-15 11:36:56 174 未启用收费键盘
+2016-11-15 11:36:56 177 构造器：NullPointerException
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.printer.GeaPrinter.<init>(GeaPrinter.java:61)
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:62)
+	at sun.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.lang.reflect.Constructor.newInstance(Constructor.java:408)
+	at com.hgits.util.hardware.HardwareHelper.initHardware(HardwareHelper.java:300)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:157)
+2016-11-15 11:36:56 181 CICM版本：V1.1.3
+2016-11-15 11:36:56 180 TFI未启用
+2016-11-15 11:36:56 230 NullPointerException
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cicm.GeaCICM.getConnection(GeaCICM.java:93)
+	at com.hgits.hardware.impl.cicm.GeaCICM$1.run(GeaCICM.java:74)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+	at java.lang.Thread.run(Thread.java:745)
+2016-11-15 11:36:56 185 串口未配置：
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.weighsystem.GeaWeighSystem.<init>(GeaWeighSystem.java:72)
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:62)
+	at sun.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.lang.reflect.Constructor.newInstance(Constructor.java:408)
+	at com.hgits.util.hardware.HardwareHelper.initHardware(HardwareHelper.java:300)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:160)
+2016-11-15 11:36:56 182 CXP：执行构造器出现空指针异常：
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.initiallize(GeaCXP.java:125)
+	at com.hgits.hardware.impl.cxp.GeaCXP.run(GeaCXP.java:110)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+	at java.lang.Thread.run(Thread.java:745)
+2016-11-15 11:36:56 236 LPR:lprPlateMode=0
+2016-11-15 11:36:56 236 LPR:lprPlateCnt=3
+2016-11-15 11:36:56 238 LPR:lprInterval=1秒
+2016-11-15 11:36:56 239 LPR:logLevel=0
+2016-11-15 11:36:56 239 LPR:车牌识别线程开始运行
+2016-11-15 11:36:56 239 LPR:加锁模式
+2016-11-15 11:36:56 245 启用电脑键盘
+2016-11-15 11:36:56 260 未启用字符叠加器
+2016-11-15 11:36:56 275 启用ETC卡读写器:COM4,115200,7,2,1,1,1
+2016-11-15 11:36:56 620 ETC:ETC卡读卡器终端机：014300013CAD
+2016-11-15 11:36:56 621 ETC:psam序列号：014300013CAD
+2016-11-15 11:36:57 102 加载视频结束
+2016-11-15 11:36:59 182 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeCanopyLightRed(GeaCXP.java:581)
+	at com.hgits.control.FlowControl.run(FlowControl.java:326)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 11:36:59 182 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.lowerRailing(GeaCXP.java:610)
+	at com.hgits.control.FlowControl.run(FlowControl.java:328)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 11:36:59 182 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeCanopyLightRed(GeaCXP.java:581)
+	at com.hgits.control.FlowControl.run(FlowControl.java:330)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 11:36:59 183 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.stopAlarm(GeaCXP.java:667)
+	at com.hgits.control.FlowControl.run(FlowControl.java:332)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 11:37:00 872 LPR:车牌识别初始化失败，初始化结果为0
+2016-11-15 11:37:02 002 加载resource/tb_alarmcode.txt
+2016-11-15 11:37:02 009 车牌识别设备异常:33
+2016-11-15 11:37:02 069 产生报警流水:com.hgits.vo.LaneAlarm[ laneAlarmPK=com.hgits.vo.LaneAlarmPK[ roadId=49, stationId=14, laneNo=X02, opTime=Tue Nov 15 11:37:02 CST 2016 ] ]
+2016-11-15 11:37:02 070 卡机异常:24
+2016-11-15 11:37:02 101 产生报警流水:com.hgits.vo.LaneAlarm[ laneAlarmPK=com.hgits.vo.LaneAlarmPK[ roadId=49, stationId=14, laneNo=X02, opTime=Tue Nov 15 11:37:02 CST 2016 ] ]
+2016-11-15 11:37:05 327 LPR:车牌识别初始化失败，初始化结果为0
+2016-11-15 11:38:33 634 开始加载视频...
+2016-11-15 11:38:34 194 构造器：NullPointerException
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.printer.GeaPrinter.<init>(GeaPrinter.java:61)
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:62)
+	at sun.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.lang.reflect.Constructor.newInstance(Constructor.java:408)
+	at com.hgits.util.hardware.HardwareHelper.initHardware(HardwareHelper.java:300)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:157)
+2016-11-15 11:38:34 195 TFI未启用
+2016-11-15 11:38:34 196 CICM版本：V1.1.3
+2016-11-15 11:38:34 197 NullPointerException
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cicm.GeaCICM.getConnection(GeaCICM.java:93)
+	at com.hgits.hardware.impl.cicm.GeaCICM$1.run(GeaCICM.java:74)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+	at java.lang.Thread.run(Thread.java:745)
+2016-11-15 11:38:34 201 串口未配置：
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.weighsystem.GeaWeighSystem.<init>(GeaWeighSystem.java:72)
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:62)
+	at sun.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.lang.reflect.Constructor.newInstance(Constructor.java:408)
+	at com.hgits.util.hardware.HardwareHelper.initHardware(HardwareHelper.java:300)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:160)
+2016-11-15 11:38:34 208 LPR:lprPlateMode=0
+2016-11-15 11:38:34 208 LPR:lprPlateCnt=3
+2016-11-15 11:38:34 209 LPR:lprInterval=1秒
+2016-11-15 11:38:34 211 LPR:logLevel=0
+2016-11-15 11:38:34 211 LPR:车牌识别线程开始运行
+2016-11-15 11:38:34 212 LPR:加锁模式
+2016-11-15 11:38:34 218 启用电脑键盘
+2016-11-15 11:38:34 308 未启用字符叠加器
+2016-11-15 11:38:34 309 未启用天线
+2016-11-15 11:38:34 309 CXP：执行构造器出现空指针异常：
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.initiallize(GeaCXP.java:125)
+	at com.hgits.hardware.impl.cxp.GeaCXP.run(GeaCXP.java:110)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+	at java.lang.Thread.run(Thread.java:745)
+2016-11-15 11:38:34 334 未启用收费键盘
+2016-11-15 11:38:34 370 启用ETC卡读写器:COM4,115200,7,2,1,1,1
+2016-11-15 11:38:34 598 ETC:ETC卡读卡器终端机：014300013CAD
+2016-11-15 11:38:34 599 ETC:psam序列号：014300013CAD
+2016-11-15 11:38:34 875 加载视频结束
+2016-11-15 11:38:36 985 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeCanopyLightRed(GeaCXP.java:581)
+	at com.hgits.control.FlowControl.run(FlowControl.java:326)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 11:38:36 986 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.lowerRailing(GeaCXP.java:610)
+	at com.hgits.control.FlowControl.run(FlowControl.java:328)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 11:38:36 986 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.changeCanopyLightRed(GeaCXP.java:581)
+	at com.hgits.control.FlowControl.run(FlowControl.java:330)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 11:38:36 987 
+java.lang.NullPointerException
+	at com.hgits.hardware.impl.cxp.GeaCXP.interruptHartBitThread(GeaCXP.java:673)
+	at com.hgits.hardware.impl.cxp.GeaCXP.stopAlarm(GeaCXP.java:667)
+	at com.hgits.control.FlowControl.run(FlowControl.java:332)
+	at com.hgits.mtclane.MTCLane.main(MTCLane.java:343)
+2016-11-15 11:38:38 697 LPR:车牌识别初始化失败，初始化结果为0
+2016-11-15 11:38:39 811 加载resource/tb_alarmcode.txt
+2016-11-15 11:38:39 814 车牌识别设备异常:33
+2016-11-15 11:38:39 867 产生报警流水:com.hgits.vo.LaneAlarm[ laneAlarmPK=com.hgits.vo.LaneAlarmPK[ roadId=49, stationId=14, laneNo=X02, opTime=Tue Nov 15 11:38:39 CST 2016 ] ]
+2016-11-15 11:38:39 868 卡机异常:24
+2016-11-15 11:38:39 908 产生报警流水:com.hgits.vo.LaneAlarm[ laneAlarmPK=com.hgits.vo.LaneAlarmPK[ roadId=49, stationId=14, laneNo=X02, opTime=Tue Nov 15 11:38:39 CST 2016 ] ]
+2016-11-15 11:38:43 153 LPR:车牌识别初始化失败，初始化结果为0
+2016-11-15 11:38:47 612 LPR:车牌识别初始化失败，初始化结果为0
+2016-11-15 11:38:52 069 LPR:车牌识别初始化失败，初始化结果为0
+2016-11-15 11:38:56 531 LPR:车牌识别初始化失败，初始化结果为0

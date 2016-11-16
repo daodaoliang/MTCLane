@@ -1,0 +1,792 @@
+/**
+ *
+ */
+package com.hgits.util;
+
+import java.util.Map;
+import java.util.Vector;
+
+import org.apache.log4j.Logger;
+
+import com.hgits.exception.MTCException;
+import com.hgits.util.rate.ParamCache;
+import com.hgits.vo.BridgeExtraChargeStd;
+import com.hgits.vo.OverLoadPrice;
+import com.hgits.vo.Price;
+import com.hgits.vo.RoadChargeStd;
+
+/**
+ * 计算费率工具类
+ *
+ * @author wh
+ *
+ */
+public class PriceCalculateUtils {
+
+	private static Logger logger = Logger.getLogger(PriceCalculateUtils.class);
+    private static Vector<String> roadPrices = new Vector<String>();
+    
+    /**
+     * 未查询到记录的标识
+     */
+    private static String NO_RECORD = "-1.0";
+
+    /**
+     * 计算费率
+     *
+     * @param paramMap 计算参数
+     * @return 计算后的费率结果，以分为单位
+     * @throws MTCException 异常
+     */
+    public static String calculate(Map<String, Object> paramMap)
+            throws MTCException {
+        String enRoadStr = (String) paramMap.get("enRoadId"); // 入口路段编码
+        String enStationStr = (String) paramMap.get("enStationId"); // 入口站编码
+        String exRoadStr = (String) paramMap.get("exRoadId"); // 出口路段编码
+        String exStationStr = (String) paramMap.get("exStationId"); // 出口站编码
+        Integer vehType = (Integer) paramMap.get("vehType"); // 车型
+        
+        Integer enRoadId = Integer.valueOf(enRoadStr);
+        Integer enStationId = Integer.valueOf(enStationStr);
+        Integer exRoadId = Integer.valueOf(exRoadStr);
+        Integer exStationId = Integer.valueOf(exStationStr);
+
+        //非计重车辆 重量可以为空
+        Double weight = 0d;
+        if (paramMap.containsKey("weight")) {
+            weight = (Double) paramMap.get("weight"); // 计费重量
+            if(weight <= 5d){ //根据计重收费手册解释，不足5吨按5吨收费
+            	weight = 5d; //计重信息如果为空，则使用默认吨位5吨
+            }
+        }
+        Double weightLimit = 0d;
+        if (paramMap.containsKey("weightLimit")) {
+            weightLimit = (Double) paramMap.get("weightLimit"); // 限重重量
+            if(weightLimit == 0){
+            	weightLimit = 5d; //计重信息如果为空，则使用默认吨位5吨
+            }
+        }
+
+
+        String sumMoney = "0";
+        switch (vehType) {
+            case 1:
+            case 2:
+            case 3:
+            case 4:
+            case 5:
+            case 7:
+                if (weight == null || weightLimit == null) {
+                    throw new MTCException("重量或者限重为必填项");
+                }
+                sumMoney = calTotalPrice(enRoadId, enStationId, exRoadId, exStationId, vehType, weight, weightLimit);
+                break;
+            default:
+                break;
+        }
+        
+		if (Double.valueOf(sumMoney) <= 0 && !sumMoney.equals(NO_RECORD)) { // 小余0元按0元收费
+			logger.debug("未找到对应费率信息或者费额等于" + sumMoney + "，变更后的费额为0");
+			sumMoney = "0";
+		} else if (Double.valueOf(sumMoney) > 0
+				&& Double.valueOf(sumMoney) <= 500
+				&& !(enRoadId == 4 && enStationId == 1)
+				&& !(enRoadId == 4 && enStationId == 2)
+				&& !(enRoadId == 4 && enStationId == 3)) { 
+			// 不足5块按5块收取，0401、0402、0403站忽略，因为有代收问题，按实际费用收取
+			sumMoney = "500";
+		}
+        return sumMoney;
+    }
+
+    /**
+     * 获取总费率
+     *
+     * @param enRoadId 入口路段编码
+     * @param enStationId 入口收费站编码
+     * @param exRoadId 出口路段编码
+     * @param exStationId 出口收费站编码
+     * @param vehType 车型
+     * @param weight 重量
+     * @param weightLimit 限重重量
+     * @throws MTCException
+     */
+    private static String calTotalPrice(Integer enRoadId, Integer enStationId,
+            Integer exRoadId, Integer exStationId, Integer vehType, Double weight,
+            Double weightLimit) throws MTCException {
+    	Map<Integer, Vector<Price>> map = ParamCache.getValidPriceMap();
+    	if(map == null){ //检查费率表信息是否存在
+    		throw new MTCException("费率信息缺失!");
+    	}
+    	Vector<Price> prices = null;
+    	switch (vehType) {
+			case 1 :
+			case 2 :
+			case 3 :
+			case 4 :
+			case 5 :
+			case 7 :
+				prices = map.get(vehType);
+				break;
+			default :
+				throw new MTCException("费率信息不存在!");
+		}
+    	
+    	if(prices == null || prices.isEmpty()){ //检查费率表信息是否存在
+    		throw new MTCException("费率信息缺失!");
+    	}
+    	
+        String totalPrice = "0";
+        String roadPrice = null;
+        boolean isExsits = false;
+
+        loop:for (Price price : prices) {
+
+            if (!price.getEnRoadId().equals(enRoadId)) {
+                continue;
+            }// 判断入口路段编码
+            if (!price.getEnStationId().equals(enStationId)) {
+                continue;
+            }// 判断入口站编码
+            if (!price.getExRoadId().equals(exRoadId)) {
+                continue;
+            }// 判断出口路段编码
+            if (!price.getExStationId().equals(exStationId)) {
+                continue;
+            }// 判断出口站编码
+            if (!price.getVehType().equals(vehType)) {
+                continue;
+            }// 判断车型
+            
+            isExsits = true; //找到对应的车型路由表
+            
+            // 当满足条件的时候，则计算总费率
+            switch (vehType) {
+                case 1:
+                case 2:
+                case 3:
+                case 4:
+                case 5:
+                    roadPrice = calPriceTotalByNomal(price);
+                    if(roadPrice.equalsIgnoreCase(NO_RECORD)){
+                    	isExsits = false;
+                    	break loop;
+                    }
+                    totalPrice = StringUtils.sum(totalPrice, roadPrice); // 非计重车辆费用
+                    break;
+                case 7: // 7型车，需要根据计重情况进行计算
+                    roadPrice = calPriceTotalByWeight(price, weight, weightLimit);
+                    if(roadPrice.equalsIgnoreCase(NO_RECORD)){
+                    	isExsits = false;
+                    	break loop;
+                    }
+                    totalPrice = StringUtils.sum(totalPrice, roadPrice); // 计重车辆费用
+                    break;
+                default:
+                    break;
+            }
+
+            roadPrices.add(roadPrice); //分别将每段路的金额保存下来
+        }
+        if(!isExsits){
+        	totalPrice = NO_RECORD;
+        }
+        return totalPrice;
+    }
+
+    /**
+     * 非计重车费用<br/> 计算公式：车型通行费=SUM((里程 * 单价 * 调整系数) + (桥隧叠加收费 * 调整系数))
+     *
+     * @param p 费率表信息
+     * @return
+     * @throws MTCException 
+     */
+    private static String calPriceTotalByNomal(Price p) throws MTCException {
+        String totalPrice = calRoadBridgePrice(p, 0d, 0d, false);
+        return totalPrice;
+    }
+
+    /**
+     * 计算路段桥隧费用
+     *
+     * @param p 费率
+     * @param weight 收费计重
+     * @param weightLimit 限重
+     * @param isWeight 是否为计重收费车辆
+     * @return
+     * @throws MTCException 
+     */
+    private static String calRoadBridgePrice(Price p, Double weight,
+            Double weightLimit, boolean isWeight) throws MTCException {
+        String totalPrice = "0"; // 本段车型金额(分) ，不包括桥段的。
+
+        Integer passType = p.getPassType(); //途经路段或桥隧类型
+        
+        switch (passType) {
+			case 1 :
+				//计算路段费用
+				totalPrice = calRoadPrice(p, weight, weightLimit, isWeight);
+				break;
+			case 2:
+				//计算桥隧费用
+				totalPrice = calBridgePrice(p,weight);
+				if(p.getEnRoadId()== 99 && p.getEnStationId() == 98){
+					totalPrice = StringUtils.mul(totalPrice,"2"); //最近站9998的话，需要桥隧费率乘以2
+				}
+				break;
+
+			default :
+				break;
+		}
+
+        return totalPrice;
+    }
+
+	/**
+	 * 计算路段费用
+	 * @param p 费率表
+	 * @param weight 计费重量
+	 * @param weightLimit 限重重量
+	 * @param isWeight 是否为计重收费车辆
+	 * @return
+	 * @throws MTCException 
+	 */
+	private static String calRoadPrice(Price p, Double weight,
+			Double weightLimit, boolean isWeight) throws MTCException {
+		
+        Integer vehType = p.getVehType();
+//        Integer bridgeExtVer = p.getBridgeExtVer();
+        String  modulusStr = "0",milesStr = "0";
+        Integer roadId = null;
+        Double modulus = 0d, miles = p.getMiles();
+        String totalPrice = "0";
+        
+		// 计算出路段费用
+        Vector<RoadChargeStd> rcsMap = ParamCache.getRoadChargeStdMap();
+        
+        if(rcsMap == null || rcsMap.isEmpty()){
+        	throw new MTCException("路段收费标准信息缺失");
+        }
+        
+        boolean isExists = false;
+        
+		for (RoadChargeStd rcs : rcsMap) {
+            roadId = rcs.getRoadUniqueId();
+            if (!p.getPassRoaduniqueId().equals(roadId)) {
+                continue;
+            }
+            //不用再进行判断桥隧版本号
+//            if (!rcs.getVersion().equals(bridgeExtVer)) {
+//                continue;
+//            }
+            
+            isExists = true;
+            /**
+             * ** 过滤不满足条件的路段收费标准信息 end ***
+             */
+            modulus = rcs.getModulus();
+            modulusStr = String.valueOf(modulus); //调整系数
+            milesStr = String.valueOf(miles); //本段里程(公里)
+            if (isWeight) {
+                //计重收费，7型计重车辆
+                totalPrice  = StringUtils.sum(totalPrice, calWeightPriceTotal(rcs, milesStr, weight, weightLimit));
+            } else {
+                //非计重收费，车型判断，计算路段费用，只计算1-5型车
+                switch (vehType) {
+                    case 1:
+                        totalPrice = StringUtils.sum(totalPrice, StringUtils.mul(milesStr, modulusStr,
+                                String.valueOf(rcs.getVehTypeStd1())));
+                        break;
+                    case 2:
+                        totalPrice = StringUtils.sum(totalPrice, StringUtils.mul(milesStr, modulusStr,
+                                String.valueOf(rcs.getVehTypeStd2())));
+                        break;
+                    case 3:
+                        totalPrice = StringUtils.sum(totalPrice, StringUtils.mul(milesStr, modulusStr,
+                                String.valueOf(rcs.getVehTypeStd3())));
+                        break;
+                    case 4:
+                        totalPrice = StringUtils.sum(totalPrice, StringUtils.mul(milesStr, modulusStr,
+                                String.valueOf(rcs.getVehTypeStd4())));
+                        break;
+                    case 5:
+                        totalPrice = StringUtils.sum(totalPrice, StringUtils.mul(milesStr, modulusStr,
+                                String.valueOf(rcs.getVehTypeStd5())));
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+		
+		if(!isExists){
+			totalPrice = NO_RECORD;
+		}
+		return totalPrice;
+	}
+
+	/**
+	 * 计算桥隧所需费用
+	 * @param p 费率表
+	 * @param weight 重量
+	 * @return
+	 * @throws MTCException 
+	 */
+	private static String calBridgePrice(Price p, Double weight) throws MTCException {
+		Integer bridgeExtVer = p.getBridgeExtVer(); //桥隧版本号
+		Integer vehType = p.getVehType(); //车型
+		Integer bridgeId = p.getPassBridgeId(); //桥隧编码
+		String totalPrice = calBridgePriceTotal(vehType, bridgeExtVer, weight, bridgeId);
+		return totalPrice;
+	}
+	
+    /**
+     * 计重车辆费用<br/> 计重车辆收费分为多种情况，正常装载和超限装载
+     *
+     * @param passRoadId 路段编码
+     * @param double1 里程数
+     * @param version 版本号
+     * @param weight 重量
+     * @param weightLimit
+     * @param weightLimit 限重重量
+     * @return 计重车辆所需费用
+     * @throws MTCException 
+     */
+    private static String calPriceTotalByWeight(Price p, Double weight,
+            Double weightLimit) throws MTCException {
+        return calRoadBridgePrice(p, weight, weightLimit, true);
+    }
+
+    /**
+     * 根据重量、里程数计算出计重车辆通行费用
+     *
+     * @param rcs 路段收费标准
+     * @param miles 里程数
+     * @param weight 重量
+     * @param weightLimit 限重重量
+     * @return 所需费用
+     * @throws MTCException 
+     */
+    private static String calWeightPriceTotal(RoadChargeStd rcs, String miles,
+            Double weight, Double weightLimit) throws MTCException {
+        Double oneWeight = 0d, twoWeight = 0d, threeWeight = 0d, overloadRatio = 0d;
+        double floatRates = 0d; //正常载重部分的浮动费率
+		Double le30Weight = 0d, gt30OrLe100Weigth = 0d;
+		Double calcWeight = 0d;
+        String totalPrice = "0"; //该段里程的总金额
+        double overRunMultiples = 1d; //超限比倍数，默认是1倍
+        double pricePerKilometer = 1d;//每公里单价
+        double onePrice = 0d, twoPrice = 0d, threePrice = 0d;
+        double modulus = rcs.getModulus();
+        Double baseRates = DoubleUtils.mul(rcs.getVehWeightStd1(),modulus);//基本费率
+        
+
+        //路段收费标准信息
+        oneWeight = rcs.getWeightRange1();
+        twoWeight = rcs.getWeightRange2();
+        threeWeight = rcs.getWeightRange3(); // 获取一、二、三类载重范围
+
+        onePrice = rcs.getVehWeightStd1();
+        twoPrice = rcs.getVehWeightStd2();
+        threePrice = rcs.getVehWeightStd3();
+        
+        calcWeight = (weight > weightLimit)?weightLimit:weight;
+        /**
+         * 计重费率计算公式 
+         * Py = P2 Wx ≤ W1 
+         * Py = { P2 * ( W2 - Wx ) + P1 * ( Wx - W1 ) } / ( W2 – W1 ) W1 < Wx ≤ W2 
+         * Py = P1 Wx >W1 
+         * Py = Py * 调整系数
+         */
+        if (calcWeight <= oneWeight) {
+            floatRates = DoubleUtils.mul(onePrice, modulus);
+        } else if (calcWeight > oneWeight && calcWeight <= twoWeight) {
+            double d1 = DoubleUtils.mul(onePrice, DoubleUtils.sub(twoWeight, calcWeight));
+            double d2 = DoubleUtils.mul(twoPrice, DoubleUtils.sub(calcWeight, oneWeight));
+            double d3 = DoubleUtils.sum(d1, d2);
+            double d4 = DoubleUtils.sub(twoWeight, oneWeight);
+            floatRates = DoubleUtils.mul(DoubleUtils.div(d3, d4, 10), modulus);
+        } else if (calcWeight > threeWeight) {
+            floatRates = DoubleUtils.mul(threePrice, modulus);
+        }
+
+        
+        if(weight > weightLimit){ //只有当计费重量大于限重时，计算超限比
+        	overloadRatio = DoubleUtils.mul(DoubleUtils.sub(DoubleUtils.div(weight, weightLimit, 10), 1), 100);// 计算出超限比
+//        	老的计重算法----------------------------------------------
+//        	overRunMultiples = calOverloadPrice(overloadRatio); //计算出费率倍数
+//
+//            /**
+//             * 超重车辆费率计算
+//             * 计算公式 SUM{ 里程 * [ 单价Py * 正常载重 + 基本费率P2 *(超载小于30%的重量 + 费率倍数Ty *
+//             * 超载大于30%的重量) ] + 桥隧叠加收费 } 该路段的收费计算公式则为：里程 * [ 单价Py * 正常载重 + 基本费率P2
+//             * *(超载小于30%的重量 + 费率倍数Ty * 超载大于30%的重量) ]
+//             */
+//            double d1 = DoubleUtils.mul(overRunMultiples, gt30OrLe100Weigth);
+//            double d2 = DoubleUtils.sum(le30Weight, d1);
+//            double d3 = DoubleUtils.mul(onePrice, d2);
+//            double d4 = DoubleUtils.mul(baseRates, weightLimit);
+//            double d5 = DoubleUtils.sum(d4, d3);
+//
+//            totalPrice = StringUtils.mul(miles, String.valueOf(d5));
+        	
+        	 //计算出超重数量的吨位，便于费率计算
+            le30Weight = DoubleUtils.mul(weightLimit, 0.3); // 超载 30%以内的重量
+    		gt30OrLe100Weigth = DoubleUtils.sub(weight, weightLimit, le30Weight); // 超载大于30%的重量
+    		
+    		if (gt30OrLe100Weigth <0) {
+    			le30Weight = DoubleUtils.sub(weight, weightLimit); //重新设置超限30%以内的重量
+    			gt30OrLe100Weigth = 0d;// 判断超限的部分是否大于30%
+    		}
+        	
+        	
+        	//读取超限标准收费信息
+            OverLoadPrice olp = ParamCache.getOverLoadPrices();
+            Double weightOverRatio1 = 30d, weightOverRatio2 = 100d, weightOverRatio3 = 100d, times1 = 4d, times2 = 4d, times3 = 10d;
+            if (olp == null) {
+            	throw new MTCException("货车超载收费标准信息缺失!");
+            }
+            else{
+                weightOverRatio1 = olp.getWeightOverRatio1();
+                weightOverRatio2 = olp.getWeightOverRatio2();
+                weightOverRatio3 = olp.getWeightOverRatio3();
+                times1 = olp.getTimes1();
+                times2 = olp.getTimes2();
+                times3 = olp.getTimes3();
+            }
+            
+            
+        	
+        	//通过线形递增函数，来判断费率倍数
+        	double d1 = DoubleUtils.mul(floatRates,weightLimit); //正常载重部分
+			if (overloadRatio <= weightOverRatio1) { //超限率小于等于30%的部分
+				//超限装载，收费超限部分按基本费率的1倍线性递增至4倍计费
+				overRunMultiples = MathUtils.linearFunction(0d, 1d, weightOverRatio1, times1, overloadRatio);
+				double d2 = DoubleUtils.mul(baseRates,overRunMultiples,le30Weight); //超限30%部分
+				pricePerKilometer = DoubleUtils.sum(d1,d2); //正常载重和超重部分的和
+				
+			} else if (overloadRatio > weightOverRatio1 && overloadRatio <= weightOverRatio2) { //超限率大于30%小于等于100%的部分
+				overRunMultiples = MathUtils.linearFunction(weightOverRatio1, times2, weightOverRatio2, times3, overloadRatio);
+				double d2 = DoubleUtils.mul(baseRates,times2,le30Weight); //超限30%的部分
+				double d3 = DoubleUtils.mul(baseRates,overRunMultiples,gt30OrLe100Weigth); //大于30%的部分
+				pricePerKilometer = DoubleUtils.sum(d1,d2,d3); //正常载重和超重部分的和
+
+			} else if (overloadRatio > weightOverRatio3) {//超限率大于100%的部分
+				double d2 = DoubleUtils.mul(baseRates, times2, le30Weight); // 超限30%的部分
+				double d3 = DoubleUtils.mul(baseRates, times3, gt30OrLe100Weigth); // 大于30%的部分
+				pricePerKilometer = DoubleUtils.sum(d1,d2,d3); //正常载重和超重部分的和
+			}
+			
+			totalPrice = StringUtils.mul(String.valueOf(pricePerKilometer), miles); //费率乘以里程
+        	
+        	
+        }
+        else{
+        	
+        	//非超重车辆计算公式则为 费额 = 费率倍数 * 单价 * 重量 * 里程
+			totalPrice = StringUtils.mul(String.valueOf(overRunMultiples),
+					String.valueOf(floatRates), String.valueOf(weight), miles);
+        }
+        
+        
+
+        return totalPrice;
+    }
+
+
+    /**
+     * 获取经过桥隧所需的费用
+     *
+     * @param vehType 车型
+     * @param version 版本
+     * @param weight 重量
+     * @param bId 桥隧编码
+     * @return
+     * @throws MTCException 
+     */
+    private static String calBridgePriceTotal(Integer vehType, Integer version,
+            Double weight, Integer bId) throws MTCException {
+        Vector<BridgeExtraChargeStd> becsMap = ParamCache
+                .getBridgeExtraChargeStdMap(); // 桥隧费用缓存
+        if(becsMap == null || becsMap.isEmpty()){
+        	throw new MTCException("桥隧叠加收费标准信息缺失");
+        }
+        Integer bridgeId = null;
+        String price = "0";
+        boolean isExists = false;
+        for (BridgeExtraChargeStd becs : becsMap) {
+            bridgeId = becs.getBridgeId();
+            if (!bridgeId.equals(bId)) {
+                continue;
+            }
+            isExists = true;
+            //读取参数的时候，已经过滤掉不符合条件的桥隧叠加收费标准信息，所以可以去掉版本信息的匹配
+//            if (becs.getVersion() != version) {
+//                continue;
+//            } 
+            // 满足条件的桥隧叠加收费标准
+            price = StringUtils.sum(price, String.valueOf(calBridgePriceByVehType(vehType, becs, weight)));
+            break;
+        }
+
+        if(bId.equals(0)){ //特殊处理，学士到含浦费用本来就为0，经过的桥隧编码为0
+        	price = "0";
+        	isExists = true;
+        }
+        if(!isExists){
+        	price = NO_RECORD;
+        }
+
+        return price;
+    }
+
+    /**
+     * 根据车型获取过桥隧费用<br/> 计算公式： 费用 = 桥隧叠加收费 * 调整系数
+     *
+     * @param vehType 车型
+     * @param becs 桥隧编码信息
+     * @param weight 重量
+     * @return
+     */
+    private static Double calBridgePriceByVehType(Integer vehType,
+            BridgeExtraChargeStd becs, Double weight) {
+        Double price = 0d, modulus = becs.getModulus();
+        switch (vehType) {
+            case 1:
+                price = DoubleUtils.mul(becs.getVehTypeExt1(), modulus);
+                break;
+            case 2:
+                price = DoubleUtils.mul(becs.getVehTypeExt2(), modulus);
+                break;
+            case 3:
+                price = DoubleUtils.mul(becs.getVehTypeExt3(), modulus);
+                break;
+            case 4:
+                price = DoubleUtils.mul(becs.getVehTypeExt4(), modulus);
+                break;
+            case 5:
+                price = DoubleUtils.mul(becs.getVehTypeExt5(), modulus);
+                break;
+            case 7:
+                // 计重车辆获取
+                price = calBridgePriceByWeight(becs, weight);
+                break;
+        }
+        return price;
+    }
+
+    /**
+     * 获取桥隧路段计重车辆的收费金额<br/> 计算公式： 费用 = 桥隧叠加收费 * 调整系数
+     *
+     * @param becs 桥隧叠加收费
+     * @param weight 车辆重量
+     * @return 计重车辆桥隧费用
+     */
+    private static Double calBridgePriceByWeight(BridgeExtraChargeStd becs,
+            Double weight) {
+        int minWeight = 0, middleWeight = 0, maxWeight = 0;
+        Double price = 0d, modulus = becs.getModulus();
+        minWeight = becs.getWeightRange1();
+        middleWeight = becs.getWeightRange2();
+        maxWeight = becs.getWeightRange3();
+        if (weight <= minWeight) {
+            price = DoubleUtils.mul(parseDouble(becs.getVehWeightExt1()),
+                    modulus);
+        } else if (weight > minWeight && weight <= middleWeight) {
+            price = DoubleUtils.mul(parseDouble(becs.getVehWeightExt2()),
+                    modulus);
+        } else if (weight > maxWeight) {
+            price = DoubleUtils.mul(parseDouble(becs.getVehWeightExt3()),
+                    modulus);
+        }
+        return price;
+    }
+
+    /**
+     * 将Integer转换成为Double
+     *
+     * @param i Integer类型
+     * @return 如果没有则返回0d，有则返回对应的数字表示
+     */
+    private static Double parseDouble(Integer i) {
+        return i == null ? 0d : Double.valueOf(i);
+    }
+    
+    
+    /**
+     * 根据路段，里程以及车型车重信息获取费用
+     * @param roadUniqueId 路段唯一号
+     * @param dis 在对应路段上的行驶里程
+     * @param vehClass 车型
+     * @param weight 计费重量
+     * @param limitWeight 检测重量
+     * @return 计算后的费率结果，以分为单位
+     * @throws MTCException 
+     */
+	public static double getFareByRoad(Integer roadUniqueId, double miles, int vehClass,
+			double weight, double limitWeight) throws MTCException {
+		String modulusStr = "0", milesStr = "0";
+		Double modulus = 0d;
+		String totalPrice = "0";
+		
+		if(weight == 0d){
+			weight = 5d; //计重信息如果为空，则使用默认吨位5吨
+		}
+		if(limitWeight == 0d){
+			limitWeight = 5d;//计重信息如果为空，则使用默认吨位5吨
+		}
+		
+		// 计算出路段费用
+		Vector<RoadChargeStd> rcsMap = ParamCache.getRoadChargeStdMap();
+
+		if (rcsMap == null || rcsMap.isEmpty()) {
+			throw new MTCException("路段收费标准信息缺失");
+		}
+		
+		boolean isExists = false;
+
+		for (RoadChargeStd rcs : rcsMap) {
+			if (!rcs.getRoadUniqueId().equals(roadUniqueId)) {
+				continue;
+			}
+			
+			isExists = true;
+			/**
+			 * ** 过滤不满足条件的路段收费标准信息 end ***
+			 */
+			modulus = rcs.getModulus();
+			modulusStr = String.valueOf(modulus); // 调整系数
+			milesStr = String.valueOf(miles); // 本段里程(公里)
+			// 非计重收费，车型判断，计算路段费用，只计算1-5型车
+			switch (vehClass) {
+				case 1 :
+					totalPrice = StringUtils.sum(
+							totalPrice,
+							StringUtils.mul(milesStr, modulusStr,
+									String.valueOf(rcs.getVehTypeStd1())));
+					break;
+				case 2 :
+					totalPrice = StringUtils.sum(
+							totalPrice,
+							StringUtils.mul(milesStr, modulusStr,
+									String.valueOf(rcs.getVehTypeStd2())));
+					break;
+				case 3 :
+					totalPrice = StringUtils.sum(
+							totalPrice,
+							StringUtils.mul(milesStr, modulusStr,
+									String.valueOf(rcs.getVehTypeStd3())));
+					break;
+				case 4 :
+					totalPrice = StringUtils.sum(
+							totalPrice,
+							StringUtils.mul(milesStr, modulusStr,
+									String.valueOf(rcs.getVehTypeStd4())));
+					break;
+				case 5 :
+					totalPrice = StringUtils.sum(
+							totalPrice,
+							StringUtils.mul(milesStr, modulusStr,
+									String.valueOf(rcs.getVehTypeStd5())));
+					break;
+				case 7 :
+					// 计重收费，7型计重车辆
+					totalPrice = StringUtils.sum(totalPrice,
+							calWeightPriceTotal(rcs, milesStr, weight, limitWeight));
+					break;
+				default :
+					break;
+			}
+			break; //满足条件，计算后，退出循环
+		}
+		if(!isExists){
+			return -1.0;
+		}
+		return Double.valueOf(totalPrice);
+	}
+    
+    /**
+     * 根据桥隧编号以及车型车重信息获取桥隧费用
+     * @param btNum 桥隧编号
+     * @param vehClass 车型
+     * @param weight 计费重量
+     * @return 计算后的费率结果，以分为单位
+     * @throws MTCException 
+     */
+	public static Double getFareByBT(Integer btNum, int vehClass, double weight) throws MTCException {
+		if(weight == 0d){
+			weight = 5d; //计重信息如果为空，则使用默认吨位5吨
+		}
+		return Double.valueOf(calBridgePriceTotal(vehClass, null, weight, btNum));
+	}
+	
+
+    public static void main(String[] args) {
+		try {
+
+//			List<String> list = new ArrayList<String>();
+//			list.add(Constant.PROP_MTCCONFIG);
+//			list.add(Constant.PROP_MTCLANE);
+//			list.add(Constant.PROP_MTCLANE_COMM);
+//			list.add(Constant.PROP_MTCLANE_CONSTANT);
+//			list.add(Constant.PROP_MTCLANE_ETC);
+//			list.add(Constant.PROP_MTCLANE_FUNCTION);
+//			list.add(Constant.PROP_MTCLANE_LPR);
+//			list.add(Constant.PROP_MTCLANE_RTP);
+//			list.add(Constant.PROP_MTCLANE_SERVER);
+//			list.add(Constant.PROP_MTCLANE_TEST);
+//			list.add(Constant.PROP_SOCKET);
+//			MyPropertiesUtils.loadProperties(list);
+//
+//			ParamCacheFileRead pcfru = ParamCacheFileRead.getInstance();
+//			pcfru.initData();
+//			Map<String, Object> paramMap = new HashMap<String, Object>();
+//			paramMap.put("enRoadId", "10"); // 入口路段编码
+//			paramMap.put("enStationId", "16"); // 入口站编码
+//			paramMap.put("exRoadId", "32"); // 出口路段编码
+//			paramMap.put("exStationId", "2"); // 出口站编码
+//			paramMap.put("vehType", 3); // 车型
+//			// paramMap.put("weight", 35.1975d); // 计费重量
+//			// paramMap.put("weightLimit", 32d); // 限重重量
+//
+//			// paramMap.put("enRoadId", "25"); // 入口路段编码
+//			// paramMap.put("enStationId", "12"); // 入口站编码
+//			// paramMap.put("exRoadId", "49"); // 出口路段编码
+//			// paramMap.put("exStationId", "14"); // 出口站编码
+//			// paramMap.put("vehType", 7); // 车型
+//			// paramMap.put("weight", 41.6d); // 计费重量
+//			// paramMap.put("weightLimit", 32d); // 限重重量
+//
+//			// paramMap.put("enRoadId", "99"); // 入口路段编码
+//			// paramMap.put("enStationId", "94"); // 入口站编码
+//			// paramMap.put("exRoadId", "49"); // 出口路段编码
+//			// paramMap.put("exStationId", "14"); // 出口站编码
+//			// paramMap.put("vehType", 5); // 车型
+//			// paramMap.put("weight", 61.425d); // 计费重量
+//			// paramMap.put("weightLimit", 32d); // 限重重量
+//
+//			// MainService mainService = new MainService();
+//			// Vehicle veh = new Vehicle();
+//			// veh.setVehicleClass(1);
+//			// double price = mainService.getFare("99", "97", "49", "14", veh);
+//			// System.out.println("元：" + price);
+//			String price = calculate(paramMap);
+//			System.out.println("分：" + price);
+//			System.out.println("元：" + StringUtils.div(price, "100", 0));
+//			int i = 1;
+//			for (String string : roadPrices) {
+//				System.out.println("第" + i + "段的金额为：" + string);
+//				i++;
+//			}
+//			// double p = getFareByRoad(4, 50, 7, 20, 10);
+//			// System.out.println(p);
+//			// System.out.println(StringUtils.div(String.valueOf(p), "100", 0));
+//			// System.out.println(getFareByRoad(2, 5.0, 7, 6.5, 10));
+//			// System.out.println(getFareByBT(1,7,60d));
+			
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+}

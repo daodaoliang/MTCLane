@@ -1,0 +1,5 @@
+[GetLogin]
+CameraIP=192.192.192.2
+CameraPort=8000
+LoginUser=santachi
+LoginPassword=ihcatnas

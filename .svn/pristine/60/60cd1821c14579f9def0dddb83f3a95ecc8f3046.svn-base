@@ -1,0 +1,286 @@
+package ui.myJLabel;
+
+import com.hgits.util.DoubleUtils;
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.math.BigDecimal;
+import javax.swing.JLabel;
+
+/**
+ * 显示轴组的标签
+ *
+ * @author Wang Guodong
+ */
+public class AgJLabel extends JLabel {
+
+    public AgJLabel(String agType, double colorRate) {
+        this.agType = agType;
+        this.colorRate = colorRate;
+        setSize(115, 27);
+    }
+
+    public AgJLabel() {
+        setSize(115, 27);
+    }
+
+    private String agType = "0";//轴组类型
+    private final int ovalLen = 8;//轮胎直径
+    private final int blankLen = 12;//空格长度
+    private int axleLen;
+    private double colorRate;
+
+    /**
+     * 设置轴组信息
+     *
+     * @param agType 轴组类型
+     * @param colorRate 装载比例
+     */
+    public void updateAg(String agType, double colorRate) {
+        this.agType = agType;
+        this.colorRate = colorRate;
+        repaint();
+    }
+
+    @Override
+    public void paint(Graphics g) {
+        axleLen = getWidth() - blankLen * 2;
+        Graphics2D g2d = (Graphics2D) g;
+        g2d .setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        drawBlank(g2d);
+        fillColor(g2d, colorRate);
+        if (agType == null) {
+            agType = "00";
+        }
+        switch (agType) {
+            case "01":
+                drawAg1(g2d);
+                break;
+            case "02":
+                drawAg2(g2d);
+                break;
+            case "03":
+                drawAg3(g2d);
+                break;
+            case "04":
+                drawAg4(g2d);
+                break;
+            case "05":
+                drawAg5(g2d);
+                break;
+            case "06":
+                drawAg6(g2d);
+                break;
+            case "07":
+                drawAg7(g2d);
+                break;
+            case "08":
+                drawAg8(g2d);
+                break;
+            case "09":
+                drawAg9(g2d);
+                break;
+            default:
+                break;
+        }
+    }
+
+    /**
+     * 画白板
+     *
+     * @param g2d
+     */
+    private void drawBlank(Graphics2D g2d) {
+        g2d.setColor(Color.white);
+        g2d.fillRect(1, 1, getWidth() - 2, getHeight() - 2);
+    }
+
+    /**
+     * 指定区域填充指定颜色
+     *
+     * @param g2d
+     * @param rate
+     * @param overloadFlag
+     */
+    private void fillColor(Graphics2D g2d, double rate) {
+        if (rate == 0) {
+            g2d.setColor(Color.white);
+            g2d.fillRect(getWidth() / 2, 0, axleLen / 2, getHeight());
+        } else if (rate >= 2) {
+            rate = 1;
+            g2d.setColor(Color.red);
+        } else if (rate > 1) {
+            double temp = DoubleUtils.round(rate, 0, BigDecimal.ROUND_DOWN);
+            rate = rate - temp;
+            g2d.setColor(Color.red);
+        } else {
+            g2d.setColor(Color.green);
+        }
+        g2d.fillRect(getWidth() / 2, 0, (int) ((int) axleLen / 2 * rate), getHeight());
+    }
+
+    /**
+     * 画轮胎
+     *
+     * @param g
+     * @param x 轮胎左上角x坐标
+     * @param y 轮胎左上角Y坐标
+     * @param len 轮胎直径
+     */
+    private void drawOneTyre(Graphics2D g, int x, int y, int len) {
+        g.setColor(new Color(0, 0, 0));
+        g.fillOval(x + 2, y, len - 2, len);
+        g.setColor(new Color(102, 102, 102));
+        g.fillOval(x, y, len - 2, len);
+    }
+
+    /**
+     * 画轴
+     *
+     * @param g
+     * @param x1
+     * @param y1
+     * @param x2
+     * @param y2
+     */
+    private void drawAxle(Graphics2D g, int x1, int y1, int x2, int y2) {
+        g.setColor(Color.black);
+        g.setStroke(new BasicStroke(2));
+        g.drawLine(x1, y1, x2, y2);
+    }
+
+    /**
+     * 画单轴单胎
+     */
+    private void drawAg1(Graphics2D g2d) {
+        int x = blankLen;
+        int y = getHeight() / 2 - ovalLen / 2;
+        drawOneTyre(g2d, x, y, ovalLen);
+        drawAxle(g2d, blankLen + ovalLen, getHeight() / 2, blankLen + axleLen - ovalLen, getHeight() / 2);
+        drawOneTyre(g2d, blankLen + axleLen - ovalLen, y, ovalLen);
+    }
+
+    /**
+     * 单轴双胎
+     *
+     * @param g2d
+     */
+    private void drawAg2(Graphics2D g2d) {
+        int x = blankLen;
+        int y = getHeight() / 2 - ovalLen / 2;
+        drawOneTyre(g2d, x, y, ovalLen);
+        drawOneTyre(g2d, x + ovalLen, y, ovalLen);
+        drawAxle(g2d, blankLen + ovalLen + ovalLen, getHeight() / 2, blankLen + axleLen - ovalLen - ovalLen, getHeight() / 2);
+        drawOneTyre(g2d, blankLen + axleLen - ovalLen, y, ovalLen);
+        drawOneTyre(g2d, blankLen + axleLen - ovalLen - ovalLen, y, ovalLen);
+    }
+
+    /**
+     * 双轴单胎
+     *
+     * @param g2d
+     */
+    private void drawAg3(Graphics2D g2d) {
+        int x = blankLen;
+        int height = getHeight();
+        drawOneTyre(g2d, x, height / 2 - ovalLen, ovalLen);
+        drawOneTyre(g2d, x, height / 2, ovalLen);
+        drawOneTyre(g2d, x + axleLen - ovalLen, height / 2 - ovalLen, ovalLen);
+        drawOneTyre(g2d, x + axleLen - ovalLen, height / 2, ovalLen);
+        drawAxle(g2d, blankLen + ovalLen, height / 2 - ovalLen / 2, blankLen + axleLen - ovalLen, height / 2 - ovalLen / 2);
+        drawAxle(g2d, blankLen + ovalLen, height / 2 + ovalLen / 2, blankLen + axleLen - ovalLen, height / 2 + ovalLen / 2);
+    }
+
+    /**
+     * 双轴单双胎
+     *
+     * @param g2d
+     */
+    private void drawAg4(Graphics2D g2d) {
+        int x = blankLen;
+        int height = getHeight();
+        drawAxle(g2d, blankLen + ovalLen, height / 2 - ovalLen / 2, blankLen + axleLen - ovalLen, height / 2 - ovalLen / 2);
+        drawAxle(g2d, blankLen + ovalLen, height / 2 + ovalLen / 2, blankLen + axleLen - ovalLen, height / 2 + ovalLen / 2);
+        drawOneTyre(g2d, x, height / 2 - ovalLen, ovalLen);
+        drawOneTyre(g2d, x, height / 2, ovalLen);
+        drawOneTyre(g2d, x + ovalLen, height / 2, ovalLen);
+        drawOneTyre(g2d, x + axleLen - ovalLen, height / 2 - ovalLen, ovalLen);
+        drawOneTyre(g2d, x + axleLen - ovalLen, height / 2, ovalLen);
+        drawOneTyre(g2d, x + axleLen - ovalLen - ovalLen, height / 2, ovalLen);
+    }
+
+    /**
+     * 双轴双胎
+     *
+     * @param g2d
+     */
+    private void drawAg5(Graphics2D g2d) {
+        int x = blankLen;
+        int height = getHeight();
+        drawAg4(g2d);
+        drawOneTyre(g2d, x + ovalLen, height / 2 - ovalLen, ovalLen);
+        drawOneTyre(g2d, x + axleLen - ovalLen - ovalLen, height / 2 - ovalLen, ovalLen);
+    }
+
+    /**
+     * 三轴单胎
+     *
+     * @param g2d
+     */
+    private void drawAg6(Graphics2D g2d) {
+        int x = blankLen;
+        int y = getHeight() / 2 - ovalLen / 2;
+        drawOneTyre(g2d, x, y, ovalLen);
+        drawAxle(g2d, blankLen + ovalLen, getHeight() / 2, blankLen + axleLen - ovalLen, getHeight() / 2);
+        drawOneTyre(g2d, blankLen + axleLen - ovalLen, y, ovalLen);
+
+        drawOneTyre(g2d, x, y - ovalLen, ovalLen);
+        drawAxle(g2d, blankLen + ovalLen, getHeight() / 2 - ovalLen, blankLen + axleLen - ovalLen, getHeight() / 2 - ovalLen);
+        drawOneTyre(g2d, blankLen + axleLen - ovalLen, y - ovalLen, ovalLen);
+
+        drawOneTyre(g2d, x, y + ovalLen, ovalLen);
+        drawAxle(g2d, blankLen + ovalLen, getHeight() / 2 + ovalLen, blankLen + axleLen - ovalLen, getHeight() / 2 + ovalLen);
+        drawOneTyre(g2d, blankLen + axleLen - ovalLen, y + ovalLen, ovalLen);
+    }
+
+    /**
+     * 三轴两单一双
+     *
+     * @param g2d
+     */
+    private void drawAg7(Graphics2D g2d) {
+        int x = blankLen;
+        int y = getHeight() / 2 - ovalLen / 2;
+        drawAg6(g2d);
+        drawOneTyre(g2d, x + ovalLen, y + ovalLen, ovalLen);
+        drawOneTyre(g2d, blankLen + axleLen - ovalLen - ovalLen, y + ovalLen, ovalLen);
+    }
+
+    /**
+     * 三轴一单两双
+     *
+     * @param g2d
+     */
+    private void drawAg8(Graphics2D g2d) {
+        int x = blankLen;
+        int y = getHeight() / 2 - ovalLen / 2;
+        drawAg7(g2d);
+        drawOneTyre(g2d, x + ovalLen, y, ovalLen);
+        drawOneTyre(g2d, blankLen + axleLen - ovalLen - ovalLen, y, ovalLen);
+    }
+
+    /**
+     * 三轴双胎
+     *
+     * @param g2d
+     */
+    private void drawAg9(Graphics2D g2d) {
+        int x = blankLen;
+        int y = getHeight() / 2 - ovalLen / 2;
+        drawAg8(g2d);
+        drawOneTyre(g2d, x + ovalLen, y - ovalLen, ovalLen);
+        drawOneTyre(g2d, blankLen + axleLen - ovalLen - ovalLen, y - ovalLen, ovalLen);
+    }
+}

@@ -1,0 +1,175 @@
+package com.hgits.vo;
+
+/**
+ * 常量类,用于加载编码中所需要的常量
+ *
+ * @author Wang Guodong
+ */
+public class Constant {
+
+    /**
+     * 车道软件版本
+     */
+    public static final String LANE_SOFT_VERSION = "1.2.1601.4";
+
+    public static final String PROP_MTCCONFIG = "resource/MTCConfig.properties";
+    public static final String PROP_MTCLANE = "resource/MTCLane.properties";
+    public static final String PROP_MTCLANE_COMM = "resource/MTCLaneComm.properties";
+    public static final String PROP_MTCLANE_CONSTANT = "resource/MTCLaneConstant.properties";
+    public static final String PROP_MTCLANE_ETC = "resource/MTCLaneETC.properties";
+    public static final String PROP_MTCLANE_FUNCTION = "resource/MTCLaneFunction.properties";
+    public static final String PROP_MTCLANE_RTP = "resource/MTCLaneRTP.properties";
+    public static final String PROP_MTCLANE_SERVER = "resource/MTCLaneServer.properties";
+    public static final String PROP_MTCLANE_TEST = "resource/MTCLaneTest.properties";
+    public static final String PROP_SOCKET = "resource/socket.properties";
+    public static final String PROP_MTCLANE_LPR = "resource/MTCLaneLPR.properties";
+    public static final String PROP_MTCLANE_CARTRIDGE = "resource/MTCLaneCartridge.properties";
+    /**
+     * 收费类型 0 按最小费额收费 1 按实际路径收费
+     */
+    public static final Integer CHARGE_TYPE = 0;
+    /**
+     * 普通车
+     */
+    public static final Integer NORMAL_VEHICLE = 0;
+    /**
+     * 内部车(白名单)
+     */
+    public static final Integer INSIDE_VEH = 1;
+    /**
+     * 军警车
+     */
+    public static final Integer MILITARY_VEHICLE = 2;
+    /**
+     * 紧急车或车队
+     */
+    public static final Integer EMERGENCY_VEH = 3;
+    /**
+     * 绿通车
+     */
+    public static final Integer GREEN_VEH = 4;
+    /**
+     * 一型车
+     */
+    public static final int VEHICLE_CLASS_ONE = 1;
+    /**
+     * 二型车
+     */
+    public static final int VEHICLE_CLASS_TWO = 2;
+    /**
+     * 三型车
+     */
+    public static final int VEHICLE_CLASS_THREE = 3;
+    /**
+     * 四型车
+     */
+    public static final int VEHICLE_CLASS_FOUR = 4;
+    /**
+     * 五型车
+     */
+    public static final int VEHICLE_CLASS_FIVE = 5;
+    /**
+     * 六型车
+     */
+    public static final int VEHICLE_CLASS_SIX = 6;
+    /**
+     * 七型车
+     */
+    public static final int VEHICLE_CLASS_SEVEN = 7;
+    /**
+     * 八型车
+     */
+    public static final int VEHICLE_CLASS_EIGHT = 8;
+    /**
+     * 九型车
+     */
+    public static final int VEHICLE_CLASS_NINE = 9;
+
+    /**
+     * 卡已发放
+     */
+    public static final String TRANSIT_CSC_STATUS_01 = "01";
+    /**
+     * 已发放预编码卡
+     */
+    public static final String TRANSIT_CSC_STATUS_02 = "02";
+    /**
+     *  已发放维修卡 
+     */
+    public static final String TRANSIT_CSC_STATUS_03 = "03";
+    /**
+     * 卡箱内未发放
+     */
+    public static final String TRANSIT_CSC_STATUS_04 = "04";
+    /**
+     * 未发放，不在卡箱内
+     */
+    public static final String TRANSIT_CSC_STATUS_05 = "05";
+    /**
+     * 未发放，不再卡箱内，预编码卡
+     */
+    public static final String TRANSIT_CSC_STATUS_06 = "06";
+    /**
+     * MiFare Pro卡
+     */
+    public static final String CARD_TYPE_1 = "1";
+    /**
+     * Transic CSC通行卡
+     */
+    public static final String CARD_TYPE_01 = "01";
+    /**
+     * Identity CSC员工卡
+     */
+    public static final String CARD_TYPE_03 = "03";
+    /**
+     * Cartridge CSC 卡箱标签卡
+     */
+    public static final String CARD_TYPE_04 = "04";
+    /**
+     * Service CSC
+     */
+    public static final String CARD_TYPE_05 = "05";
+    /**
+     * SVC
+     */
+    public static final String CARD_TYPE_06 = "06";
+    /**
+     * 年月日时分秒时间格式
+     */
+    public static final String FULL_TIME_PATTERN = "yyyyMMddHHmmss";
+    /**
+     * 年月日时间格式
+     */
+    public static final String SHORT_TIME_PATTERN = "yyMMdd";
+    /**
+     * 主机向串口发送数据后的等待时间
+     */
+    public static final Integer SLEEP_TIME = 10;
+    /**
+     * ASCII功能符STX(16进制),表示文本开始
+     */
+    public static final String STX = "02";
+    /**
+     * ASCII功能符DLE(16进制),表示数据链路转义
+     */
+    public static final String DLE = "10";
+    /**
+     * ASCII功能符ETX(16进制),表示文本结束
+     */
+    public static final String ETS = "03";
+    /**
+     * 表示数字的正则表达式
+     */
+    public static final String REGIX_NUM = "\\d+";
+
+    /**
+     * 车型1,2,3,4,5,7,8,9的正则表达式
+     */
+    public static final String REGIX_CLASS = "[1,2,3,4,5,7,8,9]";
+    /**
+     * 车牌颜色对应数字的正则表达式
+     */
+    public static String PLATE_COL_OPTION = "^[0-6]$";
+
+    public static final int RESULT = -1;
+}

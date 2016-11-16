@@ -1,0 +1,138 @@
+package com.hgits.service;
+
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import org.apache.log4j.Logger;
+
+/**
+ *
+ * @author Wang Guodong
+ */
+public class HiService {
+
+    public HiService() {
+    }
+
+    static final String HIERARCHY_CSSP = "HIERARCHY_CSSP";
+    static final String HI_FILE_PATH = "resource/HIERARCHY_CSSP.txt";
+    static final String HI_FILE_HEAD = "PlaceId\tPlaceParentId";
+    static final String HI_FILE_LINE_FEED = "\r\n";
+    private static final Logger logger = Logger.getLogger(HiService.class.getName());
+
+    /**
+     * 加载HI文件，将其内容记录到MAP集合中,父类为key，子类集合为value
+     *
+     * @return
+     */
+    public Map<String, List<String>> loadHiFile() {
+        //key 父类，value 子类集合
+        Map<String, List<String>> map = new HashMap();
+        FileInputStream fis = null;
+        InputStreamReader isr = null;
+        BufferedReader br = null;
+        try {
+            logger.debug("开始解析" + HI_FILE_PATH + "文件");
+            fis = new FileInputStream(HI_FILE_PATH);
+            isr = new InputStreamReader(fis);
+            br = new BufferedReader(isr);
+            String str;
+            while ((str = br.readLine()) != null) {
+                if (str.equals(HI_FILE_HEAD)) {
+                    continue;
+                }
+                String[] strArray = str.split("\t");
+                if (strArray.length != 2) {
+//                    logger.debug("记录" + str + "异常");
+                    continue;
+                }
+                String placeId = strArray[0];
+                String placeParentId = strArray[1];
+                List<String> value = map.get(placeParentId);
+                if (value == null) {
+                    value = new ArrayList();
+                    value.add(placeId);
+                    map.put(placeParentId, value);
+                } else if (value.contains(placeId)) {
+                } else {
+                    value.add(placeId);
+                }
+            }
+
+            Iterator it = map.keySet().iterator();
+            while (it.hasNext()) {
+                String placeParentId = (String) it.next();
+                Set<String> parentSet = new HashSet();
+                Set<String> set = getChildList(parentSet, placeParentId, map);
+                List<String> staList = new ArrayList(set);
+                Collections.sort(staList);
+                map.put(placeParentId, staList);
+            }
+        } catch (FileNotFoundException ex) {
+            logger.error(HI_FILE_PATH + "文件不存在", ex);
+        } catch (IOException ex) {
+            logger.error(null, ex);
+        } finally {
+            if (fis != null) {
+                try {
+                    fis.close();
+                } catch (IOException ex) {
+                    logger.error(null, ex);
+                }
+            }
+            if (isr != null) {
+                try {
+                    isr.close();
+                } catch (IOException ex) {
+                    logger.error(null, ex);
+                }
+            }
+            if (br != null) {
+                try {
+                    br.close();
+                } catch (IOException ex) {
+                    logger.error(null, ex);
+                }
+            }
+        }
+        logger.debug("解析" + HI_FILE_PATH + "文件结束");
+        return map;
+    }
+
+    /**
+     * 根据父类ID,从映射中获取其所有后代的集合 需要解决父类与子类互为父子的情况
+     *
+     * @param parentSet 已处理的父类集合
+     * @param parentId 父类id
+     * @param map key父类，value子类集合
+     * @return 父类所有后代的集合
+     */
+    private Set<String> getChildList(Set<String> parentSet, String parentId, Map<String, List<String>> map) {
+        parentSet.add(parentId);
+        Set<String> set = new HashSet();
+        List<String> childList = map.get(parentId);
+        if (childList != null && !childList.isEmpty()) {
+            for (String child : childList) {
+                if (!set.contains(child)) {
+                    set.add(child);
+                }
+                if (parentSet.contains(child)) {//若当前子类已经在父类中处理过，不再第二次处理
+                    continue;
+                }
+                Set<String> tempSet = getChildList(parentSet, child, map);
+                set.addAll(tempSet);
+            }
+        }
+        return set;
+    }
+}

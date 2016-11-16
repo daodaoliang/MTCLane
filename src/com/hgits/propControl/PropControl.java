@@ -1,0 +1,480 @@
+package com.hgits.propControl;
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.io.Reader;
+import java.io.UnsupportedEncodingException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import org.apache.log4j.Logger;
+
+/**
+ *
+ * @author Wang Guodong
+ */
+public class PropControl implements Runnable {
+
+    /**
+     * @param args the command line arguments
+     */
+    public static void main(String[] args) {
+        // TODO code application logic here
+        PropControl tool = new PropControl();
+        tool.run();
+    }
+    private static final String lineMark = "\r\n";
+    private static final String equalMark = "=";
+    private static final Logger logger = Logger.getLogger(PropControl.class.getName());
+    private final String DEFAULT_WRITE_CHARSET = "UTF-8";
+    private final String DEFAULT_READ_CHARSET = "UTF-8";
+    private final String dir = "resourceTemp";
+
+    /**
+     * 在配置文件中追加注释以及配置内容
+     *
+     * @param propPath 配置文件路径
+     * @param comment 配置项注释
+     * @param key 配置键
+     * @param value 配置默认值
+     */
+    private void appendParam(String propPath, String comment, String key, String value) {
+        File file = new File(propPath);
+        File dir = file.getParentFile();
+        if (!dir.exists() || !dir.isDirectory()) {
+            dir.mkdirs();
+        }
+        FileOutputStream fos = null;
+        OutputStreamWriter osw = null;
+        BufferedWriter bw = null;
+        try {
+            fos = new FileOutputStream(propPath, true);
+            osw = new OutputStreamWriter(fos, DEFAULT_WRITE_CHARSET);
+            bw = new BufferedWriter(osw);
+            StringBuilder sb = new StringBuilder();
+            sb.append(lineMark);
+            if (comment != null && !comment.trim().isEmpty()) {
+                sb.append(comment);
+                sb.append(lineMark);
+            }
+            if (key != null) {
+                sb.append(key);
+                sb.append(equalMark);
+                if (value == null) {
+                    value = "";
+                }
+                sb.append(value);
+                sb.append(lineMark);
+            }
+            bw.write(sb.toString());
+            bw.flush();
+        } catch (FileNotFoundException ex) {
+            logger.error(ex, ex);
+        } catch (UnsupportedEncodingException ex) {
+            logger.error(ex, ex);
+        } catch (IOException ex) {
+            logger.error(ex, ex);
+        } finally {
+            if (fos != null) {
+                try {
+                    fos.close();
+                } catch (IOException ex) {
+                    logger.error(ex, ex);
+                }
+            }
+            if (osw != null) {
+                try {
+                    osw.close();
+                } catch (IOException ex) {
+                    logger.error(ex, ex);
+                }
+            }
+            if (bw != null) {
+                try {
+                    bw.close();
+                } catch (IOException ex) {
+                    logger.error(ex, ex);
+                }
+            }
+        }
+    }
+
+    /**
+     * 获取配置文件内容
+     *
+     * @param propPath 配置文件路径
+     * @return 配置文件集合
+     */
+    private List<Param> loadParam(String propPath) {
+        List<Param> list = new ArrayList();
+        File file = new File(propPath);
+        if (!file.exists() || !file.isFile()) {
+            return list;
+        }
+        FileInputStream fis = null;
+        Reader isr = null;
+        BufferedReader br = null;
+        try {
+            fis = new FileInputStream(propPath);
+            isr = new UnicodeReader(fis, DEFAULT_READ_CHARSET);
+            br = new BufferedReader(isr);
+            list = loadParam(br);
+        } catch (FileNotFoundException ex) {
+            logger.error(ex, ex);
+        } finally {
+            if (fis != null) {
+                try {
+                    fis.close();
+                } catch (IOException ex) {
+                    logger.error(ex, ex);
+                }
+            }
+            if (isr != null) {
+                try {
+                    isr.close();
+                } catch (IOException ex) {
+                    logger.error(ex, ex);
+                }
+            }
+            if (br != null) {
+                try {
+                    br.close();
+                } catch (IOException ex) {
+                    logger.error(ex, ex);
+                }
+            }
+        }
+        return list;
+    }
+
+    /**
+     * 获取配置文件内容
+     *
+     * @param url 配置文件的url路径
+     * @return 配置文件集合
+     */
+    private List<Param> loadParam(URL url) {
+        List<Param> list = new ArrayList();
+        InputStream fis = null;
+        Reader reader = null;
+        BufferedReader br = null;
+        try {
+            fis = url.openStream();
+            reader = new UnicodeReader(fis, DEFAULT_READ_CHARSET);
+            br = new BufferedReader(reader);
+            list = loadParam(br);
+        } catch (FileNotFoundException ex) {
+            logger.error(ex, ex);
+        } catch (IOException ex) {
+            logger.error(ex, ex);
+        } finally {
+            if (fis != null) {
+                try {
+                    fis.close();
+                } catch (IOException ex) {
+                    logger.error(ex, ex);
+                }
+            }
+            if (reader != null) {
+                try {
+                    reader.close();
+                } catch (IOException ex) {
+                    logger.error(ex, ex);
+                }
+            }
+            if (br != null) {
+                try {
+                    br.close();
+                } catch (IOException ex) {
+                    logger.error(ex, ex);
+                }
+            }
+        }
+        return list;
+    }
+
+    /**
+     * 从流中获取配置文件内容
+     *
+     * @param br 配置文件的流
+     * @return 配置文件集合
+     */
+    private List<Param> loadParam(BufferedReader br) {
+        List<Param> list = new ArrayList();
+        try {
+            String str;
+            StringBuilder comment = new StringBuilder();//注释
+            Param param = new Param();
+            while ((str = br.readLine()) != null) {
+                str = str.replaceAll(" ", "");
+                if (str.trim().isEmpty()) {
+                    comment.append(str);
+                    param.setComment(comment.toString());
+                    comment.append(lineMark);
+                } else if (str.startsWith("#")) {//注释
+                    comment.append(str);
+                    param.setComment(comment.toString());
+                    comment.append(lineMark);
+                } else {
+                    int index = comment.lastIndexOf(lineMark);
+                    int len = comment.length();
+                    if (len == index + lineMark.length()) {
+                        comment.delete(index, len);//移除结尾的换行符
+                    }
+                    if (comment.length() > 0) {
+                        param.setComment(comment.toString());
+                    }
+                    comment = new StringBuilder();
+                    String[] buffer = str.split(equalMark);
+                    if (buffer.length == 2) {
+                        String paraKey = buffer[0];
+                        String paraValue = buffer[1];
+                        param.setKey(paraKey);
+                        param.setValue(paraValue);
+                        list.add(param);
+                        param = new Param();
+                    } else if (buffer.length == 1) {
+                        String paraKey = buffer[0];
+                        param.setKey(paraKey);
+                        list.add(param);
+                        param = new Param();
+                    }
+                }
+            }
+            if (param.getComment() != null || param.getKey() != null || param.getValue() != null) {
+                list.add(param);
+            }
+
+        } catch (FileNotFoundException ex) {
+            logger.error(ex, ex);
+        } catch (IOException ex) {
+            logger.error(ex, ex);
+        } finally {
+            if (br != null) {
+                try {
+                    br.close();
+                } catch (IOException ex) {
+                    logger.error(ex, ex);
+                }
+            }
+        }
+        return list;
+    }
+
+    /**
+     * 加载模板配置文件
+     */
+    private Map<String, List<Param>> loadTemplate() {
+        List<String> templateList = PropUtils.getTemplateList();//获取模板集合
+        Map<String, List<Param>> templateMap = new HashMap();//key'=模板文件名，value=模板内容
+        for (String str : templateList) {
+            URL url = this.getClass().getResource(str);
+            if (url == null) {
+                logger.debug("加载模板文件时发现" + str + "文件不存在");
+                continue;
+            }
+            List<Param> list = loadParam(url);
+            String actualStr = PropUtils.getActualByTemplate(str);
+            templateMap.put(actualStr, list);
+        }
+        return templateMap;
+    }
+
+    /**
+     * 加载实际配置文件
+     *
+     * @return 集合
+     */
+    private Map<String, List<Param>> loadActualParam() {
+        List<String> actualList = PropUtils.getActualList();
+        Map<String, List<Param>> actualMap = new HashMap();
+        for (String str : actualList) {
+            List<Param> list = loadParam(str);
+            actualMap.put(str, list);
+        }
+        return actualMap;
+    }
+
+    /**
+     * 加载resourceTemp文件夹并获取文件夹下所有属性的集合
+     *
+     * @return 文件夹下所有属性的集合
+     */
+    private Map<String, List<Param>> loadResourceTemp() {
+        Map<String, List<Param>> map = new HashMap<>();
+        File file = new File(dir);
+        if (!file.exists() || !file.isFile()) {
+            logger.debug("创建" + dir + "文件夹");
+            boolean flag = file.mkdirs();
+            if (flag) {
+                logger.debug("创建" + dir + "文件夹成功");
+            } else {
+                logger.debug("创建" + dir + "文件夹失败");
+            }
+            return map;
+        }
+        List<String> list = getPropList(dir);
+        for (String str : list) {
+            List<Param> paramList = loadParam(str);
+            if (paramList != null && !paramList.isEmpty()) {
+                map.put(str, paramList);
+            }
+        }
+        return map;
+    }
+
+    /**
+     * 获取文件夹下所有properties文件集合
+     *
+     * @param path 文件夹路径
+     * @return 文件夹下所有properties文件集合
+     */
+    private List<String> getPropList(String path) {
+        List<String> list = new ArrayList();
+        File file = new File(path);
+        if (!file.isDirectory() || !file.exists()) {
+            logger.debug(path + "文件夹不存在或不是文件夹");
+            return list;
+        }
+        File[] fileList = file.listFiles();
+        for (File f : fileList) {
+            if (f.isDirectory()) {
+                List<String> tempList = getPropList(f.getAbsolutePath());
+                list.addAll(tempList);
+            } else if (f.isFile()) {
+                String filePath = f.getAbsolutePath();
+                if (filePath.endsWith("properties")) {
+                    list.add(filePath);
+                }
+            }
+        }
+        return list;
+    }
+
+    @Override
+    public void run() {
+        logger.info("开始检查properties文件");
+        try {
+            Map<String, List<Param>> templateMap = loadTemplate();
+            Map<String, List<Param>> actualMap = loadActualParam();
+            compareMaps(templateMap, actualMap);
+        } catch (Exception ex) {
+            logger.error(ex, ex);
+        }
+        logger.info("properties文件检查完毕");
+    }
+
+    /**
+     * 比较模板集合与实际集合
+     *
+     * @param templateMap
+     * @param actualMap
+     */
+    private void compareMaps(Map<String, List<Param>> templateMap, Map<String, List<Param>> actualMap) {
+        Set<String> set = templateMap.keySet();
+        for (String str : set) {
+            List<Param> templateList = templateMap.get(str);
+            List<Param> actualList = actualMap.get(str);
+            List<Param> diffList = compareListByKey(templateList, actualList);
+            if (diffList == null || diffList.isEmpty()) {
+                logger.info(str + "文件检查完毕，无缺少配置");
+            }
+            for (Param param : diffList) {
+                logger.info(str + "文件发现缺少的配置，自动生成配置：" + param);
+                appendParam(str, param.getComment(), param.getKey(), param.getValue());
+            }
+
+        }
+    }
+
+    /**
+     * 比较模板集合与实际参数集合，获取差异的集合
+     *
+     * @param templateList 模板集合
+     * @param actualList 实际参数集合
+     * @return 差异集合
+     */
+    private List<Param> compareListByKey(List<Param> templateList, List<Param> actualList) {
+        List<Param> list = new ArrayList();
+        if (templateList == null || templateList.isEmpty()) {
+            return list;
+        } else if (actualList == null || actualList.isEmpty()) {
+            return templateList;
+        }
+        for (Param param : templateList) {
+            if (ignoreParam(param)) {
+                continue;
+            }
+            boolean flag = listContainsParam(actualList, param);
+            if (!flag) {
+                list.add(param);
+            }
+        }
+        return list;
+    }
+
+    /**
+     * 判断是否忽略指定参数（注释与键均为空）
+     *
+     * @param param 指定参数
+     * @return true/false
+     */
+    private boolean ignoreParam(Param param) {
+        String comment = param.getComment();
+        String key = param.getKey();
+        boolean flag1 = comment == null || comment.trim().isEmpty();
+        boolean flag2 = key == null || key.trim().isEmpty();
+        return flag1 && flag2;
+    }
+
+    /**
+     * 集合中是否包含指定元素
+     *
+     * @param list 集合
+     * @param param 指定元素
+     * @return true/false
+     */
+    private boolean listContainsParam(List<Param> list, Param param) {
+        boolean flag = false;
+        if (param == null) {
+            return false;
+        }
+        String key = param.getKey();
+        String comment = param.getComment();
+        if (key != null) {//模板中键不为空
+            for (Param p : list) {
+                String actualComment = p.getComment();
+                String actualKey = p.getKey();
+                if (actualKey != null && actualKey.equalsIgnoreCase(key)) {//键相同
+                    flag = true;
+                    break;
+                } else if (actualComment != null && actualComment.contains(key)) {//注释中包含键
+                    flag = true;
+                    break;
+                }
+            }
+        } else {//模板中键为空，只判断注释
+            for (Param p : list) {
+                String actualComment = p.getComment();
+                String actualKey = p.getKey();
+                if (actualComment != null && actualComment.contains(comment)) {//注释中已包含模板注释
+                    flag = true;
+                    break;
+                }
+            }
+        }
+
+        return flag;
+    }
+
+}

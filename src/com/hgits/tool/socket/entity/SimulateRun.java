@@ -1,0 +1,62 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package com.hgits.tool.socket.entity;
+
+/**
+ *模拟通行
+ * @author Administrator
+ */
+public class SimulateRun extends BaseConfirm {
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = -5334479825919530707L;
+	private String road = "";
+    private String station = "";
+    private String lane = "";
+    private String time = "";//yyyyMMddHHmmss
+
+    @Override
+    public String toString() {
+        return "{\"road\":\"" + road + "\","
+                + "\"station\":\"" + station + "\",\"lane\":\"" + lane + "\","
+                + "\"time\":\"" + time + "\",\"timeout\":\"" + super.getTimeout() + "\"}";
+    }
+    
+    
+    public String getRoad() {
+        return road;
+    }
+
+    public void setRoad(String road) {
+        this.road = road;
+    }
+
+    public String getStation() {
+        return station;
+    }
+
+    public void setStation(String station) {
+        this.station = station;
+    }
+
+    public String getLane() {
+        return lane;
+    }
+
+    public void setLane(String lane) {
+        this.lane = lane;
+    }
+
+    public String getTime() {
+        return time;
+    }
+
+    public void setTime(String time) {
+        this.time = time;
+    }
+    
+}

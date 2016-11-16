@@ -1,0 +1,278 @@
+package com.hgits.hardware.impl.keyboard;
+
+import MyComm.MyComm;
+import java.util.HashMap;
+import java.util.Map;
+import com.hgits.common.log.MTCLog;
+import com.hgits.control.LogControl;
+import com.hgits.control.ThreadPoolControl;
+import com.hgits.hardware.Keyboard;
+import com.hgits.service.KeyBoardService;
+import com.hgits.task.MyTask;
+import com.hgits.tool.driver.MyKeyAdapter;
+import com.hgits.util.IntegerUtils;
+import com.hgits.util.SetCOMs;
+import org.apache.log4j.Logger;
+
+public class GeaKeyboard implements Keyboard {
+    //监控电脑键盘
+
+    private MyKeyAdapter mka;
+    public Integer order;//键盘按键
+    Map<String, String> map = new HashMap<>();
+    boolean flag;//按键标志，当启用getSuperMessage指令时，其他获取按键指令停止响应（当多线程同时想要获取键盘按键时，以getSuperMessage优先）
+    private KeyBoardService keyBoardService;
+    private MyComm myComm;
+    private boolean running = true;
+    private final Logger logger = Logger.getLogger(GeaKeyboard.class);
+    private String deviceName = "收费键盘";
+
+    /**
+     * 加载按键对应信息
+     */
+    private void init() {
+        map.put("A", EMER);
+        map.put("B", ONDUTY);
+        map.put("C", OFFDUTY);
+        map.put("D", GREEN);
+        map.put("E", RED);
+        map.put("F", SIMU);
+        map.put("G", CART);
+        map.put("H", WEIGHT);
+        map.put("I", IOU);
+        map.put("P", CONFIRM);
+        map.put("O", CANCEL);
+        map.put("K", IMG);
+        map.put("X", MILITARY);
+        map.put("J", UP);
+        map.put("M", DOWN);
+        map.put("7", SEVEN);
+        map.put("8", EIGHT);
+        map.put("9", NINE);
+        map.put(".", DOT);
+        map.put("0", ZERO);
+        map.put("*", ZEROZERO);
+        map.put("1", ONE);
+        map.put("2", TWO);
+        map.put("3", THREE);
+        map.put("4", FOUR);
+        map.put("5", FIVE);
+        map.put("6", SIX);
+        map.put("N", SYSTEM);
+        map.put("L", UNIONPAY);
+    }
+
+    public Map<String, String> getMap() {
+        return map;
+    }
+
+    public void setMap(Map<String, String> map) {
+        this.map = map;
+    }
+
+    public void setMka(MyKeyAdapter mka) {
+        this.mka = mka;
+    }
+
+    public void setKeyBoardService(KeyBoardService keyBoardService) {
+        this.keyBoardService = keyBoardService;
+    }
+
+    /**
+     * 构造函数,静态快之后运行,开启串口
+     */
+    public GeaKeyboard() {
+        
+    }
+
+    /**
+     * 获取按键信息，该方法启用后，getMessage方法无效
+     *
+     * @return 按键信息，无按键返回null
+     */
+    public String getSuperMessage() {
+        flag = true;
+        return getKey();
+    }
+
+    /**
+     * 取消对于getMessage方法的限制
+     */
+    public void cancelSuperMessage() {
+        flag = false;
+    }
+
+    /**
+     * 一直等待，直至收费键盘输入指令
+     *
+     * @return 返回收费键盘输入指令对应的收费键盘按键
+     */
+    public String waitForOrder() {
+        String str;
+        while ((str = getMessage()) == null) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException ex) {
+            }
+        }
+        return str;
+    }
+
+    /**
+     * 获取收费键盘指令对应的按键值(包括电脑键盘按键)
+     *
+     * @return 返回收费键盘指令对应的按键，如果没有按键，返回null
+     */
+    public synchronized String getMessage() {
+        if (flag) {
+            return null;
+        } else {
+            return getKey();
+        }
+    }
+
+    /**
+     * 获取收费键盘指令对应的按键值(包括电脑键盘按键)
+     *
+     * @return 返回收费键盘指令对应的按键，如果没有按键，返回null
+     */
+    private synchronized String getKey() {
+        String str = mka.getKey();//电脑键盘指令
+        String str2 = null; //收费键盘指令
+        if (str == null) {
+            if (order != null) {            //如果按键不为空,也就是说已经按过键盘
+                str2 = map.get(String.valueOf((char) (int) order));     //那么将按键所对应的指令赋给str
+                order = null;             //随后将按键清空
+            }
+            if ("确认".equals(str2) || "取消".equals(str2)) {
+                LogControl.logInfo(str2);
+            }
+            if ("系统".equals(str2)) { //按过系统键后，清空按键
+                order = null;
+                str2 = null;
+            }
+            return str2;
+        } else if (str.matches("[0-9]") || str.equals(".")) {
+            return str;
+        } else {
+            str = map.get(str.toUpperCase());
+            if ("确认".equals(str) || "取消".equals(str)) {
+                LogControl.logInfo(str);
+            }
+            return str;
+        }
+
+    }
+
+    /**
+     * 向收费键盘发送报警指令
+     *
+     * @return 成功true，失败false
+     */
+    public boolean sendAlert() {
+        order = null; //需要报警的话，将按键设置为空
+        if (myComm == null||!myComm.isRunning()) {
+            return false;
+        }
+        MTCLog.log("keyboard send alert");
+        myComm.write("\nB\r".getBytes());//响警告音
+        try {
+            Thread.sleep(500);
+        } catch (InterruptedException ex) {
+        }
+        myComm.write("\nb\r".getBytes());//停止警告音
+        return true;
+    }
+
+    /**
+     * 等待接到确认指令
+     */
+    public void waitForConfirm() {
+
+        while (true) {
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException ex) {
+            }
+            if ("确认".equals(waitForOrder())) {
+                break;
+            }
+        }
+
+    }
+
+    /**
+     * 获取异常信息
+     *
+     * @return 异常信息
+     */
+    public String getErrorMsg() {
+        if (myComm != null) {
+            return deviceName+myComm.getErrorMsg();
+        }
+        return null;
+    }
+
+    @Override
+    public void run() {
+        init();
+        String[] infos;//从配置文件中读取到的有关串口信息的字符串
+        int baudRate;//波特率
+        int dataBits;//数据位
+        int stopBits;//停止位
+        int parity;//校验位
+        try {
+            String info = SetCOMs.getKeyboard();
+            if (info != null) {
+                running = true;
+                MTCLog.log("启用收费键盘" + info);
+                infos = info.split(",");
+                String portName = infos[0];
+                baudRate = IntegerUtils.parseString(infos[1]);
+                dataBits = IntegerUtils.parseString(infos[2]);
+                stopBits = IntegerUtils.parseString(infos[3]);
+                parity = IntegerUtils.parseString(infos[4]);
+                int logLevel = IntegerUtils.parseString(infos[6]);
+                //开启串口
+                myComm = new MyComm();
+                int i = myComm.openComm(portName, baudRate, dataBits, stopBits, parity, logLevel);
+                if (i != 0) {
+                    logger.error("打开串口" + portName + "失败");
+                    return;
+                }
+                ParseTask parseTask = new ParseTask();
+                ThreadPoolControl.getThreadPoolInstance().execute(parseTask);
+            } else {
+                running = false;
+                MTCLog.log("未启用收费键盘");
+            }
+        } catch (Exception e) {
+            MTCLog.log("收费键盘异常", e);
+        }
+    }
+
+    class ParseTask extends MyTask {
+
+        @Override
+        public void run() {
+            while (running) {
+                try {
+                    Thread.sleep(1);
+                } catch (InterruptedException ex) {
+                }
+                if (myComm == null) {
+                    continue;
+                }
+                Byte b = myComm.readByte();
+                if (b == null) {
+                    continue;
+                }
+                order = (int) b;
+                Integer tempOrder = order;
+                if (keyBoardService.specialHand(tempOrder)) {
+                    order = null;
+                }
+            }
+        }
+    }
+}

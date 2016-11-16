@@ -1,0 +1,509 @@
+package com.hgits.hardware.impl.cxp;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.log4j.Logger;
+
+import Automation.BDaq.DaqException;
+import Automation.BDaq.DeviceInformation;
+import Automation.BDaq.DeviceTreeNode;
+import Automation.BDaq.ErrorCode;
+import Automation.BDaq.InstantDiCtrl;
+import Automation.BDaq.InstantDoCtrl;
+
+import com.hgits.common.log.MTCLog;
+import com.hgits.hardware.CXP;
+import com.hgits.util.common.Global;
+
+
+/**
+ * 研华IO控制卡接入类
+ * @author zengzb
+ * @since 2016-07-04 
+ */
+public class YhIOCTRL implements CXP{
+	private Logger log = Logger.getLogger(this.getClass());
+	/**************************************************************
+	 --doBinaryStr 为一个二进制的字符串、最左边为高位（D7位），最右边为低位（D0位）
+	 --从低到高位、每一位用于控制一个外设的状态
+	 --D0:栏杆机 D2：通行灯 D3：雨蓬灯 D4：报警灯
+	 **************************************************************/
+	private StringBuilder doBinaryStr = new StringBuilder("00000000");
+	
+	private int portCount = 1;//默认只能有一个设备端口
+	private static InstantDiCtrl instantDiCtrl = new InstantDiCtrl();//DI指令对象
+	private static InstantDoCtrl instantDoCtrl = new InstantDoCtrl();//DO指令对象
+	
+
+	private final String DO_DEVICE_BJD = "BJD";//报警灯
+	private final String DO_DEVICE_YPD = "YPD";//雨蓬灯
+	private final String DO_DEVICE_TXD = "TXD";//通行灯
+	private final String DO_DEVICE_LGJ = "LGJ";//栏杆机
+	private final String DI_DEVICE_QXQ = "QXQ";//前线圈
+	private final String DI_DEVICE_HXQ = "HXQ";//后线圈
+	private Map<String,Integer> doDevicePos = null;//输出 设备位置定义集合
+	private Map<String,Integer> diDevicePos = null;//输入 设备位置定义集合
+	
+	
+	private static List<String> deviceNames = new ArrayList<String>();//用于保存设备名称列表
+    private boolean isLift;//自动栏杆是否抬起，true：抬起，false：没有抬起
+    private boolean lightGreen;//通行灯状态 true 绿灯 false 红灯
+    private String cxpConnectionError = "";//异常信息
+    private boolean isRunning = false;//为True时运行
+    
+    /**
+     * 雨棚灯标识 0 灯灭；1 红；2 绿
+     */
+    private int canopyFlag = 1;
+    
+    /**
+     * 到达线圈是否有车 false表示无车(前线圈)
+     */
+    private boolean reachCoilFlag;
+    
+    /**
+     * 通道线圈是否有车 false表示无车(后线圈)
+     */
+    private boolean channelCoilFlag;
+    
+    //栏杆关闭
+    private final String unLift = "0";
+    
+    //报警器停止报警
+    private final String unAlarm = "0";
+    
+    //雨棚灯变红
+    private final String lightTurnRed = "0";
+    
+    //通行灯变红
+    private final String tifcLightRed = "0";
+    
+    //报警器报警
+    private final String alarm = "1";
+    
+    //栏杆抬起
+    private final String lift = "1";
+
+    //雨棚灯变绿
+    private final String lightTurnGreen = "1";
+
+    //通行灯变绿
+    private final String tifcLightGreen = "1";
+
+	/**
+	 * 构造函数用于初始化
+	 */
+	public YhIOCTRL(){
+		super();
+	}
+	
+    @Override
+    public void run(){
+        try {
+    		//配置输出及输入设备的bit位
+    		if(doDevicePos == null){
+    			doDevicePos = new HashMap<String,Integer>();
+    			doDevicePos.put(DO_DEVICE_LGJ, Integer.valueOf(0));
+    			doDevicePos.put(DO_DEVICE_TXD, Integer.valueOf(2));
+    			doDevicePos.put(DO_DEVICE_YPD, Integer.valueOf(3));
+    			doDevicePos.put(DO_DEVICE_BJD, Integer.valueOf(4));
+    		}
+    		
+    		if(diDevicePos == null){
+    			diDevicePos = new HashMap<String,Integer>();
+    			diDevicePos.put(DI_DEVICE_QXQ, Integer.valueOf(0));
+    			diDevicePos.put(DI_DEVICE_HXQ, Integer.valueOf(1));
+    		}
+    		
+            initiallize();
+        } catch (Exception ex) {
+            MTCLog.log("IO控制板初始化异常", ex);
+        } 
+    }
+	
+	/**
+	 * 具体的初始化方法
+	 * @return
+	 */
+	private int initiallize(){
+		int InitFlag = 1;
+		
+		//------初始化设备---------
+		log.debug("正在初始化IO控制卡。。。");
+		ArrayList<DeviceTreeNode> installedDevice = instantDoCtrl.getSupportedDevices();
+		if(installedDevice.size() <= 0){
+			log.error("未获取到已安装的IO卡设备信息,设备初始化失败!");
+			InitFlag = -1001;
+			cxpConnectionError = "IO卡：初始化失败";
+			return InitFlag;
+		}
+		
+		if(installedDevice.size() > 1){
+			InitFlag = -1002;
+			log.error("当前工控机中插入了多于一个IO控制卡设备,目前系统不能支持!");
+			cxpConnectionError = "IO卡：多控制卡";
+			return InitFlag;
+		}else{
+			DeviceTreeNode installed = installedDevice.get(0);
+			log.debug("IO控制卡初始化成功,获取设备名称："+installed.toString());
+			deviceNames.add(installed.toString());
+		}
+		
+		//设置当前使用的设备
+		try {
+			instantDiCtrl.setSelectedDevice(new DeviceInformation(getDeviceName()));
+			instantDoCtrl.setSelectedDevice(new DeviceInformation(getDeviceName()));
+		} catch (DaqException e) {
+			InitFlag = -1003;
+			log.error("根据设备名称启用IO控制卡发生异常!"+e.getMessage());
+			cxpConnectionError = "IO卡：启用异常";	
+			e.printStackTrace();
+		}
+		
+		//读取设备中的端口总数
+		portCount = instantDoCtrl.getPortCount();
+		log.debug("初始化IO控制卡完成,端口总数为："+portCount);
+		
+		//发送设备初始化指令
+		sendInitiallizeOrder();
+		return InitFlag;
+	}
+	
+	/**
+	 * 往设备DO端口发送指令通用方法
+	 */
+	private void sendOrderDO(String deviceTypeDO,String optType){
+		byte[] portData = new byte[portCount];
+		try {			
+			/*读取设备状态*/
+			portData = readDO();
+		} catch (InterruptedException e1) {
+			log.error("读取设备当前状态出现线程中断异常!", e1);
+			e1.printStackTrace();
+		} catch (Exception e2){
+			log.error("读取设备当前状态发生IO异常!", e2);
+			e2.printStackTrace();
+		}
+		
+		//将获取的设备当前的字节值转换成十进制值
+		int currState = byteToInt(portData[0]);
+
+		//log.debug("获取DO端口当前状态值（十进制）："+currState);
+		log.debug("获取IO控制卡状态："+lpad(Integer.toBinaryString(currState),'0',8));
+		
+		//根据读取的十进制值转换的二进制串
+		doBinaryStr = new StringBuilder(lpad(Integer.toBinaryString(currState),'0',8));
+		
+		//根据配置设备对应的"Dn"位,(n 为 0---7，一个字节固定为8位) 计算出相应的位置后，并替换相应位置的值
+		doBinaryStr.replace((8-doDevicePos.get(deviceTypeDO))-1, 
+				(8-doDevicePos.get(deviceTypeDO)), optType);//对相应设备执行操作
+		
+		log.debug("发送IO控制卡指令："+doBinaryStr);
+		int num = Integer.parseInt(doBinaryStr.toString(), 2);
+		//log.debug("待发送给设备的指令（十进制）："+num);
+		//log.debug("待发送给设备的指令（十六进制）："+(byte)Integer.parseInt(Integer.toHexString(num), 16));
+		
+		//发送指令(将十进制转换成十六进制指令发送)
+		writeDO((byte)Integer.parseInt(Integer.toHexString(num),16));
+	}
+	
+	/**
+	 * 设备初始化指令发送
+	 */
+	public void sendInitiallizeOrder(){
+		String doBinaryStr = "000".concat(unAlarm).concat(lightTurnRed).concat(tifcLightRed).concat("0").concat(unLift);
+		log.debug("发送IO控制卡指令："+doBinaryStr);
+		int num = Integer.parseInt(doBinaryStr.toString(), 2);
+		//log.debug("初始化设备待发送给设备的指令（十进制）："+num);
+		//log.debug("初始化设备待发送给设备的指令（十六进制）："+(byte)Integer.parseInt(Integer.toHexString(num),16));
+		
+		//发送指令(将十进制转换成十六进制指令发送)
+		writeDO((byte)Integer.parseInt(Integer.toHexString(num),16));
+	}
+	
+	@Override
+	public void changeCanopyLightRed() {		
+		canopyFlag = 1;//设置雨蓬灯标志为红灯
+		
+		log.debug("IO控制卡>>>雨蓬灯变红");
+		sendOrderDO(DO_DEVICE_YPD,lightTurnRed);
+	}
+
+	@Override
+	public void changeCanopyLightGreen() {
+		canopyFlag = 2;//设置雨蓬灯标志为绿灯
+
+		log.debug("IO控制卡>>>雨蓬灯变绿");
+		sendOrderDO(DO_DEVICE_YPD,lightTurnGreen);
+	}
+	
+	@Override
+	public void lowerRailing() {
+		log.debug("IO控制卡>>>栏杆机降落");
+		sendOrderDO(DO_DEVICE_LGJ,unLift);
+	}
+
+	@Override
+	public void liftRailing() {
+		log.debug("IO控制卡>>>栏杆机抬起");
+		sendOrderDO(DO_DEVICE_LGJ,lift);
+	}
+	
+	@Override
+	public void warningAlarm() {
+		log.debug("IO控制卡>>>报警灯开启报警");
+		sendOrderDO(DO_DEVICE_BJD,alarm);
+	}
+	
+	@Override
+	public void stopAlarm() {
+		log.debug("IO控制卡>>>报警灯停止报警");
+		sendOrderDO(DO_DEVICE_BJD,unAlarm);
+	}
+
+	@Override
+	public void changeTrafficLightGreen() {
+		log.debug("IO控制卡>>>通行灯变绿");
+		sendOrderDO(DO_DEVICE_TXD,tifcLightGreen);
+	}
+
+	@Override
+	public void changeTrafficLightRed() {
+		log.debug("IO控制卡>>>通行灯变红");
+		sendOrderDO(DO_DEVICE_TXD,tifcLightRed);
+	}
+	
+	@Override
+	public int getCanopyFlag() {
+		return canopyFlag;
+	}
+	
+	@Override
+	public boolean checkPassageCoil() {
+		byte[] portData = new byte[portCount];
+		try {
+			portData = readDI();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		//log.debug("检查后线圈是否有车（十进制）："+portData[0]);
+		int currState = byteToInt(portData[0]);
+		
+		String binaryStr = lpad(Integer.toBinaryString(currState),'0',8);
+		//log.debug("检查后线圈是否有车（二进制）："+binaryStr);
+		
+		//由于二进制长度总长为 8位且下标从0开始，只可能出现最大下标值7，故这里用7去减相应位置
+		if(binaryStr.charAt(7-diDevicePos.get(DI_DEVICE_HXQ)) == '1'){
+			log.debug("IO控制卡 检测到后线圈 [有车]");
+			channelCoilFlag = true;			
+		}else{
+			channelCoilFlag = false;
+		}
+		return channelCoilFlag;
+	}
+	
+	@Override
+	public boolean checkArriveCoil() {
+		byte[] portData = new byte[portCount];
+		try {
+			portData = readDI();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		int currState = byteToInt(portData[0]);
+		
+		//log.debug("检查前线圈是否有车（十进制）："+portData[0]);
+		String binaryStr = lpad(Integer.toBinaryString(currState),'0',8);
+		//log.debug("检查前线圈是否有车（二进制）："+binaryStr);
+		
+		//由于二进制长度总长为 8位且下标从0开始，只可能出现最大下标值7，故这里用7去减相应位置
+		if(binaryStr.charAt(7-diDevicePos.get(DI_DEVICE_QXQ)) == '1'){
+			log.debug("IO控制卡 检测到前线圈 [有车]");
+			channelCoilFlag = true;
+		}else{
+			//log.debug("检查前线圈是否有车： 无车");
+			channelCoilFlag = false;
+		}
+		return channelCoilFlag;
+	}
+	
+	@Override
+	public String getCxpErrorMsg() {
+		return cxpConnectionError;
+	}
+	
+	/**
+	 * 返回设备的名称，存在多个设备情况下，默认使用第一个设备
+	 * @return
+	 */
+	private String getDeviceName(){
+		String deviceName = (deviceNames == null ? null : (deviceNames.size() > 0) ? deviceNames.get(0) : null);	
+		return deviceName;
+	}
+	
+	/**
+	 * 从设备的输出端读取设备返回的数据
+	 * @return
+	 * @throws Exception 
+	 */
+	private byte[] readDO() throws Exception{
+		byte[] protDataDO = new byte[portCount];
+		
+		/*读取设备状态前睡眠500ms，用于设备的响应时间*/
+		Thread.sleep(500);
+		try{
+			ErrorCode errcode = instantDoCtrl.Read(0, portCount, protDataDO);
+			if(Global.BioFaild(errcode)){
+				log.error("IO控制卡 获取当前状态失败:"+errcode.toString());
+				return null;
+			}
+		}catch(Exception e){
+			log.error("IO控制卡 获取当前状态异常!"+e.getMessage());
+			throw new Exception("IO控制卡 获取当前状态异常!",e);
+		}
+		return protDataDO;
+	}
+	
+	/**
+	 * 向设备的输出端发送控制设备的数据
+	 * @return
+	 */
+	private void writeDO(byte data){
+		ErrorCode errorCode = instantDoCtrl.Write(0, data);
+		if(Global.BioFaild(errorCode)){
+			log.error("设置IO控制卡当前状态异常!");
+		}
+	}
+	
+	/**
+	 * 从设备的输入端读取设备返回的数据
+	 * @return
+	 * @throws Exception 
+	 */
+	private byte[] readDI() throws Exception{
+		byte[] protDataDI = new byte[portCount];
+		
+		/*读取设备状态前睡眠500ms，用于设备的响应时间*/
+		Thread.sleep(500);
+		try{
+			ErrorCode errcode = instantDiCtrl.Read(0, portCount, protDataDI);
+			if(Global.BioFaild(errcode)){
+				log.error("获取IO控制卡当前状态失败:"+errcode.toString());
+				return null;
+			}
+		}catch(Exception e){
+			log.error("获取IO控制卡当前状态异常!"+e.getMessage());
+			throw new Exception("获取IO控制卡当前状态异常!",e);
+		}
+		
+		return protDataDI;
+	}
+	
+	private void closeDOCtrl(){
+		if(instantDoCtrl != null){
+			instantDoCtrl.Cleanup();
+		}		
+	}
+	
+	private void closeDICtrl(){
+		if(instantDiCtrl != null){
+			instantDiCtrl.Cleanup();
+		}		
+	}
+	
+	/**
+	 * 将byte值转换成int值
+	 * @param b
+	 * @return
+	 */
+	public static int byteToInt(byte b) {  
+		//Java 总是把 byte 当做有符处理；我们可以通过将其和 0xFF 进行二进制与得到它的无符值  
+		return b & 0xFF;  
+	} 
+	
+	/**
+	 * 对指定的字符串按要求的长度在左边补齐相应的字符
+	 * @param str
+	 * @param c
+	 * @param len
+	 * @return
+	 */
+	public static String lpad(String str,char c,int len){
+		if(str == null){
+			return "";
+		}
+		
+		if(str.length() > 0 && str.length() < len){
+			StringBuffer sb = new StringBuffer();
+			for(int i = 0; i < (len-str.length()); i++){
+				sb.append(c);
+			}
+			return sb.toString().concat(str);
+		}
+		return str;
+	}
+	
+	public static void main(String[] args) {
+		Logger log = Logger.getLogger(YhIOCTRL.class);		
+		
+		log.debug("1:等待设备开始初始化......");
+		YhIOCTRL ctrl = new YhIOCTRL();
+		log.debug("1:完成设备开始初始化......");
+		
+		log.debug("2:开始发送【栏杆机降落】指令......");
+		ctrl.lowerRailing();
+		log.debug("2:完成发送【栏杆机降落】指令......");
+		
+		log.debug("3:开始发送【栏杆机抬起】指令......");
+		ctrl.liftRailing();
+		log.debug("3:完成发送【栏杆机抬起】指令......");
+		
+		log.debug("4:开始发送【通行灯变红】指令......");
+		ctrl.changeTrafficLightRed();
+		log.debug("4:完成发送【通行灯变红】指令......");
+		
+		log.debug("5:开始发送【通行灯变绿】指令......");
+		ctrl.changeTrafficLightGreen();
+		log.debug("5:完成发送【通行灯变绿】指令......");
+		
+		log.debug("6:开始发送【雨蓬灯变红】指令......");
+		ctrl.changeCanopyLightRed();
+		log.debug("6:完成发送【雨蓬灯变红】指令......");
+		
+		log.debug("7:开始发送【雨蓬灯变绿】指令......");
+		ctrl.changeCanopyLightGreen();
+		log.debug("7:完成发送【雨蓬灯变绿】指令......");
+		
+		log.debug("8:开始发送【停止报警】指令......");
+		ctrl.stopAlarm();
+		log.debug("8:完成发送【停止报警】指令......");
+		
+		log.debug("9:开始发送【开启报警】指令......");
+		ctrl.warningAlarm();
+		log.debug("9:完成发送【开启报警】指令......");
+		
+		log.debug("10:开始发送【获取前线圈状态】指令......");
+		ctrl.checkArriveCoil();
+		log.debug("10:完成发送【获取前线圈状态】指令......");
+		
+		log.debug("11:开始发送【开启报警】指令......");
+		ctrl.checkPassageCoil();
+		log.debug("11:完成发送【开启报警】指令......");
+//		String str = "00000021";
+//		System.out.println(TestCtrl2.lpad(str,'0',8));
+//		System.out.println(str.charAt(8-0-1));
+	}
+
+    @Override
+    public void setArrriveCoil(boolean flag) {
+    }
+
+    @Override
+    public void setPassageCoil(boolean flag) {
+    }
+
+}
+

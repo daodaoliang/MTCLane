@@ -1,0 +1,194 @@
+package com.hgits.control;
+
+import com.hgits.service.TempControl;
+import com.hgits.util.MyPropertiesUtils;
+import com.hgits.vo.Constant;
+import ui.ExtJFrame;
+
+/**
+ * 离线模式控制
+ *
+ * @author WangGuodong
+ */
+public class OffLineControl {
+
+    private LaneServerControl lcc;//监控室控制
+    private long totalOffLineTime;//整体离线倒计时时间,单位：秒
+    private long balanceOffLineTime;//剩余离线倒计时时间
+    private ExtJFrame extJFrame;//软件界面
+    private final TempControl tempSvc = TempControl.getSingleInstance();//临时文件服务类
+    private final String SPLIT_MARK1 = ":";//时间分隔符
+    private final String SPLIT_MARK2 = "：";//时间分隔符
+    private boolean running = true;//监控标识
+
+    public OffLineControl() {
+        init();
+    }
+
+    public void setLcc(LaneServerControl lcc) {
+        this.lcc = lcc;
+    }
+
+    public void setExtJFrame(ExtJFrame extJFrame) {
+        this.extJFrame = extJFrame;
+    }
+
+    public void run() {
+        /**
+         * 检测监控线程是否正常运行
+         */
+        ThreadPoolControl.getThreadPoolInstance().execute(new Runnable() {
+            @Override
+            public void run() {
+                MonitorOffLine monitor = new MonitorOffLine();
+                while (running) {
+                    if (!monitor.isMonitorFlag()) {//监控线程并未运行
+                        ThreadPoolControl.getThreadPoolInstance().execute(monitor);
+                    }
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException ex) {
+                    }
+                }
+            }
+        });
+    }
+
+    /**
+     * 退出监控
+     */
+    public void exit() {
+        running = false;
+    }
+
+    /**
+     * 离线倒计时是否已终结
+     *
+     * @return true/false
+     */
+    public boolean isTerminated() {
+        if (!running) {
+            return false;
+        }
+        return (!lcc.isBureauOnLine()) && (balanceOffLineTime <= 0);
+    }
+
+    /**
+     * 初始化
+     */
+    private void init() {
+        if (!FunctionControl.isOnlineActive()) {
+            LogControl.logInfo("不启用在线收费功能");
+            running = false;
+            return;
+        }
+        String str = MyPropertiesUtils.getProperties(Constant.PROP_MTCLANE_CONSTANT, "totalOffLineTime", "48:00:00");//获取离线倒计时整体时间，默认48小时
+        str = str.replaceAll(SPLIT_MARK2, SPLIT_MARK1);
+        LogControl.logInfo("totalOffLIneTime=" + str);
+        long i = getSeconds(str);
+        if (i < 0) {//离线倒计时整体时间异常，改为默认48小时
+            i = 48 * 3600L;
+        }
+        totalOffLineTime = i;
+        String str1 = tempSvc.parseTempOffLine();//获取离线倒计时剩余时间
+        long temp = getSeconds(str1);
+        if (temp < 0 || temp > totalOffLineTime) {//离线倒计时剩余时间不可为负数，也不可大于整体离线倒计时
+            balanceOffLineTime = totalOffLineTime;
+        } else {
+            balanceOffLineTime = temp;
+        }
+        LogControl.logInfo("离线倒计时整体时间：" + totalOffLineTime + "秒");
+        LogControl.logInfo("离线倒计时剩余时间：" + balanceOffLineTime + "秒");
+    }
+
+    /**
+     * 将hh:mm:ss解析为秒，数据异常时，返回-1
+     */
+    private long getSeconds(String str) {
+        if (str == null) {
+            return -1;
+        }
+        String[] buffer = null;
+        if (str.contains(SPLIT_MARK1)) {
+            buffer = str.split(SPLIT_MARK1);
+        } else if (str.contains(SPLIT_MARK2)) {
+            buffer = str.split(SPLIT_MARK2);
+        }
+        if (buffer == null || buffer.length != 3) {
+            return -1;
+        } else {
+            String s1 = buffer[0];
+            String s2 = buffer[1];
+            String s3 = buffer[2];
+            if (s1.matches(Constant.REGIX_NUM) && s2.matches(Constant.REGIX_NUM) && s3.matches(Constant.REGIX_NUM)) {
+                long hour = Long.parseLong(s1);
+                long minute = Long.parseLong(s2);
+                long second = Long.parseLong(s3);
+                return hour * 3600L + minute * 60L + second;
+            } else {
+                return -1;
+            }
+        }
+    }
+
+    class MonitorOffLine implements Runnable {
+
+        private boolean monitorFlag;
+
+        public boolean isMonitorFlag() {
+            return monitorFlag;
+        }
+
+        public void setMonitorFlag(boolean monitorFlag) {
+            this.monitorFlag = monitorFlag;
+        }
+
+        /**
+         * 检测是否离线
+         */
+        @Override
+        public void run() {
+            setMonitorFlag(true);
+            try {
+                Thread.sleep(5000);//等待5秒钟再启动离线检测，等待离线判断完成
+            } catch (InterruptedException ex) {
+            }
+            while (running) {
+                try {
+                    Thread.sleep(1000);
+                    if (lcc.isBureauOnLine()) {//联网
+                        balanceOffLineTime = totalOffLineTime;//重置剩余离线时间
+                        tempSvc.deleteTempOffLine();//清空离线倒计时记录文件
+                        extJFrame.updateOnlineInfo();
+                        continue;
+                    }
+                    balanceOffLineTime--;
+                    if (balanceOffLineTime < 0) {
+                        balanceOffLineTime = 0;
+                    }
+                    long hour = balanceOffLineTime / 3600;
+                    long minute = balanceOffLineTime % 3600 / 60;
+                    long second = balanceOffLineTime % 60;
+                    StringBuilder sb = new StringBuilder();
+                    if (hour < 10) {
+                        sb.append(0);
+                    }
+                    sb.append(hour).append(SPLIT_MARK1);
+                    if (minute < 10) {
+                        sb.append(0);
+                    }
+                    sb.append(minute).append(SPLIT_MARK1);
+                    if (second < 10) {
+                        sb.append(0);
+                    }
+                    sb.append(second);
+                    extJFrame.updateOffLineInfo(sb.toString());
+                    tempSvc.generateTempOffLine(sb.toString());
+                } catch (Exception ex) {
+                    LogControl.logInfo("离线检测异常", ex);
+                }
+            }
+            setMonitorFlag(false);
+        }
+    }
+}

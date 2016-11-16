@@ -1,0 +1,288 @@
+package com.hgits.util;
+
+import com.hgits.vo.LaneEnList;
+import com.hgits.vo.LaneExList;
+import java.io.UnsupportedEncodingException;
+import java.math.BigDecimal;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.zip.CRC32;
+
+/**
+ *
+ * @author Wang Guodong
+ */
+public class CRCUtils {
+
+    /**
+     * CRC校验之前对需要校验的String数据进行预处理，null值设为空字符串
+     *
+     * @param str 需要校验的String数据
+     * @return 处理后的值
+     */
+    public static String handle(String str) {
+        if (str == null) {
+            return "";
+        } else {
+            return str;
+        }
+    }
+
+    /**
+     * CRC校验之前对需要校验的Integer数据进行预处理，null值设为0
+     *
+     * @param i 需要校验的Integer数据
+     * @return 处理后的值
+     */
+    public static int handle(Integer i) {
+        if (i == null) {
+            return 0;
+        } else {
+            return i;
+        }
+    }
+
+    /**
+     * CRC校验之前对需要校验的Double数据进行预处理，null值设为0
+     *
+     * @param i 需要校验的Double数据
+     * @return 处理后的值
+     */
+    public static String handle(Double i) {
+        if (i == null) {
+            return "0.00";
+        } else {
+            BigDecimal bd = new BigDecimal(i);
+            bd = bd.setScale(2, BigDecimal.ROUND_HALF_UP);
+            return bd.toString();
+        }
+    }
+
+    /**
+     * CRC校验之前对需要校验的Long数据进行预处理，null值设为0
+     *
+     * @param i 需要校验的Long数据
+     * @return 处理后的值
+     */
+    public static long handle(Long i) {
+        if (i == null) {
+            return 0;
+        } else {
+            return i;
+        }
+    }
+
+    /**
+     * CRC校验之前对需要校验的Short数据进行预处理，null值设为0
+     *
+     * @param i 需要校验的Short数据
+     * @return 处理后的值
+     */
+    public static short handle(Short i) {
+        if (i == null) {
+            return 0;
+        } else {
+            return i;
+        }
+    }
+
+    /**
+     * CRC校验之前对需要校验的Date数据进行预处理，null值设为空字符串
+     *
+     * @param date 需要处理的日期
+     * @param format 处理的格式
+     * @return 处理后的值
+     */
+    public static String handle(Date date, String format) {
+        if (date == null) {
+            return "";
+        } else {
+            SimpleDateFormat sdf = new SimpleDateFormat(format);
+            return sdf.format(date);
+        }
+    }
+
+    /**
+     * 获取出口流水对应的CRC校验值
+     *
+     * @param exList 出口流水
+     * @return CRC校验值
+     */
+    public static int getCrc(LaneExList exList) {
+        StringBuilder sbf = new StringBuilder();
+        String dhmFormat = "yyyy-MM-dd HH:mm:ss";
+        sbf.append(CRCUtils.handle(exList.getRecordId()));
+        sbf.append(CRCUtils.handle(exList.getListNo()));
+        sbf.append(CRCUtils.handle(exList.getEnListNo()));
+        sbf.append(CRCUtils.handle(exList.getEnRoadId()));
+        sbf.append(CRCUtils.handle(exList.getEnStationId()));
+        sbf.append(CRCUtils.handle(exList.getEnStationName()));
+        sbf.append(CRCUtils.handle(exList.getEnLaneNo()));
+        sbf.append(CRCUtils.handle(exList.getEnLaneId()));
+        sbf.append(CRCUtils.handle(exList.getEnLaneType()));
+        sbf.append(CRCUtils.handle(exList.getEnVehType()));
+        sbf.append(CRCUtils.handle(exList.getEnVehClass()));
+        sbf.append(CRCUtils.handle(exList.getEnVehPlate()));
+        sbf.append(CRCUtils.handle(exList.getEnVehPlateColor()));
+        sbf.append(CRCUtils.handle(exList.getEnSquadId()));
+        sbf.append(CRCUtils.handle(exList.getEnOperatorNo()));
+        sbf.append(CRCUtils.handle(exList.getEnOpTime(), dhmFormat));
+        sbf.append(CRCUtils.handle(exList.getRoadId()));
+        sbf.append(CRCUtils.handle(exList.getStationId()));
+        sbf.append(CRCUtils.handle(exList.getStationName()));
+        sbf.append(CRCUtils.handle(exList.getLaneNo()));
+        sbf.append(CRCUtils.handle(exList.getLaneId()));
+        sbf.append(CRCUtils.handle(exList.getLaneType()));
+        sbf.append(CRCUtils.handle(exList.getVehType()));
+        sbf.append(CRCUtils.handle(exList.getVehClass()));
+        sbf.append(CRCUtils.handle(exList.getVehPlate()));
+        sbf.append(CRCUtils.handle(exList.getVehPlateColor()));
+        sbf.append(CRCUtils.handle(exList.getLoginTime(), dhmFormat));
+        sbf.append(CRCUtils.handle(exList.getSquadId()));
+        sbf.append(CRCUtils.handle(exList.getSquadDate(), dhmFormat));
+        sbf.append(CRCUtils.handle(exList.getOperatorNo()));
+        sbf.append(CRCUtils.handle(exList.getOperatorName()));
+        sbf.append(CRCUtils.handle(exList.getOpCardNo()));
+        sbf.append(CRCUtils.handle(exList.getOpTime(), dhmFormat));
+        sbf.append(CRCUtils.handle(exList.getTicketType()));
+        sbf.append(CRCUtils.handle(exList.getChargeType()));
+        sbf.append(CRCUtils.handle(exList.getComputerMoney()));
+        sbf.append(CRCUtils.handle(exList.getPayCardType()));
+        sbf.append(CRCUtils.handle(exList.getPassCardNo()));
+        sbf.append(CRCUtils.handle(exList.getCardBoxNo()));
+        sbf.append(CRCUtils.handle(exList.getuPCardType()));
+        sbf.append(CRCUtils.handle(exList.getuPCardNo()));
+        sbf.append(CRCUtils.handle(exList.getuPCardBalanceBf()));
+        sbf.append(CRCUtils.handle(exList.getuPCardBalanceAf()));
+        sbf.append(CRCUtils.handle(exList.getuPCardDiscount()));
+        sbf.append(CRCUtils.handle(exList.getuPCardMoney()));
+        sbf.append(CRCUtils.handle(exList.getoBUId()));
+        sbf.append(CRCUtils.handle(exList.getxTCardType()));
+        sbf.append(CRCUtils.handle(exList.getxTCardNo()));
+        sbf.append(CRCUtils.handle(exList.getxTCardBalanceBf()));
+        sbf.append(CRCUtils.handle(exList.getxTCardBalanceAf()));
+        sbf.append(CRCUtils.handle(exList.getxTCardDiscount()));
+        sbf.append(CRCUtils.handle(exList.getxTCardMoney()));
+        sbf.append(CRCUtils.handle(exList.getpDiscountToll()));
+        sbf.append(CRCUtils.handle(exList.getCashMoney()));
+        sbf.append(CRCUtils.handle(exList.getFreeMoney()));
+        sbf.append(CRCUtils.handle(exList.getOfficeMoney()));
+        sbf.append(CRCUtils.handle(exList.getUnpayMoney()));
+        sbf.append(CRCUtils.handle(exList.getGetMoney()));
+        sbf.append(CRCUtils.handle(exList.getWeightFlag()));
+        sbf.append(CRCUtils.handle(exList.getAxisNum()));
+        sbf.append(CRCUtils.handle(exList.getAxisGroupNum()));
+        sbf.append(CRCUtils.handle(exList.getAxisType()));
+        sbf.append(CRCUtils.handle(exList.getPreAxisType()));
+        sbf.append(CRCUtils.handle(exList.getTotalWeight()));
+        sbf.append(CRCUtils.handle(exList.getPreTotalWeight()));
+        sbf.append(CRCUtils.handle(exList.getAxisWeightDetail()));
+        sbf.append(CRCUtils.handle(exList.getTotalWeightForCharge()));
+        sbf.append(CRCUtils.handle(exList.getTotalWeightLimit()));
+        sbf.append(CRCUtils.handle(exList.getOverWeight()));
+        sbf.append(CRCUtils.handle(exList.getOverRatio()));
+        sbf.append(CRCUtils.handle(exList.getPreVehType()));
+        sbf.append(CRCUtils.handle(exList.getPreVehMoney()));
+        sbf.append(CRCUtils.handle(exList.getPlateImageNo()));
+        sbf.append(CRCUtils.handle(exList.getVehImageNo()));
+        sbf.append(CRCUtils.handle(exList.getSpEvent()));
+        sbf.append(CRCUtils.handle(exList.getCardSelcetCode()));
+        sbf.append(CRCUtils.handle(exList.getOpSelcetCode()));
+        sbf.append(CRCUtils.handle(exList.getVehChargeSelcetCode()));
+        sbf.append(CRCUtils.handle(exList.getVehPassSelcetCode()));
+        sbf.append(CRCUtils.handle(exList.getInvoiceId()));
+        sbf.append(CRCUtils.handle(exList.getSectionPath()));
+        sbf.append(CRCUtils.handle(exList.getSectionCharge()));
+        sbf.append(CRCUtils.handle(exList.getVehTypeAuto()));
+        sbf.append(CRCUtils.handle(exList.getVehPlateAuto()));
+        sbf.append(CRCUtils.handle(exList.getPlateAutoColor()));
+        sbf.append(CRCUtils.handle(exList.getpSAMCardNo()));
+        sbf.append(CRCUtils.handle(exList.getProgramVer()));
+        sbf.append(CRCUtils.handle(exList.getPriceVer()));
+        sbf.append(CRCUtils.handle(exList.getOfficialCardNo()));
+        sbf.append(CRCUtils.handle(exList.getFreeRoadIdSer()));
+        sbf.append(CRCUtils.handle(exList.geteTCTradeNo()));
+        sbf.append(CRCUtils.handle(exList.geteTCTac()));
+        sbf.append(CRCUtils.handle(exList.geteTCTermTradNo()));
+        sbf.append(CRCUtils.handle(exList.geteTCTermCode()));
+        sbf.append(CRCUtils.handle(exList.getSpare1()));
+        sbf.append(CRCUtils.handle(exList.getSpare2()));
+        sbf.append(CRCUtils.handle(exList.getSpare3()));
+        sbf.append(CRCUtils.handle(exList.getSpare4()));
+//        sbf.append(CRCUtils.handle(exList.getTransferTag()));
+        System.out.println("sbf="+sbf);
+        CRC32 crc32 = new CRC32();
+        try {
+            crc32.update(sbf.toString().getBytes("gbk"));
+        } catch (UnsupportedEncodingException ex) {
+        }
+        long value = crc32.getValue();
+        return (int) value;
+    }
+
+    /**
+     * 获取入口交易流水的CRC32校验码
+     *
+     * @param laneEnList 入口交易流水
+     * @return CRC32校验码
+     */
+    public static int getCrc(LaneEnList laneEnList) {
+        StringBuilder sbf = new StringBuilder();
+        sbf.append(CRCUtils.handle(laneEnList.getRecordId()));
+        String dhmFormat = "yyyy-MM-dd HH:mm:ss";
+        sbf.append(CRCUtils.handle(laneEnList.getListNo()));
+        sbf.append(CRCUtils.handle(laneEnList.getRoadId()));
+        sbf.append(CRCUtils.handle(laneEnList.getStationId()));
+        sbf.append(CRCUtils.handle(laneEnList.getStationName()));
+        sbf.append(CRCUtils.handle(laneEnList.getLaneNo()));
+        sbf.append(CRCUtils.handle(laneEnList.getLaneId()));
+        sbf.append(CRCUtils.handle(laneEnList.getLaneType()));
+        sbf.append(CRCUtils.handle(laneEnList.getVehType()));
+        sbf.append(CRCUtils.handle(laneEnList.getVehClass()));
+        sbf.append(CRCUtils.handle(laneEnList.getVehPlate()));
+        sbf.append(CRCUtils.handle(laneEnList.getVehPlateColor()));
+        sbf.append(CRCUtils.handle(laneEnList.getLoginTime(), dhmFormat));
+        sbf.append(CRCUtils.handle(laneEnList.getSquadId()));
+        sbf.append(CRCUtils.handle(laneEnList.getSquadDate(), dhmFormat));
+        sbf.append(CRCUtils.handle(laneEnList.getOperatorNo()));
+        sbf.append(CRCUtils.handle(laneEnList.getOperatorName()));
+        sbf.append(CRCUtils.handle(laneEnList.getOpCardNo()));
+        sbf.append(CRCUtils.handle(laneEnList.getOpTime(), dhmFormat));
+        sbf.append(CRCUtils.handle(laneEnList.getTicketType()));
+        sbf.append(CRCUtils.handle(laneEnList.getPassCardNo()));
+        sbf.append(CRCUtils.handle(laneEnList.getCardBoxNo()));
+        sbf.append(CRCUtils.handle(laneEnList.getxTCardType()));
+        sbf.append(CRCUtils.handle(laneEnList.getxTCardNo()));
+        sbf.append(CRCUtils.handle(laneEnList.getoBUId()));
+        sbf.append(CRCUtils.handle(laneEnList.getPlateImageNo()));
+        sbf.append(CRCUtils.handle(laneEnList.getVehImageNo()));
+        sbf.append(CRCUtils.handle(laneEnList.getSpEvent()));
+        sbf.append(CRCUtils.handle(laneEnList.getCardSelcetCode()));
+        sbf.append(CRCUtils.handle(laneEnList.getOpSelcetCode()));
+        sbf.append(CRCUtils.handle(laneEnList.getVehChargeSelcetCode()));
+        sbf.append(CRCUtils.handle(laneEnList.getVehPassSelcetCode()));
+        sbf.append(CRCUtils.handle(laneEnList.getVehTypeAuto()));
+        sbf.append(CRCUtils.handle(laneEnList.getVehPlateAuto()));
+        sbf.append(CRCUtils.handle(laneEnList.getPlateAutoColor()));
+        sbf.append(CRCUtils.handle(laneEnList.getpSAMCardNo()));
+        sbf.append(CRCUtils.handle(laneEnList.getProgramVer()));
+        sbf.append(CRCUtils.handle(laneEnList.getSpare1()));
+        sbf.append(CRCUtils.handle(laneEnList.getSpare2()));
+        sbf.append(CRCUtils.handle(laneEnList.getSpare3()));
+        sbf.append(CRCUtils.handle(laneEnList.getSpare4()));
+//        sbf.append(CRCUtils.handle(laneEnList.getTransferTag()));
+        System.out.println("sbf="+sbf);
+        CRC32 crc32 = new CRC32();
+        try {
+            crc32.update(sbf.toString().getBytes("gbk"));
+        } catch (UnsupportedEncodingException ex) {
+        }
+        long value = crc32.getValue();
+        return (int) value;
+    }
+    public static void main(String[] args) {
+        System.out.println(handle(0.0));
+    }
+
+
+}

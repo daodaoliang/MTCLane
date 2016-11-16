@@ -1,0 +1,175 @@
+package com.hgits.control;
+
+import com.hgits.service.MainService;
+import com.hgits.util.MyPropertiesUtils;
+import com.hgits.vo.Constant;
+
+/**
+ * 用于处理车辆的异常车辆（special vehicle control）
+ *
+ * @author Wang Guodong
+ */
+public class SVControl {
+
+    private MainService mainSvc;
+
+    /**
+     * 根据卡观察码处理车辆
+     *
+     * @param obCode 卡观察码
+     */
+    public void handelSpecialVehicle(String obCode) {
+        if (obCode == null) {
+            return;
+        }
+        switch (obCode) {
+            case "-1"://未知入口
+                handleUnknowEntryVeh();
+                break;
+            case "1"://通行卡状态异常
+                handleCardStatusErrorVeh();
+                break;
+            case "2"://超时
+                handleOvertimeVeh();
+                break;
+            case "3"://车型差异
+                handleClassDiffVeh();
+                break;
+            case "4"://车牌差异
+                handlePlateDiffVeh();
+                break;
+            case "5"://车型车牌不符
+                handleClassAndPlateDiffVeh();
+                break;
+            case "6"://U型车两小时之内
+                handleUInTwoVeh();
+                break;
+            case "7"://U型车两小时之外
+                handleUOutTwoVeh();
+                break;
+            case "8"://无卡
+                handleNoCardVeh();
+                break;
+            case "9"://不可读卡
+                handleUnReadCardVeh();
+                break;
+            case "10"://更改车型
+                handleClassModifyVeh();
+                break;
+            case "11"://更改车种
+                handleTypeModifyVeh();
+                break;
+            case "12"://残卡
+                handleDamageCardVeh();
+                break;
+            case "13"://小于最小行程时间
+                handleMinumumVeh();
+                break;
+        }
+    }
+
+    /**
+     * 处理卡状态异常
+     */
+    private void handleCardStatusErrorVeh() {
+//        #卡状态异常 是否请求监控室确认（0不请求 1请求，默认0），跳站（0000表示不跳站）
+//cardStatusErrorVeh=0，9997
+        String str = MyPropertiesUtils.getProperties(Constant.PROP_MTCLANE_FUNCTION, "cardStatusErrorVeh", "0,0000");
+        str =str.replaceAll("，", ",");
+        String[] buffer = str.split(",");
+        if(buffer.length<2){
+            System.out.println("卡状态异常处理规则配置错误");
+            return;
+        }
+        String str1 = buffer[0];
+        if(!"0".equals(str)){
+            mainSvc.waitForControlRoomConfirmEntry(null, str1);
+        }
+        
+        String str2 = buffer[1];
+        
+
+    }
+    /**
+     * 处理超时车
+     */
+    private void handleOvertimeVeh(){
+        
+    }
+    /**
+     * 处理未知入口站车辆
+     */
+    private void handleUnknowEntryVeh(){
+        
+    }
+    /**
+     * 处理车型差异车辆
+     */
+    private void handleClassDiffVeh(){
+        
+    }
+    /**处理车牌差异车辆
+     * 
+     */
+    private void handlePlateDiffVeh(){
+        
+    }
+    /**
+     * 处理车型及车牌差异车辆
+     */
+    private void handleClassAndPlateDiffVeh(){
+        
+    }
+    /**
+     * 处理两小时之内U型车
+     */
+    private void handleUInTwoVeh(){
+        
+    }
+    /**
+     * 处理两小时之外U型车
+     */
+    private void handleUOutTwoVeh(){
+        
+    }
+    /**
+     * 处理无卡车
+     */
+    private void handleNoCardVeh(){
+        
+    }
+    /**
+     * 处理残卡车
+     */
+    private void handleDamageCardVeh(){
+        
+    }
+    /**
+     * 处理不可读卡车
+     */
+    private void handleUnReadCardVeh(){
+        
+    }
+    /**
+     * 处理更改车型
+     */
+    private void handleClassModifyVeh(){
+        
+    }
+    /**
+     * 处理更改车种
+     */
+    private void handleTypeModifyVeh(){
+        
+    }
+    /**
+     * 处理形式时间小于最小时间车辆
+     */
+    private void handleMinumumVeh(){
+        
+    }
+    
+    
+    
+    
+}

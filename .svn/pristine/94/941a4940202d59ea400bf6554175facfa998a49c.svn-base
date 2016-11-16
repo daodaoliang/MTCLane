@@ -1,0 +1,75 @@
+package com.hgits.cron;
+
+import java.util.Date;
+
+import org.apache.log4j.Logger;
+import org.quartz.Job;
+import org.quartz.JobExecutionContext;
+import org.quartz.JobExecutionException;
+
+import com.hgits.service.constant.MtcConstant;
+import com.hgits.util.MyPropertiesUtils;
+import com.hgits.util.rate.MultiRateFileUtils;
+import com.hgits.vo.Constant;
+
+/**
+ * 多版本参数文件检查任务
+ * 
+ * @author wh
+ */
+public class CheckMultiParamJob implements Job {
+
+	private static Logger _log = Logger.getLogger(CheckMultiParamJob.class);
+	
+	private MultiRateFileUtils multiRateFileUtils = new MultiRateFileUtils();
+	/**
+	 * 车道类型
+	 */
+	private static Integer laneType = Integer.valueOf(MyPropertiesUtils
+			.getProperties(Constant.PROP_MTCCONFIG,
+					MtcConstant.PROPERTIES_LANETYPE,
+					MtcConstant.MTC_LANE_TYPE_EN));
+
+	/**
+	 * Quartz requires a public empty constructor so that the scheduler can
+	 * instantiate the class whenever it needs.
+	 */
+	public CheckMultiParamJob() {
+	}
+
+	/**
+	 * <p>
+	 * Called by the <code>{@link org.quartz.Scheduler}</code> when a
+	 * <code>{@link org.quartz.Trigger}</code> fires that is associated with the
+	 * <code>Job</code>.
+	 * </p>
+	 * 
+	 * @throws JobExecutionException
+	 *             if there is an exception while executing the job.
+	 */
+	public void execute(JobExecutionContext context)
+			throws JobExecutionException {
+
+		// This job simply prints out its job name and the
+		// date and time that it is running
+//		 JobKey jobKey = context.getJobDetail().getKey();
+		_log.info("多版本参数文件读取检查 executing at " + new Date());
+		checkMultiPriceFileTask();
+	}
+
+
+	/**
+	 * 检查多版本费率参数文件
+	 */
+	private void checkMultiPriceFileTask() {
+		try {
+			// 只有出口才需要校验是否下发了多版本费率
+			if (laneType == MtcConstant.MTC_LANE_TYPE_EX) {
+				multiRateFileUtils.checkMultiPriceRecvFile();
+			}
+		} catch (Exception e) {
+			_log.error("检查多版本费率参数文件异常，异常原因：" + e.getMessage(), e);
+		}
+	}
+
+}

@@ -1,0 +1,68 @@
+package com.hgits.tool.driver;
+
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+
+import com.hgits.common.log.MTCLog;
+import com.hgits.control.FunctionControl;
+import com.hgits.service.KeyBoardService;
+
+/**
+ * 电脑键盘监听类
+ *
+ * @author jelly
+ */
+public class MyKeyAdapter extends KeyAdapter {
+
+    //电脑键盘启用标识 0标识不启用电脑键盘，1表示启用电脑键盘
+    private int pcKeyboardCode = 0;
+
+    private KeyBoardService keyBoardService;
+
+    public void setKeyBoardService(KeyBoardService keyBoardService) {
+        this.keyBoardService = keyBoardService;
+    }
+
+    public MyKeyAdapter() {
+        try {
+            if (FunctionControl.isPcKeyboardActive()) {
+                pcKeyboardCode = 1;
+                MTCLog.log("启用电脑键盘");
+            } else {
+                MTCLog.log("不启用电脑键盘");
+            }
+        } catch (Exception ex) {
+            MTCLog.log("电脑键盘初始化异常", ex);
+        }
+    }
+    private char key = (char) -1;
+
+    @Override
+    public void keyPressed(KeyEvent e) {
+        char tempKey = e.getKeyChar();
+        if (pcKeyboardCode == 1) {
+            MTCLog.log("电脑键盘：" + tempKey);
+
+            //只有启用的电脑键盘，才截取操作
+            String str = String.valueOf(tempKey);
+            if (keyBoardService.specialHand(str)) {
+                key = (char) -1;
+            } else {
+                key = tempKey;
+            }
+        }
+    }
+
+    public String getKey() {
+        if (pcKeyboardCode != 1) {
+            return null;
+        }
+        if (key == (char) -1) {
+            return null;
+        } else {
+            String str = String.valueOf(key);
+            key = (char) -1;
+            return str;
+        }
+    }
+}

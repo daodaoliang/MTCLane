@@ -1,0 +1,25 @@
+package com.hgits.propControl;
+
+/**
+ *
+ * @author Wang Guodong
+ */
+public class Template {
+
+    public static final String PROP_MTCCONFIG = "/com/hgits/propControl/template/MTCConfig.properties";
+    public static final String PROP_MTCLANE = "/com/hgits/propControl/template/MTCLane.properties";
+    public static final String PROP_MTCLANE_COMM = "/com/hgits/propControl/template/MTCLaneComm.properties";
+    public static final String PROP_MTCLANE_CONSTANT = "/com/hgits/propControl/template/MTCLaneConstant.properties";
+    public static final String PROP_MTCLANE_ETC = "/com/hgits/propControl/template/MTCLaneETC.properties";
+    public static final String PROP_MTCLANE_FUNCTION = "/com/hgits/propControl/template/MTCLaneFunction.properties";
+    public static final String PROP_MTCLANE_RTP = "/com/hgits/propControl/template/MTCLaneRTP.properties";
+    public static final String PROP_MTCLANE_SERVER = "/com/hgits/propControl/template/MTCLaneServer.properties";
+    public static final String PROP_MTCLANE_TEST = "/com/hgits/propControl/template/MTCLaneTest.properties";
+    public static final String PROP_MTCLANE_KEYBOARD = "/com/hgits/propControl/template/MTCLaneKeyboard.properties";
+    public static final String PROP_SOCKET = "/com/hgits/propControl/template/socket.properties";
+    public static final String PROP_MTCLANE_LPR = "/com/hgits/propControl/template/MTCLaneLPR.properties";
+    public static final String PROP_LANE = "/com/hgits/propControl/template/hardware/lane.properties";
+    public static final String PROP_KEYBOARD = "/com/hgits/propControl/template/template/keyboard.properties";
+    public static final String PROP_WANGLUKEYBOARD = "/com/hgits/propControl/template/template/WangluKeyboard.properties";
+
+}

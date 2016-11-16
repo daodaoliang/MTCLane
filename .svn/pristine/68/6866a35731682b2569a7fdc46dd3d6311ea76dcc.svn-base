@@ -1,0 +1,39 @@
+package com.hgits.hardware;
+
+import com.hgits.vo.CpuCard;
+
+/**
+ * ETC读卡器
+ * @author zengzb
+ *
+ */
+public interface CpuCardReader {
+
+	/**
+     * 获取CPU卡信息
+     *
+     * @return CPU卡信息，无卡返回null
+     */
+    public CpuCard getCpuCard();
+    
+    /**
+     * 写卡
+     *
+     * @param card 装载信息的卡片实体类
+     * @return 写卡结果 0则成功，非0则失败
+     */
+    public int write(CpuCard card);
+    
+    /**
+     * 关闭读写器
+     *
+     * @return 操作的结果
+     */
+    public int closeReader();
+    
+    /**
+     * 获取异常消息
+     * @return
+     */
+    public String getErrorMsg();
+}

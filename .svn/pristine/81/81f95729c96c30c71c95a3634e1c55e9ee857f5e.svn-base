@@ -1,0 +1,663 @@
+package com.hgits.tool.driver;
+
+import com.hgits.common.log.MTCLog;
+import com.hgits.control.LogControl;
+import com.hgits.util.HexUtils;
+import com.hgits.util.IntegerUtils;
+import com.hgits.util.LongUtils;
+import com.hgits.util.SetCOMs;
+import com.hgits.util.StringUtil;
+import com.hgits.vo.Constant;
+import com.sun.jna.ptr.LongByReference;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.util.Arrays;
+import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+/**
+ * 本类主要对于ETC卡读写器借口的方法进行实现
+ *
+ * @author lq
+ */
+public class MiFareService {
+
+    private IMiFare etcRW;
+    private byte nPort;                               //链接ETC卡读写器的串口
+    private int braudRate;                            //串口的波特率
+    private int cmdType;                              //读写器的卡座标志  0代表无PSAM卡 ，1代表SAM卡座1； 2代表SAM卡座2；3代表C6卡座
+    private String information[];                     //接收串口配置的数组
+    private static final String Command_read0015 = "00B095002B";//读取0015文件的指令（二进制文件）
+    private static final String Command_read0019 = "00B201CC2B";//读取0019文件的指令（变长记录文件）
+    private static final String Command_openDF = "00A40000021001";//进入DF文件目录的指令
+    private static final String Command_Get_Transaction_Prove = "805A000902";//获取TAC码
+    private static final String Command_verify_PIN = "0020000002003A";//校验个人密钥
+    private static final String Command_init_CAPP_Purchase = "805003020B0100000000";//复合消费初始化,不包含终端号，例如：805003020B0100000000
+    private static final String Command_get_EP_Info = "80FB00020B";//取电子钱包的信息
+    private static final String Command_get_balance = "805C000204";//取电子钱包的余额
+    public static String etcDLL = "resource/dll/etcreader/IccReader_MingHua.dll";//ETC读卡器动态链接库名称
+
+    /**
+     * 无参构造函数
+     */
+    public MiFareService() {
+    }
+
+    public void setCmdType(int cmdType) {
+        this.cmdType = cmdType;
+    }
+
+    /**
+     * 初始化ETC卡读写器的参数
+     *
+     * @return 0成功； 其他失败
+     */
+    public int initParam() {
+        try {
+            etcRW = IMiFare.INSTANCE;
+            String info = SetCOMs.getEtc();
+            if (info == null) {
+                MTCLog.log("未启用ETC卡读写器");
+                return -1;
+            } else {
+                MTCLog.log("启用ETC卡读写器:" + info);
+                information = info.split(",");
+                nPort = Byte.parseByte(information[0].substring(3));        //端口号
+                braudRate = IntegerUtils.parseString(information[1]);     //波特率
+                cmdType = IntegerUtils.parseString(information[5]);       //卡座号
+                return 0;
+            }
+        } catch (Exception ex) {
+            LogControl.logInfo("ETC卡读写器初始化异常", ex);
+            return -1;
+        }
+    }
+
+    /**
+     * 将16进制的字符串转换成二进制的数据
+     *
+     * @param shex 16进制字符串（必须以‘\0’结尾的字符串）
+     * @param sbin 二进制数据缓冲区（存放结果）
+     * @param shex_len 16进制数据的字节数（当shex_len小于等于0时就取全部的长度） @retu rn 转换后的数据的长度
+     * @return 转换后的二进制数据
+     */
+    public int HexToBin(String shex, byte[] sbin, int shex_len) {
+        int i = etcRW.HexToBin(shex, sbin, shex_len);
+        return i;
+    }
+
+    /**
+     * 检查ETC卡读写器是否正常运转
+     *
+     * @return 返回结果若为0，则运转正常，非0，则运行异常
+     */
+    public int checkRD() {
+        int i = etcRW.RD_Test(nPort);
+        return i;
+    }
+
+    /**
+     * 打开ETC卡读写器
+     *
+     * @return 返回执行的结果为0，则打开成功，非0，则打开失败
+     */
+    public int openReader() {
+        int i = etcRW.Open_Reader(nPort, braudRate, cmdType);
+        return i;
+    }
+
+    /**
+     * 关闭已经打开的ETC卡读写器
+     *
+     * @return 返回执行的结果为0，则关闭成功，非0，则关闭失败
+     */
+    public int closeReader() {
+        int i = 0;
+        if (etcRW != null) {
+            i = etcRW.Close_Reader(nPort);
+        }
+        return i;
+
+    }
+
+    /**
+     * 重新设定与已经打开的ETC卡相连的串口的波特率
+     *
+     * @param braud 波特率，取9600,19200,38400,115200之一，加电后缺省值为38400
+     * @return 返回执行的结果为0，则设定成功，非0，则设定失败
+     */
+    public int setBraud(int braud) {
+        int i = etcRW.RD_SetBaud(nPort, braud);
+        return i;
+    }
+
+    /**
+     * 获取与已经打开ETC卡读写器相连的串口的波特率
+     *
+     * @return 返回串口的波特率 9600,19200,38400,115200之一，加电后缺省值为38400
+     */
+    public int getBraud() {
+        int i = etcRW.RD_GetBaud(nPort);
+        return i;
+    }
+
+    /**
+     * 设定ETC卡读写器蜂鸣和指示灯的工作方式
+     *
+     * @param beep 蜂鸣器工作方式,0x00 NO_CONTROL : 保持原状态，不控制； 0x80 BEEP_OFF : 关闭蜂鸣器；
+     * 0x81 BEEP_SHORT : 蜂鸣器“D-D”鸣叫两声，间隔100毫秒； 0x82 BEEP_LASTING : 蜂鸣器鸣叫1秒后停止
+     * @param green 绿指示灯工作方式,0x00 NO_CONTROL : 保持原状态，不控制； 0x80 LED_OFF : 关闭指示灯；
+     * 0x81 LED_LASTING : 令指示灯一直亮； 0x82 LED_SHORT : 指示灯亮1秒后熄灭； 0x83 LED_TWINKLE
+     * : 指示灯以1秒的间隔交互闪烁；
+     * @param yellow 黄指示灯工作方式 同green灯；
+     * @return 返回执行的结果为0，则设置成功，非0，则设置失败
+     */
+    public int setMMI(int beep, int green, int yellow) {
+        int i = etcRW.RD_SetMMI(nPort, beep, green, yellow);
+        return i;
+    }
+
+    /**
+     * 获取最近发送的命令帧(取最近操作的数据帧信息,该函数可用于写现场LOG文件)
+     *
+     * @param order 接收的命令信息
+     * @return 返回命令的长度
+     */
+    public int getLastOrder(String order) {
+        byte[] info = new byte[1024];
+        int i = etcRW.GetLastTxFrame(nPort, info);
+        if (i > 0) {
+            order = new String(info);
+        } else {
+            order = "";
+        }
+        return i;
+    }
+
+    /**
+     * 取最近回复的命令帧（取最近操作的数据帧信息,该函数可用于写现场LOG文件）
+     *
+     * @param reply 用于接收最近回复的信息
+     * @return 返回回复信息的长度
+     */
+    public int getLasrReply(String reply) {
+        byte[] info = new byte[1024];
+        int i = etcRW.GetLastRxFrame(nPort, info);
+        if (i > 0) {
+            reply = new String(info);
+        } else {
+            reply = "";
+        }
+        return i;
+    }
+
+    /**
+     * 获取动态连接库的版本号
+     *
+     * @param version 用于接收版本号
+     * @return 返回执行查询的结果，0则表示查询成功，非0则表示查询失败
+     */
+    public int getDLLVersion(String version) {
+        byte[] info = new byte[100];
+        int i = etcRW.RD_GetVersion(nPort, info);
+        if (i == 0) {
+            version = new String(info);
+        } else {
+            version = "";
+        }
+        return i;
+    }
+
+    /**
+     * 射频复位，相当于短时间关闭天线后重新开启。该操作执行后能使所有MIFARE
+     * 卡能被ETC卡读写器打开（Open_Card），包含原来被锁定（MF1_Halt）的卡;
+     *
+     * @return 若返回值等于0，则设定成功；若返回值不等于0，则设定失败
+     */
+    public int resetRF() {
+        int i = etcRW.RF_Reset(nPort);
+        return i;
+    }
+
+    /**
+     * 复位IC卡;复位SAM/PRO卡，对SAM/PRO卡进行操作前需进行复位；
+     *
+     * @return 若返回值等于0，则为复位成功；若返回值不等于0，则复位失败
+     */
+    public int resetCPU() {
+        int i = etcRW.CPU_Reset(nPort, cmdType);
+        return i;
+    }
+
+    /**
+     * 打开ETC卡卡片，成功将获取ETC卡卡号
+     *
+     * @return ETC卡卡号以及回应状态码等信息
+     */
+//    public String openCard() {
+//        StringBuilder cardNo = new StringBuilder();
+//        byte[] info = new byte[9];
+//        int[] len = new int[1];
+//       int i = etcRW.Open_CardB(nPort, info, len);
+//        if (i == 0) {
+//            cardNo.append("0").append(",").append(Long.toString(LongUtils.parseHexString(HexUtils.encode(info).substring(0, len[0] * 2))));
+//        } else {
+//            cardNo.append(i).append(", ");
+//        }
+//        return cardNo.toString();
+//    }
+    public String openCard() {
+        StringBuilder cardNo = new StringBuilder();
+        byte[] info = new byte[9];
+        int[] len = new int[1];
+        int i = etcRW.Open_CardB(nPort, info, len);
+        if (i == 0) {
+            int infoLen = len[0];
+            infoLen=infoLen>=info.length?info.length:infoLen;
+            byte[] buffer = Arrays.copyOf(info, infoLen);
+            byte[] serialBuffer = new byte[infoLen];
+            for(int j=0;j<infoLen;j++){
+                serialBuffer[infoLen-j-1] = buffer[j];
+            }
+            long serial = LongUtils.bytesToLong(serialBuffer);
+            cardNo.append("0").append(",").append(StringUtil.toLength(serial,10));
+        } else {
+            cardNo.append(i).append(", ");
+        }
+        return cardNo.toString();
+    }
+
+    /**
+     * 获取当前所选定的卡类型
+     *
+     * @return 卡类型 -1 —— 未知类型 0, MIFARE_ONE—— MIFARE ONE卡； 1, MIFARE_PRO——
+     * MIFARE PRO 卡
+     */
+    public int getCardType() {
+        int i = etcRW.Get_CardType(nPort);
+        return i;
+    }
+
+    /**
+     * 判别是否有卡在读写器上
+     *
+     * @return 小于 0 表示 错误； 0 表示 无卡 ； 1 表示有1张或多张
+     */
+    public int seekCard() {
+        int i = etcRW.ICC_Present(nPort);
+        return i;
+    }
+
+    /**
+     * 返回TIMECOS指令的响应状态（SW12）信息
+     * 备注：注意区分Put_Error函数和ICC_Message函数的功能。Put_Error函数用来显示几乎所有函数的操作状态，
+     * 如是否正常执行、是否超时等信息；而ICC_Message是用来显示TIMECOS指令响应的SW12所对应的状态信息，
+     * 适用于SAM卡和PRO卡操作。
+     *
+     * @param sw12 2个字节，SAM卡和PRO卡的timecos指令响应状态码SW1和SW2，SW1为低字节
+     * @return SW1、SW2所指示的状态信息
+     */
+    public String getTIMECOSMessage(StringBuilder sw12) {
+        String message = etcRW.ICC_Message(sw12);
+        return message;
+    }
+
+    /**
+     * 对扇区进行认证
+     *
+     * @param keyType 密钥类型 0 为密钥A 1 为密钥B
+     * @param sector 扇区号（0-15）注：每个扇区分4块（block）
+     * @param key 12字节的密钥字符串
+     * @param cardid ic卡的物理卡号
+     * @return 若返回值等于0，则为认证成功；若返回值不等于0，则认证失败
+     */
+    public int authenticateWithKey(int keyType, int sector, String key, String cardid) {
+        long start = System.currentTimeMillis();
+        int i = etcRW.MF1_AuthenticateWithKey(nPort, keyType, sector, key, cardid);
+        long now = System.currentTimeMillis();
+        System.out.println("authenticateWithKey:用时" + (now - start) + "毫秒,result=" + i + ",keyType=" + keyType + ",sector=" + sector + ",key=" + key + ",cardid=" + cardid);
+        return i;
+    }
+
+    /**
+     * 读取已经通过扇区认证后中块的数据
+     *
+     * @param block 块号 （0-63）
+     * @param keyType 密钥类型
+     * @param key 密钥值
+     * @return 指定块的内容,若返回null表示读取失败
+     */
+    public String readBlockEx(int block, int keyType, String key) {
+        if (key == null) {
+            return null;
+        }
+        byte[] info = new byte[64];
+        long start = System.currentTimeMillis();
+        int i = etcRW.MF1_ReadBlockEx(nPort, block, keyType, key, info);
+        long now = System.currentTimeMillis();
+        System.out.println("readBLockEx:用时" + (now - start) + "豪秒,i=" + i + ",block=" + block + ",keyType=" + keyType + ",key=" + key + ",info=" + new String(info));
+        String str = null;
+        if (i == 0) {
+            str = new String(info).trim();
+        }
+        return str;
+    }
+
+    /**
+     * 写卡（将数据写入通过扇区认证后的块中）
+     *
+     * @param block 块号 （0-63）
+     * @param keyType 密钥类型
+     * @param key 密钥值
+     * @param data 待写入的数据，16字节
+     * @return 若返回值等于0，则为写入成功；若返回值不等于0，则写入失败
+     */
+    public int writeBlockEx(int block, int keyType, String key, String data) {
+        long start = System.currentTimeMillis();
+        int i = etcRW.MF1_WriteBlockEx(nPort, block, keyType, key, data);
+        long now = System.currentTimeMillis();
+        System.out.println("writeBlockEx:用时" + (now - start) + "毫秒，result=" + i + ",block=" + block + ",keyType=" + keyType + ",key=" + key + ",data=" + data);
+        return i;
+    }
+
+    /**
+     * 挂起卡（挂起当前操作的MIFARE ONE卡）
+     *
+     * @return 执行的结果，0则表示成功，非0则表示失败
+     */
+    public int haltCard() {
+        int i = etcRW.MF1_Halt(nPort);
+        return i;
+    }
+
+    /**
+     * 本方法是MIFARE PRO卡指令的通用支持函数，可实现MIFARE PRO卡的任意TIMECOS(不含SW1和SW2)
+     * 注：1.预留给response的长度要足够长，必须是所需要的到的二进制信息长度的
+     * 2倍。如取8字节随机数，则response长度至少为20(含SW1和SW2)。
+     * 2.预留给response和sw12的长度要足够长，必须是所需要的到的二进制信息长度的2倍。如取8字节随机数，则response长度至少为16。
+     *
+     * @param command 指令帧（以’\0’结尾的16进制字符串或常量字符串）
+     * @param response 响应帧（以’\0’结尾的16进制字符串或常量字符串）
+     * @return 操作的结果，0则表示操作成功，非0则表示操作失败
+     */
+    public int commandPRO(String command, String response) {
+        byte[] info = new byte[20];
+        int i = etcRW.PRO_Command(nPort, command, info);
+        if (i == 0) {
+            response = HexUtils.encode(info);
+        } else {
+            response = "";
+        }
+        return i;
+    }
+
+    /**
+     * 本方法是MIFARE PRO卡指令的通用支持函数，可实现MIFARE PRO卡的任意TIMECOS(含SW1和SW2)
+     * 注：1.预留给response的长度要足够长，必须是所需要的到的二进制信息长度的
+     * 2倍。如取8字节随机数，则response长度至少为20(含SW1和SW2)。
+     * 2.预留给response和sw12的长度要足够长，必须是所需要的到的二进制信息长度的2倍。如取8字节随机数，则response长度至少为16。
+     *
+     * @param command 指令帧（以’\0’结尾的16进制字符串或常量字符串）
+     * @return 若返回值等于0，则为执行成功；若返回值不等于0，则执行失败
+     */
+    public String commandPROEx1(String command) {
+        String str = command.substring(command.length() - 2, command.length());
+        StringBuilder sb = new StringBuilder();
+        int len;
+        if ("00A4".equals(command.substring(0, 4))) {
+            len = 1024;
+        } else {
+            len = 2 * IntegerUtils.parseHexString(str) + 2;
+        }
+        byte[] info = new byte[len];
+        byte[] sw = new byte[5];
+        MTCLog.log("ETC:send timecose-" + command);
+        int i = etcRW.PRO_CommandEx(nPort, command, info, sw);
+        if (i == 0) {
+            sb.append("0").append(",").append(HexUtils.encode(info)).append(",").append(HexUtils.encode(sw));
+        } else {
+            sb.append(i).append(",");
+        }
+        MTCLog.log("ETC:recv timecose res-" + sb);
+        return sb.toString();
+    }
+
+    /**
+     * 本方法是MIFARE PRO卡指令的通用支持函数，可实现MIFARE PRO卡的任意TIMECOS(含SW1和SW2)
+     *
+     * @param commandName timecos指令名
+     * @param command timecos指令内容（以’\0’结尾的16进制字符串或常量字符串）
+     * @return null 失败无结果
+     */
+    public String commandPROEx1(String commandName, String command) {
+//        String str = command.substring(command.length() - 2, command.length());
+//        StringBuilder sb = new StringBuilder();
+        int len;
+//        if ("00A4".equals(command.substring(0, 4))) {
+        len = 1024;
+//        } else {
+//            len = 2 * IntegerUtils.parseHexString(str) + 2;
+//        }
+        byte[] info = new byte[len];
+        byte[] sw = new byte[5];
+        int i = etcRW.PRO_CommandEx(nPort, command, info, sw);
+        String sw12 = new String(sw).trim();
+        String response = new String(info).trim();
+        MTCLog.log("ETC:" + commandName + ":" + command + "指令执行结果：" + i + ",响应状态码：" + sw12 + ",response:" + response);
+        if (i != 0) {
+            return null;
+        }
+        if (!"9000".equals(sw12)) {
+            return null;
+        }
+        return response;
+    }
+
+    /**
+     * 写CPU文件
+     *
+     * @param fileId 文件标识
+     * @param data 待写入的数据(16进制)
+     * @return 操作的结果，为0则写入成功，非0则失败
+     */
+    public int writeFile(String fileId, byte[] data) {
+        int i = etcRW.PRO_WriteFile(nPort, cmdType, fileId, data);
+        return i;
+    }
+
+    /**
+     * PRO卡的消费
+     *
+     * @param sTime 消费的时间
+     * @param money 消费金额
+     * @param tollInfo 联网收费信息文件0019的内容(内容的长度是去掉了前面的固定的'AA2900'，也就是长度只有80)
+     * @return 返回执行的结果，开头为0则执行成功，非0则执行失败
+     */
+    public String comsumeMoney(String sTime, int money, String tollInfo) {
+        String sTermTradNo;    // 终端脱机交易序号
+        String sCardTradeNo;   // 卡片交易序号
+        String sTAC;           // 复合消费Tac码
+        long iBalance1, iBalance2; //iBalance1  卡片消费前余额;iBalance2    卡片消费后余额
+        StringBuilder sb = new StringBuilder();
+        byte[] stm1 = new byte[261];
+        byte[] stm2 = new byte[261];
+        byte[] stm3 = new byte[261];
+        LongByReference stm4 = new LongByReference();
+        LongByReference stm5 = new LongByReference();
+        int i = etcRW.PRO_Comsume(nPort, cmdType, sTime, money, tollInfo, stm1, stm2, stm3, stm4, stm5);
+        if (i == 0) {
+            sTermTradNo = new String(stm1).trim();
+            sCardTradeNo = new String(stm2).trim();
+            sTAC = new String(stm3).trim();
+            iBalance1 = stm4.getValue();
+            iBalance2 = stm5.getValue();
+            sb.append("0,").append(sTermTradNo).append(",").append(sCardTradeNo).append(",").append(sTAC);
+            sb.append(",").append(Long.toString(iBalance1)).append(",").append(Long.toString(iBalance2));
+        } else {
+            sb.append(i).append(",");
+        }
+        return sb.toString();
+    }
+
+    /**
+     * 获取错误代码对应的错误信息
+     *
+     * @param erro 错误代码
+     * @return 错误信息
+     */
+    public String putError(int erro) {
+        String message = "";
+        try {
+            message = new String(etcRW.Put_Error(erro).getBytes("gbk"), "utf-8");
+        } catch (UnsupportedEncodingException ex) {
+            Logger.getLogger(MiFareService.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return message;
+    }
+
+    /**
+     * 查询读写器是否打开
+     *
+     * @return 若返回值等于0，则已打开；若返回值不等于0，未打开
+     */
+    public int isReaderOpen() {
+        return etcRW.IsReaderOpen(nPort);
+    }
+
+    /**
+     * 获取PSAM卡号码
+     *
+     * @return PSAM卡号码
+     */
+    public String getPsam() {
+        String psam = null;
+        try {
+            String command = "00A40000023F00";//选择CPU卡主控文件指令
+            String commandName = "选择PSAM卡主控文件";
+            byte[] buffer = new byte[56];
+            byte[] sw12 = new byte[16];
+            int i;
+            String res;
+            i = etcRW.SAM_CommandEx(nPort, command, buffer, sw12);//选择CPU卡主控文件指令
+            res = new String(sw12).trim();
+            if (i != 0) {
+                MTCLog.log("ETC:" + commandName + "指令" + command + "执行失败，返回值：" + i + "响应状态码为：" + res);
+            }
+            if (!"9000".equals(res)) {
+                MTCLog.log("ETC:" + commandName + "指令" + command + "执行成功，返回值：" + i + "但响应状态码异常，为：" + res);
+            }
+            command = "00B0960006";
+            commandName = "读取PSAM卡0015文件内容";
+            buffer = new byte[56];
+            sw12 = new byte[16];
+            i = etcRW.SAM_CommandEx(nPort, command, buffer, sw12);//读取PSAM卡0015文件内容
+            res = new String(sw12).trim();
+            if (i != 0) {
+                MTCLog.log("ETC:" + commandName + "指令" + command + "执行失败，返回值：" + i + "响应状态码为：" + res);
+                return null;
+            }
+            if (!"9000".equals(res)) {
+                MTCLog.log("ETC:" + commandName + "指令" + command + "执行成功，返回值：" + i + "但响应状态码异常，为：" + res);
+                return null;
+            }
+            String str = new String(buffer).trim();
+            MTCLog.log("ETC:" + "ETC卡读卡器终端机：" + str);
+            psam = str.substring(0, 12);
+        } catch (Exception ex) {
+            MTCLog.log("ETC:" + "获取PSAM卡卡号异常", ex);
+        }
+        return psam;
+    }
+
+    public void testDF() {
+
+    }
+
+    /**
+     * 绿灯指示灯以1秒的间隔交互闪烁；
+     */
+    public void setGreenLight() {
+        etcRW.RD_SetMMI(nPort, 0x00, 0x83, 0x00);
+    }
+
+    /**
+     * 蜂鸣器鸣叫一秒后停止
+     */
+    public void beep() {
+        etcRW.RD_SetMMI(nPort, 0x82, 0x00, 0x00);
+    }
+
+    /**
+     * 蜂鸣器鸣叫两次后停止
+     */
+    public void beepTwice() {
+        etcRW.RD_SetMMI(nPort, 0x81, 0x00, 0x00);
+    }
+
+    /**
+     * 根据卡片脱机交易序列号获取TAC码
+     *
+     * @param tradeNum 卡片脱机交易序列号
+     * @return tac码，若为null，表示获取tac码失败
+     */
+    public String getTac(String tradeNum) {
+        String str = commandPROEx1("Command_Get_Transaction_Prove", Command_Get_Transaction_Prove + tradeNum);
+        if (str == null || str.length() < 16) {
+            return null;
+        } else {
+            return str.substring(8, 16);
+        }
+    }
+
+    /**
+     * 通过交易初始化指令获取卡片上一次交易的序号（默认交易金额为0）
+     *
+     * @param terminalId 终端号
+     * @return 卡片上一次交易序号
+     */
+    public String getTransNum(String terminalId) {
+        String str = commandPROEx1("Command_init_CAPP_Purchase", Command_init_CAPP_Purchase + terminalId);
+        if (str == null || str.length() < 12) {
+            return null;
+        }
+        return str.substring(8, 12);//获取交易序号
+    }
+
+    /**
+     * modify by yili 根据ETC.properties文件中useDllKey配置的key进行读取相应的动态库路径获取EtcDllName
+     *
+     * @return EtcDllName
+     */
+    public static String getEtcDllName() {
+        File file = new File(Constant.PROP_MTCLANE_ETC);
+        if (file.exists() && file.isFile()) {
+            FileInputStream fis = null;
+            try {
+                Properties prop = new Properties();
+                fis = new FileInputStream(file);
+                prop.load(fis);
+
+                String useDllKey = prop.getProperty("useDllKey", "ETCDLL");
+                if (null != useDllKey) {
+                    etcDLL = prop.getProperty(useDllKey, etcDLL);
+                }
+            } catch (Exception ex) {
+                Logger.getLogger(MiFareService.class.getName()).log(Level.SEVERE, "加载ETC读卡器动态库配置文件异常", ex);
+            } finally {
+                try {
+                    if (fis != null) {
+                        fis.close();
+                    }
+                } catch (IOException ex) {
+                    Logger.getLogger(MiFareService.class.getName()).log(Level.SEVERE, "关闭流异常", ex);
+                }
+            }
+        }
+        return etcDLL;
+    }
+
+}

@@ -1,0 +1,233 @@
+/**
+ * 
+ */
+package com.hgits.util;
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.TimeZone;
+
+import com.hgits.service.constant.DateConstant;
+
+/**
+ * 日期工具类
+ * 
+ * @author wh
+ *
+ */
+public class DateUtils extends org.apache.commons.lang.time.DateUtils {
+	private static SimpleDateFormat sdf = new SimpleDateFormat(
+			DateConstant.DATE_FORMAT_YYYMMDD_SPACE_HHMMSS);
+
+	public static final int DATE_TYPE_DAY = 1;
+
+	public static final int DATE_TYPE_MONTH = 2;
+
+	public static final int DATE_TYPE_YEAR = 3;
+
+	public static final String DATE_OPERA_ADD = "+";
+
+	public static final String DATE_OPERA_MINUS = "-";
+
+	/**
+	 * 日期计算
+	 * 
+	 * @param obj
+	 *            待计算日期
+	 * @param dateType
+	 *            计算日期类别。1：日；2：月；3：年
+	 * @param calculateType
+	 *            计算类型。-：减；+：加
+	 * @param calculateNum
+	 *            计算值。
+	 * @return
+	 * @throws Exception
+	 */
+	public static Date calculate(Date obj, int dateType, String calculateType,
+			int calculateNum) throws Exception {
+		int countNum = 0;
+		Calendar cal = Calendar.getInstance();
+		Date rst = null;
+
+		// 判断计算类型
+		if (DATE_OPERA_MINUS.equals(calculateType)) {
+			countNum = 0 - calculateNum;
+		} else if (DATE_OPERA_ADD.equals(calculateType)) {
+			countNum = 0 + calculateNum;
+		} else {
+			throw new Exception("calculateType输入参数值不合法");
+		}
+		cal.add(dateType, countNum);
+		rst = cal.getTime();
+		return rst;
+	}
+
+	/**
+	 * 获取车道当前时间
+	 * 
+	 * @return 返回Date类型的系统时间
+	 */
+	public static Date getCurrentDate() {
+		Date date = new Date();
+		return date;
+	}
+	
+	/**
+	 * 格式化日期字符串，转换成yyyy-mm-dd hh:mm:ss
+	 * 
+	 * @param date
+	 * @return
+	 */
+	public static String formatDateToString(Date date) {
+		if (date == null) {
+			return null;
+		}
+		return sdf.format(date);
+	}
+
+	/**
+	 * 格式化日期格式，转换成制定类型的日期格式
+	 * 
+	 * @param date
+	 *            日期
+	 * @param format
+	 *            格式类型
+	 * @return
+	 */
+	public static String formatDateToString(Date date, String format) {
+		if (date == null && null == format) {
+			return null;
+		}
+		return new SimpleDateFormat(format).format(date);
+	}
+
+	/**
+	 * date类型转sql date类型
+	 * 
+	 * @param date
+	 *            date
+	 * @return sql date
+	 */
+	public static java.sql.Date convertSqlDate(Date date) {
+		java.sql.Date sd = null;
+		if (null != date) {
+			sd = new java.sql.Date(date.getTime());
+		} else {
+			sd = new java.sql.Date(getCurrentDate().getTime());
+		}
+		return sd;
+	}
+
+	/**
+	 * 将字符串转换为Date类型
+	 * 
+	 * @param dateStr
+	 * @return
+	 */
+	public static Date parseDate(String dateStr) {
+		try {
+			return sdf.parse(dateStr);
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	/**
+	 * 将字符串转换为Date类型，转换成制定类型的日期格式
+	 * 
+	 * @param date
+	 *            日期
+	 * @param format
+	 *            格式类型
+	 * @return
+	 */
+	public static Date parseDate(String dateStr, String format) {
+		if (dateStr == null || null == format) {
+			return null;
+		}
+		try {
+			return new SimpleDateFormat(format).parse(dateStr);
+		} catch (ParseException e) {
+			//e.printStackTrace();
+		}
+		return null;
+	}
+
+	/**
+	 * 获取任意类型的当前时间格式
+	 * 
+	 * @param dateFormat
+	 * @return
+	 */
+	public static String now(String dateFormat) {
+		Calendar cal = Calendar.getInstance();
+		SimpleDateFormat sdf = new SimpleDateFormat(dateFormat);
+		TimeZone timeZoneChina = TimeZone.getTimeZone("Asia/Shanghai");
+		sdf.setTimeZone(timeZoneChina);// 设置系统时区
+		return sdf.format(cal.getTime());
+	}
+
+	/**
+	 * 获取传入日期的当前月份的最后一天。
+	 * 
+	 * @param month
+	 *            日期
+	 * @return
+	 */
+	public static Date getLastOfMonth(Date month) {
+		if (null == month) {
+			return null;
+		}
+		Calendar calendar = Calendar.getInstance();
+		calendar.setTime(month);
+		calendar.set(Calendar.DATE, 1); // 设置为当月的第一天
+		calendar.roll(Calendar.DATE, -1);
+		calendar.set(Calendar.HOUR_OF_DAY, 23);
+		calendar.set(Calendar.MINUTE, 59);
+		calendar.set(Calendar.SECOND, 59);
+		calendar.set(Calendar.MILLISECOND, 999);
+		return calendar.getTime();
+	}
+
+	/**
+	 * 获取传入日期的当前月份的第一天。
+	 * 
+	 * @param month
+	 *            日期
+	 * @return
+	 */
+	public static Date getFirstOfMonth(Date month) {
+		if (null == month) {
+			return null;
+		}
+		Calendar calendar = Calendar.getInstance();
+		calendar.setTime(month);
+		calendar.set(GregorianCalendar.DAY_OF_MONTH, 1);
+		calendar.set(Calendar.HOUR_OF_DAY, 0);
+		calendar.set(Calendar.MINUTE, 0);
+		calendar.set(Calendar.SECOND, 0);
+		calendar.set(Calendar.MILLISECOND, 0);
+		return calendar.getTime();
+	}
+	
+	/**
+	 * 获取两个时间之间的差额，单位是毫秒
+	 * @param date1 日期1
+	 * @param date2 日期2
+	 * @return
+	 */
+	public static long getTimeDifference(Date date1,Date date2){
+		if(date1 == null){
+			return -1;
+		}
+		if(date2 == null){
+			return -1;
+		}
+		return date1.getTime()-date2.getTime();
+	}
+
+}

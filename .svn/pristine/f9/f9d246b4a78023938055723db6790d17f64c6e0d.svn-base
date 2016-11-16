@@ -1,0 +1,319 @@
+package com.hgits.mtclane;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+import javax.swing.JOptionPane;
+
+import org.apache.log4j.xml.DOMConfigurator;
+
+import ui.AlarmJFrame;
+import ui.ExtJFrame;
+import unique.UniqueCheck;
+
+import com.hgits.control.AutoMachineControl;
+import com.hgits.control.CartControl;
+import com.hgits.control.ExitControl;
+import com.hgits.control.FlowControl;
+import com.hgits.control.GcControl;
+import com.hgits.control.ImgLaneServerControl;
+import com.hgits.control.JobControl;
+import com.hgits.control.LaneServerControl;
+import com.hgits.control.LogControl;
+import com.hgits.control.OffLineControl;
+import com.hgits.control.PaperCardControl;
+import com.hgits.control.SimulateControl;
+import com.hgits.control.ThreadPoolControl;
+import com.hgits.control.ToolErrorControl;
+import com.hgits.control.UpdateControl;
+import com.hgits.control.WeighControl;
+import com.hgits.cron.BackUpLogJob;
+import com.hgits.cron.CheckParamJob;
+import com.hgits.hardware.CICM;
+import com.hgits.hardware.CXP;
+import com.hgits.hardware.CpuCardReader;
+import com.hgits.hardware.IcReaderWriter;
+import com.hgits.hardware.Keyboard;
+import com.hgits.hardware.LprService;
+import com.hgits.hardware.Printer;
+import com.hgits.hardware.TFI;
+import com.hgits.hardware.VideoInstruction;
+import com.hgits.hardware.WeighSystem;
+import com.hgits.realTimePath.RealTimePath;
+import com.hgits.service.CpuCardService;
+import com.hgits.service.KeyBoardService;
+import com.hgits.service.MainService;
+import com.hgits.control.TempControl;
+import com.hgits.service.constant.MtcConstant;
+import com.hgits.tool.driver.MyKeyAdapter;
+import com.hgits.util.CheckQuartzTimeThread;
+import com.hgits.util.DateUtils;
+import com.hgits.util.IntegerUtils;
+import com.hgits.util.LaneListUtils;
+import com.hgits.util.MyPropertiesUtils;
+import com.hgits.util.QuartzManage;
+import com.hgits.util.cache.ParamCacheFileRead;
+import com.hgits.util.cache.ParamVersionUtils;
+import com.hgits.util.hardware.HardwareHelper;
+import com.hgits.vo.Constant;
+import com.hgits.vo.Lane;
+import com.hgits.vo.MTC;
+
+/**
+ * @author 王国栋 2014-8-15
+ */
+public class MTCLane {
+
+    @SuppressWarnings("static-access")
+    public static void main(String[] args) throws Exception {
+        try {
+            boolean flag = UniqueCheck.check(MTCLane.class.getSimpleName());
+            if (!flag) {
+                ThreadPoolControl.getThreadPoolInstance().shutdownNow();
+                return;
+            }
+            Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
+            DOMConfigurator.configure("resource" + File.separator + "log4j.xml");
+            LogControl.logInfo("MTCLane启动");
+            LogControl.logInfo("软件界面初始化");
+            ExtJFrame extJFrame = ExtJFrame.getSingleInstance();
+            System.setProperty("org.terracotta.quartz.skipUpdateCheck", "true"); //取消quartz的自动更新检查
+            List<String> list = new ArrayList<String>();
+            list.add(Constant.PROP_MTCCONFIG);
+            list.add(Constant.PROP_MTCLANE);
+            list.add(Constant.PROP_MTCLANE_COMM);
+            list.add(Constant.PROP_MTCLANE_CONSTANT);
+            list.add(Constant.PROP_MTCLANE_ETC);
+            list.add(Constant.PROP_MTCLANE_FUNCTION);
+            list.add(Constant.PROP_MTCLANE_LPR);
+            list.add(Constant.PROP_MTCLANE_RTP);
+            list.add(Constant.PROP_MTCLANE_SERVER);
+            list.add(Constant.PROP_MTCLANE_TEST);
+            list.add(Constant.PROP_SOCKET);
+            LogControl.logInfo("初始化配置文件");
+            MyPropertiesUtils.loadProperties(list);
+            LogControl.logInfo("初始化配置文件结束，加载文件如下");
+            List<File> propFileList = MyPropertiesUtils.getPropList();
+            for (File propFile : propFileList) {
+                LogControl.logInfo(propFile.getAbsolutePath());
+            }
+            LogControl.logInfo("初始化配置文件结束，加载属性如下");
+            Map<String, String> propMap = MyPropertiesUtils.getPropMap();
+            List<String> keyList = new ArrayList<String>(propMap.keySet());
+            Collections.sort(keyList);
+            for (String key : keyList) {
+                LogControl.logInfo(key + "=" + propMap.get(key));
+            }
+            /*------------初始化硬件配置文件---------*/
+            HardwareHelper helper = new HardwareHelper();
+
+//            LaneClientControl lc = new LaneClientControl();
+//            lc.init();
+            LaneServerControl lc = new LaneServerControl();
+            ThreadPoolControl.getThreadPoolInstance().execute(lc);
+
+            Lane lane = Lane.getInstance();
+            lane.setRoadId(MyPropertiesUtils.getProperties(Constant.PROP_MTCCONFIG, "roadId", "000"));
+            lane.setStationId(MyPropertiesUtils.getProperties(Constant.PROP_MTCCONFIG, "stationId", "000"));
+            lane.setLaneId(MyPropertiesUtils.getProperties(Constant.PROP_MTCCONFIG, "laneNo", "000").toUpperCase());
+            lane.setLaneType(IntegerUtils.parseString(MyPropertiesUtils.getProperties(Constant.PROP_MTCCONFIG, "laneType", "0")));
+            lane.selfCheck();//车道信息自检
+
+            GcControl gcControl = new GcControl("gcControl");//垃圾回收
+            ThreadPoolControl.getThreadPoolInstance().execute(gcControl);
+            LogControl.logInfo("软件启动············");
+
+            LogControl.logInfo("加载费显");
+            TFI tfi = helper.initHardware(TFI.class, helper, "getInstance");
+            ThreadPoolControl.getThreadPoolInstance().execute(tfi);
+            LogControl.logInfo("加载卡机");
+            CICM cicm = helper.initHardware(CICM.class, helper);
+
+            LogControl.logInfo("加载CXP板");
+            CXP cxp = helper.initHardware(CXP.class, helper);
+            ThreadPoolControl.getThreadPoolInstance().execute(cxp);
+
+            LogControl.logInfo("加载收费键盘");
+            Keyboard keyboard = helper.initHardware(Keyboard.class, helper);
+            ThreadPoolControl.getThreadPoolInstance().execute(keyboard);
+
+            LogControl.logInfo("加载M1卡读卡器");
+            IcReaderWriter miReader = helper.initHardware(IcReaderWriter.class, helper);
+            ThreadPoolControl.getThreadPoolInstance().execute(miReader);
+            LogControl.logInfo("加载打印机");
+            Printer printer = helper.initHardware(Printer.class, helper);
+
+            LogControl.logInfo("加载计重系统");
+            WeighSystem weighSystem = helper.initHardware(WeighSystem.class, helper);
+
+            LogControl.logInfo("加载车牌识别");
+            LprService lprSvc = helper.initHardware(LprService.class, helper, new Class[]{CXP.class}, new Object[]{cxp});
+            lprSvc.start();
+
+            LogControl.logInfo("加载ETC卡读卡器");
+            CpuCardReader ccr = helper.initHardware(CpuCardReader.class, helper);
+
+            LogControl.logInfo("加载电脑键盘");
+            MyKeyAdapter mka = new MyKeyAdapter();
+            mka.setCxp(cxp);
+            keyboard.setMka(mka);
+
+            LogControl.logInfo("加载字符叠加器");
+            VideoInstruction vi = helper.initHardware(VideoInstruction.class, helper);
+            ThreadPoolControl.getThreadPoolInstance().execute(vi);
+
+            extJFrame.addKeyListener(mka);
+            LogControl.logInfo("4");
+            extJFrame.showMySelf();
+            //初始化参数文件
+            LogControl.logInfo("初始化参数文件开始");
+            ParamCacheFileRead pcfru = ParamCacheFileRead.getInstance();
+            try {
+                boolean initDate = pcfru.initData();
+                LogControl.logInfo("初始化参数文件结束");
+                pcfru.setLoadParam(initDate);
+            } catch (Exception e) {
+                //参数加载异常
+                LogControl.logInfo("初始化参数文件异常，错误原因：" + e.getMessage(), e);
+                pcfru.setLoadParam(Boolean.FALSE);
+            }
+
+            /**
+             * 生成车道版本信息
+             */
+            MTC mtc = new MTC();
+            mtc.setVersion(Constant.LANE_SOFT_VERSION);
+            mtc.setStartTime(DateUtils.getCurrentDate());
+            ParamVersionUtils.checkParamVersion(mtc, MtcConstant.MTC_VERSION); //生成车道软件版本
+            LaneListUtils.genLaneParaVer();
+
+            //进入业务流程
+            LogControl.logInfo("控制类初始化");
+            LogControl.logInfo("加载离线收费控制类");
+            OffLineControl offLineControl = new OffLineControl();
+            offLineControl.setExtJFrame(extJFrame);
+            offLineControl.setLcc(lc);
+            offLineControl.run();
+
+            LogControl.logInfo("加载卡箱控制类");
+            CartControl cartControl = new CartControl(extJFrame, keyboard, cicm, miReader, lane);//卡机菜单控制
+
+            LogControl.logInfo("加载ETC卡服务类");
+            CpuCardService cpuCardSvc = new CpuCardService(ccr, extJFrame);        //CPU卡服务类初始化
+
+            LogControl.logInfo("加载模拟控制类");
+            SimulateControl simControl = new SimulateControl(keyboard, extJFrame);                  //模拟程序初始化
+
+            LogControl.logInfo("加载计重控制类");
+            WeighControl weighControl = new WeighControl(weighSystem, extJFrame, keyboard);      //计重控制初始化
+            weighControl.setLc(lc);
+
+            LogControl.logInfo("加载上下班控制类");
+            JobControl jobControl = new JobControl(extJFrame, keyboard);                       //上下班控制
+
+            LogControl.logInfo("加载入口图片请求控制类");
+//            ImgLaneClientControl imgLaneClientControl = new ImgLaneClientControl();
+            ImgLaneServerControl imgLaneClientControl = new ImgLaneServerControl();
+            imgLaneClientControl.init();//入口图片请求程序启动
+
+            LogControl.logInfo("加载自助发卡设备控制");
+            AutoMachineControl amc = AutoMachineControl.getSingleInstance();
+            //升级文件监控
+            LogControl.logInfo("加载升级控制");
+            UpdateControl update = new UpdateControl();
+            update.setExtJFrame(extJFrame);
+            update.setKeyboard(keyboard);
+
+            LogControl.logInfo("加载主服务类");
+            MainService mainSvc = new MainService(cxp, keyboard, cicm, tfi, miReader, printer, extJFrame);
+            mainSvc.setImgLaneClientControl(imgLaneClientControl);
+            mainSvc.setLane(lane);
+            mainSvc.setLc(lc);
+            cpuCardSvc.setMainSvc(mainSvc);
+            weighControl.setMainSvc(mainSvc);
+            PaperCardControl.getSingleInstance().setKeyboard(keyboard);
+            LogControl.logInfo("进入业务流程");
+            RealTimePath rtSvc = RealTimePath.getSingleInstance();
+            ThreadPoolControl.getThreadPoolInstance().execute(rtSvc);
+            TempControl tempSvc = TempControl.getSingleInstance();
+
+            //流程控制总程
+            final FlowControl fc = new FlowControl();
+            fc.setTempSvc(tempSvc);
+            fc.setRtSvc(rtSvc);
+            fc.setCxp(cxp);
+            fc.setExtJFrame(extJFrame);
+            fc.setKeyboard(keyboard);
+            fc.setLprSvc(lprSvc);
+            fc.setMireader(miReader);
+            fc.setPrinter(printer);
+            fc.setTfi(tfi);
+            fc.setCicm(cicm);
+            fc.setLane(lane);
+            fc.setCartControl(cartControl);
+            fc.setCpuCardSvc(cpuCardSvc);
+            fc.setLogControl(jobControl);
+            fc.setMainSvc(mainSvc);
+            fc.setSimControl(simControl);
+            fc.setWeighControl(weighControl);
+            fc.setUpdate(update);
+            fc.setVi(vi);
+            fc.setAmc(amc);
+            fc.setLc(lc);
+            fc.setOffLineControl(offLineControl);
+            mainSvc.setFc(fc);
+//            AntiBackControl abc = new AntiBackControl(keyboard, extJFrame, cxp);
+//            ThreadPoolControl.getThreadPoolInstance().execute(abc);
+//            fc.setAbc(abc);
+            //硬件异常显示
+            LogControl.logInfo("硬件异常显示初始化");
+            ToolErrorControl tec = new ToolErrorControl(extJFrame, keyboard, miReader, cxp, tfi, printer, cicm, weighSystem, ccr, lprSvc, cartControl);
+            tec.setFc(fc);
+            tec.setAmcControl(amc);
+            tec.setVi(vi);
+//            tec.setAbc(abc);
+            ThreadPoolControl.getThreadPoolInstance().execute(tec);
+            ExitControl ex = new ExitControl(fc, lc, imgLaneClientControl);
+            ex.run();
+
+            AlarmJFrame alarmJFrame = AlarmJFrame.getSingleInstance(); //初始化报警界面
+
+            //申明键盘服务类，用于处理特殊按键功能
+            KeyBoardService keyBoardService = new KeyBoardService();
+            keyBoardService.setAlarmJFrame(alarmJFrame);
+            keyBoardService.setExtJFrame(extJFrame);
+            keyBoardService.setFc(fc);
+            keyBoardService.setKeyboard(keyboard);
+
+            keyboard.setKeyBoardService(keyBoardService);
+            mka.setKeyBoardService(keyBoardService);
+            // 备份日志定时器任务
+            BackUpLogJob backupLogJob = new BackUpLogJob();
+            QuartzManage.startJob("backUpLogJob", "backUpLogTrigger", backupLogJob, "0 0 1 1 * ?");
+
+            //启动定时任务去检查是否有新下发的参数
+            CheckParamJob checkParamJob = new CheckParamJob();
+            QuartzManage.startJob("checkParamJob", "checkParamTrigger", checkParamJob, "0/45 * * * * ?");
+
+            //开启定时器检查线程
+            CheckQuartzTimeThread cqt = new CheckQuartzTimeThread("backUpLogTrigger", "checkParamTrigger");
+            ThreadPoolControl.getThreadPoolInstance().execute(cqt);
+            fc.run();
+        } catch (Throwable ex) {
+            String str = ex.toString() + "," + Arrays.toString(ex.getStackTrace());
+            str = str.replaceAll(",", "\r\n");
+            str = str.replace("[", "");
+            str = str.replace("]", "");
+            LogControl.logInfo("异常", ex);
+            JOptionPane.showMessageDialog(ExtJFrame.getSingleInstance(), str, "异常", JOptionPane.ERROR_MESSAGE);
+            System.exit(0);
+        } finally {
+            LogControl.logInfo("主线程结束");
+        }
+    }
+
+}

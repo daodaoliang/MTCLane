@@ -1,0 +1,167 @@
+package com.hgits.service;
+
+import com.hgits.realTimePath.MD5Util;
+import com.hgits.util.cache.ParamCacheQuery;
+import com.hgits.vo.EncryptionKey;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.Vector;
+
+/**
+ * 加密服务类
+ *
+ * @author Wang Guodong
+ */
+public class EncryptService {
+
+    /**
+     * 加密指定信息，首先将需要加密的信息进行MD5加密，获取16位字符串（16进制），以下用MD5表示<br>
+     * 然后获取密钥，密钥应为0123456789ABCDEF打乱顺序后的字符串，如123456789ABCDEF0<br>
+     * 然后获取MD5字符串中所有字符在密钥中的下标，用十六进制表示后即为加密后的信息<br>
+     * 以密钥123456789ABCDEF0为例，如MD5=BBBBBBBBBBBBBBBB，那么获取到的加密后的信息为AAAAAAAAAAAAAAAA
+     *
+     * @param str 需要加密的信息
+     * @return 加密后的结果（16位字符串）,若密钥错误，返回null
+     */
+    public String encryptString(String str) {
+        String key = getEncryptionKey();
+        if (!checkKey(key)) {//密钥校验失败
+            return null;
+        }
+        return encryptString(key, str);
+    }
+
+    /**
+     * 使用指定密钥加密指定信息
+     *
+     * @param key 密钥
+     * @param info 需要加密的信息
+     * @return 加密后的结果(若密钥不符合要求，返回null)
+     */
+    private String encryptString(String key, String info) {
+        if (!checkKey(key)) {
+            return null;
+        }
+        String md5Info = MD5Util.MD5(info.toUpperCase(), false).toUpperCase();
+//        String[] buffer = md5Info.split("");
+        if (md5Info == null) {
+            return null;
+        }
+        String[] buffer = getStringBuffer(md5Info);
+        StringBuilder sb = new StringBuilder();
+        for (String temp : buffer) {
+            int index = key.indexOf(temp);
+            sb.append(Integer.toHexString(index).toUpperCase());
+        }
+        return sb.toString();
+    }
+
+    /**
+     * 获取str对应的String字符串
+     *
+     * @param str str
+     * @return String字符串
+     */
+    private String[] getStringBuffer(String str) {
+        if (str == null) {
+            return null;
+        }
+        int len = str.length();
+        String[] buffer = new String[len];
+        for (int i = 0; i < len; i++) {
+            buffer[i] = str.substring(i, i + 1);
+        }
+        return buffer;
+    }
+
+    /**
+     * 检测信息加密是否正确
+     *
+     * @param info 需要加密的信息
+     * @param encrypedInfo 加密的信息
+     * @return true/false
+     */
+    public boolean checkEncryption(String info, String encrypedInfo) {
+        if (info == null || encrypedInfo == null) {
+            return false;
+        }
+        boolean flag = false;
+        Vector<EncryptionKey> keyList = ParamCacheQuery.queryEncryptionKey();
+        for (EncryptionKey en : keyList) {
+            Date start = en.getStartTime();
+            Date end = en.getExpireDate();
+            Date now = new Date();
+            if (start == null || end == null) {//密钥的开始时间或结束时间异常
+                continue;
+            } else if (now.after(end) || now.before(start)) {//密钥不再启用时间内
+                continue;
+            } else {
+                String key = en.getEncryptionKey();
+                if (!checkKey(key)) {
+                    continue;
+                }
+                String result = encryptString(key, info);
+                if (encrypedInfo.equalsIgnoreCase(result)) {
+                    flag = true;
+                }
+            }
+        }
+        return flag;
+    }
+
+    /**
+     * 获取加密用密钥,为0123456789ABCDEF打乱顺序后的组合，不可重复
+     *
+     * @return 加密用密钥<br>
+     * 若没有密钥，返回null<br>
+     * 密钥不符合要求，返回null<br>
+     * 密钥不在有效期内，返回null<br>
+     */
+    private String getEncryptionKey() {
+        Vector<EncryptionKey> keyList = ParamCacheQuery.queryEncryptionKey();
+        if (keyList == null || keyList.isEmpty()) {
+            return null;
+        }
+        for (EncryptionKey en : keyList) {
+            Date start = en.getStartTime();
+            Date end = en.getExpireDate();
+            Date now = new Date();
+            if (start == null || end == null) {//密钥的开始时间或结束时间异常
+                continue;
+            } else if (now.after(end) || now.before(start)) {//密钥不在启用时间内
+                continue;
+            } else {
+                int i = en.getEncryptionRank();//获取密钥等级
+                if (i == 0) {//加密用密钥
+                    String key = en.getEncryptionKey();
+                    if (checkKey(key)) {//密钥符合要求
+                        return key.toUpperCase();
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 校验密钥,密钥0123456789ABCDEF打乱顺序后的字符串
+     *
+     * @param key 密钥
+     * @return true/false
+     */
+    private boolean checkKey(String key) {
+        boolean flag = true;
+        if (key == null) {
+            return false;
+        } else if (key.length() != 16) {
+            return false;
+        }
+        for (int i = 0; i < 16; i++) {
+            String hexStr = Integer.toHexString(i).toUpperCase();
+            if (!key.contains(hexStr)) {
+                flag = false;
+            }
+        }
+        return flag;
+    }
+}

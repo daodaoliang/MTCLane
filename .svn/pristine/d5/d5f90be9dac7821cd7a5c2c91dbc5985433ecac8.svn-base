@@ -1,0 +1,205 @@
+package com.hgits.control;
+
+import com.hgits.util.file.UnicodeInputStream;
+import com.hgits.util.file.UnicodeReader;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Level;
+import org.apache.log4j.Logger;
+
+/**
+ * 建立resourceTemp文件夹， 软件启动时检测该文件夹， 若检测到该文件夹下有properties文件，
+ * 则将该properties文件与resource文件夹下相应的properties文件做比较，
+ * resourceTemp下有而resource没有，在resource追加
+ * resourceTemp下有resource有但不同，根据resourceTemp更新resource
+ * resourceTemp下有resource有并且resource下的属性被注释，根据resourceTemp更新resource
+ *
+ * @author WangGuodong
+ */
+public class RsControl {
+
+    private final String dir1 = "resourceTemp";
+    private final String dir2 = "resource";
+    private final String equalMark = "=";
+    private Logger logger = Logger.getLogger(RsControl.class.getName());
+    private final String defaultCharset = "UTF-8";
+
+    public void run() {
+        logger.debug("开始检测" + dir1 + "文件夹");
+        File file = new File(dir1);
+        if (!file.exists() || !file.isDirectory()) {
+            logger.debug("创建resourceTemp文件夹");
+            boolean flag = file.mkdirs();
+            if (flag) {
+                logger.debug("创建resourceTemp文件夹成功");
+            } else {
+                logger.debug("创建resourceTemp文件夹失败");
+            }
+            return;
+        }
+        File[] list = file.listFiles();
+        for (File f : list) {
+            String path = f.getAbsolutePath();
+            String[] buffer = path.split(dir1);
+            String name = buffer[buffer.length - 1];
+//            String name = f.getName();
+            if (name.endsWith(".properties")) {
+                logger.debug("开始发现");
+                String resourceFilePath = dir1 + name;
+                String targetFilePath = dir2 + name;
+                List<String> resourceList = getListFromFile(resourceFilePath);//获取源文件内容
+                if (resourceList == null || resourceList.isEmpty()) {//源文件无内容
+                    continue;
+                }
+                List<String> targetList = getListFromFile(targetFilePath);//获取目标文件内容
+                compareLists(targetFilePath, resourceList, targetList);
+            }
+        }
+    }
+
+    /**
+     * 获取文件内容
+     *
+     * @param resourceFilePath 文件路径
+     * @return 文件集合
+     */
+    private List<String> getListFromFile(String resourceFilePath) {
+        List<String> list = new ArrayList();
+        FileInputStream fis = null;
+        UnicodeReader ur = null;
+        BufferedReader br = null;
+        try {
+            File resourceFile = new File(resourceFilePath);
+            if (!resourceFile.exists() || !resourceFile.isFile() || resourceFile.isHidden()) {
+                logger.debug("文件" + resourceFilePath + "不存在");
+                return list;
+            }
+            fis = new FileInputStream(resourceFile);
+            ur = new UnicodeReader(fis, defaultCharset);
+            br = new BufferedReader(ur);
+            String str;
+            while ((str = br.readLine()) != null) {
+                list.add(str);
+            }
+        } catch (FileNotFoundException ex) {
+            logger.error(ex, ex);
+        } catch (IOException ex) {
+            logger.error(ex, ex);
+        } finally {
+            try {
+                if (fis != null) {
+                    fis.close();
+                }
+            } catch (IOException ex) {
+                logger.error(ex);
+            }
+            try {
+                if (ur != null) {
+                    ur.close();
+                }
+            } catch (IOException ex) {
+                logger.error(ex);
+            }
+            try {
+                if (br != null) {
+                    br.close();
+                }
+            } catch (IOException ex) {
+                logger.error(ex);
+            }
+        }
+        return list;
+    }
+
+    private void compareLists(String targetFilePath, List<String> resourceList, List<String> targetList) {
+        boolean flag = false;
+        OUTER:
+        for (String str : resourceList) {
+            if (str == null || str.trim().isEmpty()) {//空不处理
+                continue;
+            }
+            str = str.replaceAll(" ", "");
+            if (str.startsWith("#")) {//注释不处理
+                continue;
+            }
+            if (!str.contains(equalMark)) {//无等号不处理
+                continue;
+            }
+            String tempStr = str.substring(0, str.indexOf("=") + 1);
+            int len = targetList.size();
+            for (int i = 0; i < len; i++) {
+                String temp = targetList.get(i);
+                if (temp.equals(str)) {//已包含更改内容,不需要对targetList做修改
+                    continue OUTER;
+                }
+                temp = temp.replaceAll("#", "");
+                if (temp.startsWith(tempStr)) {//包含更改内容的属性，需要对targetList做修改
+                    flag = true;
+                    targetList.set(i, str);
+                    continue OUTER;
+                }
+            }
+            flag = true;//targetList全部处理完成后没有发现需要更改内容，表示需要追加改内容
+            targetList.add(str);
+        }
+        if (flag) {
+            writeFile(targetFilePath, targetList);
+        }
+    }
+
+    /**
+     * 更新文件
+     *
+     * @param filePath 文件路径
+     * @param list 文件内容
+     */
+    private void writeFile(String filePath, List<String> list) {
+        FileOutputStream fos = null;
+        OutputStreamWriter osw = null;
+        PrintWriter pw = null;
+        try {
+            fos = new FileOutputStream(filePath);
+            osw = new OutputStreamWriter(fos, defaultCharset);
+            pw = new PrintWriter(osw);
+            for (String str : list) {
+                if (str != null) {
+                    pw.println(str);
+                    pw.flush();
+                }
+            }
+        } catch (FileNotFoundException ex) {
+            logger.error(ex, ex);
+        } catch (UnsupportedEncodingException ex) {
+            logger.error(ex, ex);
+        } finally {
+            if (fos != null) {
+                try {
+                    fos.close();
+                } catch (IOException ex) {
+                    logger.error(ex, ex);
+                }
+            }
+            if (osw != null) {
+                try {
+                    osw.close();
+                } catch (IOException ex) {
+                    logger.error(ex, ex);
+                }
+            }
+            if (pw != null) {
+                pw.close();
+            }
+        }
+    }
+}

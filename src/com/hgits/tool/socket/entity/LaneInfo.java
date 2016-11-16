@@ -1,0 +1,146 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package com.hgits.tool.socket.entity;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * 管理车道信息：如联网状态、客户端时间、CPU型号负荷、软件版本等。
+ *
+ * @author hjz
+ */
+public class LaneInfo extends BaseConfirm {
+
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	private String station;//路段+站编码
+    private String laneNO;//车道编码
+    private String version;//软件版本
+    private ParamVersion paramVersion;//参数版本
+    private String clintTime;//客户端时间
+    private String cpuType;//cpu型号
+    private String cpuUse;//cpu使用率
+    private String memoryUse;//剩余内存/总内存
+    private String operatingSystem;//操作系统
+    private String networkStatus;//联网状态
+
+    public List<String> getValues() {
+        List<String> lists = new ArrayList<String>();
+        
+        lists.add(station);//路段+站编码
+        lists.add(laneNO);//车道编码
+        lists.add(version);//软件版本
+        lists.add(paramVersion.getLaneVersion());
+        lists.add(clintTime);//客户端时间
+        lists.add(cpuType);//cpu型号
+        lists.add(cpuUse);//cpu使用率
+        lists.add(memoryUse);//内存使用率
+        lists.add(operatingSystem);//操作系统
+        lists.add(networkStatus);//联网状态
+        
+        return lists;
+    }
+
+    @Override
+    public String toString() {
+
+        return "{\"station\":\"" + station + "\","
+                + "\"laneNO\":\"" + laneNO + "\","
+                + "\"version\":\"" + version + "\","
+                + "\"paramVersion\":" + paramVersion + ","
+                + "\"clintTime\":\"" + clintTime + "\","
+                + "\"cpuType\":\"" + cpuType + "\","
+                + "\"cpuUse\":\"" + cpuUse + "\","
+                + "\"memoryUse\":\"" + memoryUse + "\","
+                + "\"operatingSystem\":\"" + operatingSystem + "\","
+                + "\"networkStatus\":\"" + networkStatus + "\"}";
+    }
+
+
+    public String getStation() {
+        return station;
+    }
+
+    public void setStation(String station) {
+        this.station = station;
+    }
+
+    public String getLaneNO() {
+        return laneNO;
+    }
+
+    public void setLaneNO(String laneNO) {
+        this.laneNO = laneNO;
+    }
+
+    public String getVersion() {
+        return version;
+    }
+
+    public void setVersion(String version) {
+        this.version = version;
+    }
+
+    public String getClintTime() {
+        return clintTime;
+    }
+
+    public void setClintTime(String clintTime) {
+        this.clintTime = clintTime;
+    }
+
+    public String getCpuType() {
+        return cpuType;
+    }
+
+    public void setCpuType(String cpuType) {
+        this.cpuType = cpuType;
+    }
+
+    public String getCpuUse() {
+        return cpuUse;
+    }
+
+    public void setCpuUse(String cpuUse) {
+        this.cpuUse = cpuUse;
+    }
+
+    public String getMemoryUse() {
+        return memoryUse;
+    }
+
+    public void setMemoryUse(String memoryUse) {
+        this.memoryUse = memoryUse;
+    }
+
+    public String getOperatingSystem() {
+        return operatingSystem;
+    }
+
+    public void setOperatingSystem(String operatingSystem) {
+        this.operatingSystem = operatingSystem;
+    }
+
+    public ParamVersion getParamVersion() {
+        return paramVersion;
+    }
+
+    public void setParamVersion(ParamVersion paramVersion) {
+        this.paramVersion = paramVersion;
+    }
+
+    public String getNetworkStatus() {
+        return networkStatus;
+    }
+
+    public void setNetworkStatus(String networkStatus) {
+        this.networkStatus = networkStatus;
+    }
+
+}

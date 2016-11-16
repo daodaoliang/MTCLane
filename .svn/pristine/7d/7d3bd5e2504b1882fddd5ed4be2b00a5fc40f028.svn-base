@@ -1,0 +1,127 @@
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package com.hgits.vo;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+import net.sf.json.JsonConfig;
+
+/**
+ * 车辆信息确认模块
+ *
+ * @author huangjz
+ */
+public class VehInfoConfirm {
+
+    private String time;//报警时间
+    private String lane;//报警车道
+    private String alarmCode;//确认代码 1 修改车辆信息 2 修改轴组信息 3 添加车辆 4 删除车辆 5 拖车
+    private String axleChooseByUser;//收费员选择的轴组
+    private List<List<AxleGroup>> axleList;//List<AxleGroup>
+
+    public List<List<AxleGroup>> getAxleList() {
+        return axleList;
+    }
+
+    public void setAxleList(List<List<AxleGroup>> axleList) {
+        this.axleList = axleList;
+    }
+
+    public String getAxleChooseByUser() {
+        return axleChooseByUser;
+    }
+
+    public void setAxleChooseByUser(String axleChooseByUser) {
+        this.axleChooseByUser = axleChooseByUser;
+    }
+    
+    public String getTime() {
+        return time;
+    }
+
+    public void setTime(String time) {
+        this.time = time;
+    }
+
+    public String getLane() {
+        return lane;
+    }
+
+    public void setLane(String lane) {
+        this.lane = lane;
+    }
+
+    public String getAlarmCode() {
+        return alarmCode;
+    }
+
+    public void setAlarmCode(String alarmCode) {
+        this.alarmCode = alarmCode;
+    }
+
+    @Override
+    public String toString() {
+        return "{\"time\":\"" + time + "\",\"lane\":\"" + lane + "\",\"alarmCode\":\""
+                + alarmCode + "\",\"axleChooseByUser\":\"" + axleChooseByUser + "\",\"axleList\":" + axleList + "}";//
+    }
+
+    public static void main(String[] args) {
+        VehInfoConfirm v = new VehInfoConfirm();
+
+        v.setLane("X01");
+        v.setTime("19:50:30");
+        v.setAlarmCode("1");
+//        v.setWhyAlarm("修改车辆信息");
+        v.setAxleChooseByUser("2");
+        List<AxleGroup> carInfo = new ArrayList<AxleGroup>();
+        AxleGroup a1 = new AxleGroup();
+        a1.setAxleType("02");
+        a1.setAxleWeight(0.5);
+        carInfo.add(a1);
+
+        AxleGroup a2 = new AxleGroup();
+        a2.setAxleType("04");
+        a2.setAxleWeight(0.7);
+        carInfo.add(a2);
+
+        List<List<AxleGroup>> list = new ArrayList<List<AxleGroup>>();
+
+        list.add(carInfo);
+        list.add(carInfo);
+//        JSONArray arry = JSONArray.fromObject(carInfo);
+        JSONArray jsonList = JSONArray.fromObject(list);
+//        v.setAxleGroupInfo(arry);
+        v.setAxleList(jsonList);
+
+
+        System.out.println(v.toString());
+
+//        String jsonString = "{\"time\":\"19:50:30\",\"lane\":\"X01\",\"alarmCode\":\"1\",\"axleChooseByUser\":\"2\",\"axleList\":[[{\"vehType\":\"02\",\"weight\":\"0.5\"},{\"vehType\":\"04\",\"weight\":\"0.7\"}]]}";
+
+        JSONObject jsonObject = JSONObject.fromObject(v.toString());
+        //转相应的类
+        Object o = JSONObject.toBean(jsonObject, VehInfoConfirm.class);
+        VehInfoConfirm vehInfoConfirm = (VehInfoConfirm) o;
+        //辆车集合
+        List<List<AxleGroup>> carGroups = vehInfoConfirm.getAxleList();
+        System.out.println("1:"+carGroups.size());
+        //第一辆车的轴信息集合
+        List<AxleGroup> axleGroups = carGroups.get(0);
+        System.out.println("2:"+axleGroups.size());
+        System.out.println(axleGroups);
+
+        //获取
+        JSONObject jsonObject1 = JSONObject.fromObject(axleGroups.get(0));
+        Object oo = JSONObject.toBean(jsonObject1, AxleGroup.class);
+        AxleGroup axleGroup = (AxleGroup) oo;
+        //输出轴型
+        System.out.println(axleGroup.getAxleType());
+
+    }
+}

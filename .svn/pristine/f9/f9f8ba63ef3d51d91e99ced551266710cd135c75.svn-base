@@ -1,0 +1,807 @@
+/**
+ * 
+ */
+package com.hgits.util.cache;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.Vector;
+
+import ui.ExtJFrame;
+
+import com.hgits.exception.MTCException;
+import com.hgits.service.constant.MtcConstant;
+import com.hgits.service.constant.ParamConstant;
+import com.hgits.util.DateUtils;
+import com.hgits.util.LaneListUtils;
+import com.hgits.util.MyPropertiesUtils;
+import com.hgits.util.ReflectionUtils;
+import com.hgits.util.StringUtils;
+import com.hgits.util.file.FileUtils;
+import com.hgits.util.file.ReadFromFileUtils;
+import com.hgits.vo.Constant;
+
+/**
+ * 新版本参数文件工具类
+ * @author Administrator
+ *
+ */
+public class RecvParamUtils {
+	private ParamCacheFileRead rcfr = ParamCacheFileRead.getInstance();
+	
+	/**
+	 * 车道类型，默认为入口
+	 */
+    private Integer laneType = Integer.valueOf(MyPropertiesUtils.getProperties(Constant.PROP_MTCCONFIG,MtcConstant.PROPERTIES_LANETYPE, MtcConstant.MTC_LANE_TYPE_EN));
+    
+    /**
+     * 湘通卡黑名单匹配正则
+     */
+    private String XTCARDBLACK_FILENAME_REG = "^tb_xtcardblack.*$";
+
+	/**
+     * 新费率表的版本校验
+     * @return 如果不存在多个版本，则返回true，存在多个版本，则返回false
+     * @throws MTCException
+     */
+    public boolean getPriceFutureVersion() throws MTCException {
+        boolean isVaild = true;
+        Object obj = null;
+        Set<Object> version = new HashSet<>(); //参数版本
+
+        if (laneType == 2) { // 只有车道类型等于出口的时候，才加载费率信息
+            //检查费率是否存在
+            for (Integer vehType : ParamCacheFileRead.vehRoutes) {
+                obj = getRecv2Obj(ParamConstant.PARAM_VEHROUTE + vehType + ParamConstant.PARAM_RECV);
+                if(obj == null){
+					FileUtils.deleteFile(ParamCacheFileRead
+							.getParamFilePath(ParamConstant.PARAM_VEHROUTE
+									+ vehType + ParamConstant.PARAM_RECV));
+					isVaild = isVaild && Boolean.FALSE;
+                }else{
+                	ParamVersionUtils.checkFutureParamVersion(obj, ParamConstant.PARAM_VEHROUTE + vehType); //加入未来版本
+                    version.add(getRecvParam(obj, "version"));
+                    isVaild = isVaild && checkRecvStartTime(obj);
+                }
+                
+            }
+        }
+
+        //检查路段叠加收费表是否更新
+        obj = getRecv2Obj(ParamConstant.PARAM_ROADCHARGESTD + ParamConstant.PARAM_RECV);
+        if(obj == null){
+			FileUtils.deleteFile(ParamCacheFileRead
+					.getParamFilePath(ParamConstant.PARAM_ROADCHARGESTD
+							+ ParamConstant.PARAM_RECV));
+			isVaild = isVaild && Boolean.FALSE;
+        }else{
+        	ParamVersionUtils.checkFutureParamVersion(obj, ParamConstant.PARAM_ROADCHARGESTD); //加入未来版本
+            version.add(getRecvParam(obj, "version"));
+            isVaild = isVaild && checkRecvStartTime(obj);
+        }
+        
+
+        //检查桥隧叠加收费是否更新
+        obj = getRecv2Obj(ParamConstant.PARAM_BRIDGE_EXTRA_CHARGE_STD + ParamConstant.PARAM_RECV);
+        if(obj == null){
+			FileUtils.deleteFile(ParamCacheFileRead
+					.getParamFilePath(ParamConstant.PARAM_BRIDGE_EXTRA_CHARGE_STD
+							+ ParamConstant.PARAM_RECV));
+			isVaild = isVaild && Boolean.FALSE;
+        }else{
+        	ParamVersionUtils.checkFutureParamVersion(obj, ParamConstant.PARAM_BRIDGE_EXTRA_CHARGE_STD); //加入未来版本
+        	version.add(getRecvParam(obj, "version"));
+        	isVaild = isVaild && checkRecvStartTime(obj);
+        }
+
+        //检查行车时间是否更新
+        obj = getRecv2Obj(ParamConstant.PARAM_TRAVELTIME + ParamConstant.PARAM_RECV);
+        if(obj == null){
+			FileUtils.deleteFile(ParamCacheFileRead
+					.getParamFilePath(ParamConstant.PARAM_TRAVELTIME
+							+ ParamConstant.PARAM_RECV));
+			isVaild = isVaild && Boolean.FALSE;
+        }else{
+        	ParamVersionUtils.checkFutureParamVersion(obj, ParamConstant.PARAM_TRAVELTIME); //加入未来版本
+        	version.add(getRecvParam(obj, "version"));
+        	isVaild = isVaild && checkRecvStartTime(obj);
+        }
+        
+        //检查货车超载收费标准是否更新
+        obj = getRecv2Obj(ParamConstant.PARAM_OVERLOADPRICE + ParamConstant.PARAM_RECV);
+        if(obj == null){
+			FileUtils.deleteFile(ParamCacheFileRead
+					.getParamFilePath(ParamConstant.PARAM_OVERLOADPRICE
+							+ ParamConstant.PARAM_RECV));
+			isVaild = isVaild && Boolean.FALSE;
+        }else{
+        	ParamVersionUtils.checkFutureParamVersion(obj, ParamConstant.PARAM_OVERLOADPRICE); //加入未来版本
+        	version.add(getRecvParam(obj, "version"));
+            isVaild = isVaild || checkRecvStartTime(obj);
+        }
+        
+        if(version.size() > 1){ //存在多个版本，表示费率版本存在差异
+        	isVaild = false;
+        	RateParamErrorUtils.put("RateVersion", "新费率版本不一致，请检查！");
+        	throw new MTCException("新费率版本不一致，请检查！");
+        }
+        
+        return isVaild;
+    }
+    
+    /**
+     * 获取对象的指定属性值
+     * @param obj 对象
+     * @param param 属性名
+     * @return
+     */
+    public Object getRecvParam(Object obj,String param) {
+        Object value = null;
+        if (obj != null) {
+        	value = ReflectionUtils.invokeGetterMethod(obj, param); //获取对象里面的属性
+        }
+        return value;
+    }
+    
+    /**
+     * 读取指定文件，并解析成对象
+     * @param fileName 文件名
+     * @return
+     * @throws MTCException
+     */
+    public Object getRecv2Obj(String fileName) throws MTCException {
+        String[] s = null;
+        String tempLine = checkRecvFile(fileName); //判断Recv文件是否存在，如果存在tempLine记录必定有值。
+        if(StringUtils.isNotEmpty(tempLine)){
+        	if (fileName.indexOf(ParamConstant.PARAM_VEHROUTE) != -1) { //检查费率
+            	s = tempLine.split(ParamConstant.TAB_STRING, -1);
+    			if (s.length == ParamConstant.PRICE_LENGTH) {
+    				return rcfr.convertToPrice(s);
+    			} else {
+    				RateParamErrorUtils.put(ParamConstant.PARAM_VEHROUTE + ParamConstant.PARAM_RECV, fileName + "参数表格式不正确！");
+    	        	throw new MTCException(fileName + "参数表格式不正确！");
+    			}
+            } else if (fileName.equalsIgnoreCase(ParamConstant.PARAM_STATION + ParamConstant.PARAM_RECV)) {
+                s = tempLine.split(ParamConstant.TAB_STRING, -1);
+                if (s.length == ParamConstant.STATION_LENGTH) {
+                    return rcfr.convertToStation(s);
+                } else {
+                	RateParamErrorUtils.put(ParamConstant.PARAM_STATION+ ParamConstant.PARAM_RECV, fileName + "参数表格式不正确！");
+    	        	throw new MTCException(fileName + "参数表格式不正确！");
+    			}
+            } else if (fileName.equalsIgnoreCase(ParamConstant.PARAM_ROADCHARGESTD + ParamConstant.PARAM_RECV)) {
+                s = tempLine.split(ParamConstant.TAB_STRING, -1);
+                if (s.length == ParamConstant.ROADCHARGESTD_LENGTH) {
+                    return rcfr.convertToRoadChargeStd(s);
+                } else {
+                	RateParamErrorUtils.put(ParamConstant.PARAM_ROADCHARGESTD+ ParamConstant.PARAM_RECV, fileName + "参数表格式不正确！");
+    	        	throw new MTCException(fileName + "参数表格式不正确！");
+    			}
+            } else if (fileName.equalsIgnoreCase(ParamConstant.PARAM_BRIDGE_EXTRA_CHARGE_STD + ParamConstant.PARAM_RECV)) {
+                s = tempLine.split(ParamConstant.TAB_STRING, -1);
+                if (s.length == ParamConstant.BRIDGEEXTRACHARGESTD_LENGTH) {
+                    return rcfr.convertToBridgeExtraChargeStd(s);
+                } else {
+                	RateParamErrorUtils.put(ParamConstant.PARAM_BRIDGE_EXTRA_CHARGE_STD+ ParamConstant.PARAM_RECV, fileName + "参数表格式不正确！");
+    	        	throw new MTCException(fileName + "参数表格式不正确！");
+    			}
+            } else if (fileName.equalsIgnoreCase(ParamConstant.PARAM_TRAVELTIME + ParamConstant.PARAM_RECV)) {
+                s = tempLine.split(ParamConstant.TAB_STRING, -1);
+                if (s.length == ParamConstant.TRAVELTIME_LENGTH) {
+                    return rcfr.convertToTravelTime(s);
+                } else {
+                	RateParamErrorUtils.put(ParamConstant.PARAM_TRAVELTIME+ ParamConstant.PARAM_RECV, fileName + "参数表格式不正确！");
+    	        	throw new MTCException(fileName + "参数表格式不正确！");
+    			}
+            } else if (fileName.equalsIgnoreCase(ParamConstant.PARAM_ISSUER + ParamConstant.PARAM_RECV)) {
+                s = tempLine.split(ParamConstant.TAB_STRING, -1);
+                if (s.length == ParamConstant.ISSUER_LENGTH) {
+                    return rcfr.convertToIssuer(s);
+                } else {
+                	RateParamErrorUtils.put(ParamConstant.PARAM_ISSUER+ ParamConstant.PARAM_RECV, fileName + "参数表格式不正确！");
+    	        	throw new MTCException(fileName + "参数表格式不正确！");
+    			}
+            } else if (fileName.equalsIgnoreCase(ParamConstant.PARAM_USERRATE + ParamConstant.PARAM_RECV)) {
+                s = tempLine.split(ParamConstant.TAB_STRING, -1);
+                if (s.length == ParamConstant.USERRATE_LENGTH) {
+                    return rcfr.convertToUserRate(s);
+                } else {
+                	RateParamErrorUtils.put(ParamConstant.PARAM_USERRATE+ ParamConstant.PARAM_RECV, fileName + "参数表格式不正确！");
+    	        	throw new MTCException(fileName + "参数表格式不正确！");
+    			}
+            } else if (fileName.equalsIgnoreCase(ParamConstant.PARAM_OVERLOADPRICE + ParamConstant.PARAM_RECV)) {
+                s = tempLine.split(ParamConstant.TAB_STRING, -1);
+                if (s.length == ParamConstant.OVER_LOAD_PRICE_LENGTH) {
+                    return rcfr.convertOverLoadPrice(s);
+                } else {
+                	RateParamErrorUtils.put(ParamConstant.PARAM_OVERLOADPRICE+ ParamConstant.PARAM_RECV, fileName + "参数表格式不正确！");
+    	        	throw new MTCException(fileName + "参数表格式不正确！");
+    			}
+            }else if(fileName.equalsIgnoreCase(ParamConstant.PARAM_ENCRYPTIONKEY+ParamConstant.PARAM_RECV)){
+           	 s = tempLine.split(ParamConstant.TAB_STRING, -1);
+             if (s.length == ParamConstant.ENCRYPTIONKEY_LENGTH) {
+                 return rcfr.convertToEncryptionKey(s);
+             } else {
+             	RateParamErrorUtils.put(ParamConstant.PARAM_ENCRYPTIONKEY+ ParamConstant.PARAM_RECV, fileName + "参数表格式不正确！");
+ 	        	throw new MTCException(fileName + "参数表格式不正确！");
+ 			}
+        }
+        }
+        return null;
+    }
+    
+    /**
+     * 检查是否存在新版本的费率相关表
+     *
+     * @return 存在返回true，不存在返回false
+     * @throws MTCException
+     */
+    public synchronized boolean checkPriceRecvFile() throws MTCException {
+        if (isPriceRecvFileExists()) {
+            if (getPriceFutureVersion()) {
+            	LaneListUtils.genLaneParaFutureVer();
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * 检查是否存在新版本的参数表
+     *
+     * @return
+     * @throws MTCException
+     */
+    public synchronized Vector<String> checkRecvFileExists() throws MTCException {
+    	Vector<String> param = new Vector<String>();
+    	Vector<String> otherRecvFile = isOtherRecvFileExists();
+    	param.addAll(otherRecvFile);
+    	Vector<String> otherRecvFileExistsEnabled = isOtherRecvFileExistsEnabled();
+    	param.addAll(otherRecvFileExistsEnabled);
+        return param;
+    }
+
+
+    /**
+     * 检查费率参数表是否存在新的版本
+     * 需要所有的表全部有下发，才算是完整的费率
+     *
+     * @return
+     * @throws MTCException
+     */
+    private synchronized boolean isPriceRecvFileExists() throws MTCException {
+        boolean isExists = false;
+        Object obj = null;
+        final int rateRecvFileSize = 10; //费率相关文件总数
+        int rateActualFileSize = 0;
+
+        if (laneType == 2) { // 只有车道类型等于出口的时候，才加载费率信息
+            //检查费率是否存在
+			for (Integer vehType : ParamCacheFileRead.vehRoutes) {
+				isExists = checkParamFileExists(ParamConstant.PARAM_VEHROUTE
+						+ vehType + ParamConstant.PARAM_RECV); //判断新下发的费率文件是否存在
+				if (isExists) {//只有文件存在，则需要判断个数是否满足。
+					obj = getRecv2Obj(ParamConstant.PARAM_VEHROUTE + vehType
+							+ ParamConstant.PARAM_RECV);
+					if (obj != null) {
+						rateActualFileSize++;
+					}
+				}
+			}
+			
+			//检查路段叠加收费表是否更新
+	        isExists = checkParamFileExists(ParamConstant.PARAM_ROADCHARGESTD + ParamConstant.PARAM_RECV);
+	        if(isExists){
+//	        	RateParamErrorUtils.put(ParamConstant.PARAM_ROADCHARGESTD + ParamConstant.PARAM_RECV, "新路段叠加收费参数表缺失，请检查！");
+//	        	throw new MTCException("新路段叠加收费参数表缺失，请检查！");
+	        	obj = getRecv2Obj(ParamConstant.PARAM_ROADCHARGESTD + ParamConstant.PARAM_RECV);
+	        	if(obj == null){
+	            	RateParamErrorUtils.put(ParamConstant.PARAM_ROADCHARGESTD + ParamConstant.PARAM_RECV, "新路段叠加收费参数表缺失，请检查！");
+	            	throw new MTCException("新路段叠加收费参数表缺失，请检查！");
+	        	}
+	        	else{
+	        		rateActualFileSize++;
+	        	}
+	        }
+
+	        //检查桥隧叠加收费是否更新
+	        isExists = checkParamFileExists(ParamConstant.PARAM_BRIDGE_EXTRA_CHARGE_STD + ParamConstant.PARAM_RECV);
+	        if(isExists){
+//	        	RateParamErrorUtils.put(ParamConstant.PARAM_BRIDGE_EXTRA_CHARGE_STD + ParamConstant.PARAM_RECV, "新桥隧叠加收费参数表缺失，请检查！");
+//	        	throw new MTCException("新桥隧叠加收费参数表缺失，请检查！");
+	        	obj = getRecv2Obj(ParamConstant.PARAM_BRIDGE_EXTRA_CHARGE_STD + ParamConstant.PARAM_RECV);
+	        	if(obj == null){
+	            	RateParamErrorUtils.put(ParamConstant.PARAM_BRIDGE_EXTRA_CHARGE_STD + ParamConstant.PARAM_RECV, "新桥隧叠加收费参数表缺失，请检查！");
+	            	throw new MTCException("新桥隧叠加收费参数表缺失，请检查！");
+	        	}
+	        	else{
+	        		rateActualFileSize++;
+	        	}
+	        }
+
+	        //检查行车时间是否更新
+	        isExists = checkParamFileExists(ParamConstant.PARAM_TRAVELTIME + ParamConstant.PARAM_RECV);
+	        if(isExists){
+//	        	RateParamErrorUtils.put(ParamConstant.PARAM_TRAVELTIME + ParamConstant.PARAM_RECV, "新行车时间参数表缺失，请检查！");
+//	        	throw new MTCException("新行车时间参数表缺失，请检查！");
+	        	obj = getRecv2Obj(ParamConstant.PARAM_TRAVELTIME + ParamConstant.PARAM_RECV);
+	        	if(obj == null){
+	            	RateParamErrorUtils.put(ParamConstant.PARAM_TRAVELTIME + ParamConstant.PARAM_RECV, "新行车时间参数表缺失，请检查！");
+	            	throw new MTCException("新行车时间参数表缺失，请检查！");
+	        	}
+	        	else{
+	        		rateActualFileSize++;
+	        	}
+	        }
+	        
+	        //检查货车超载收费标准是否更新
+	        isExists = checkParamFileExists(ParamConstant.PARAM_OVERLOADPRICE + ParamConstant.PARAM_RECV);
+	        if(isExists){
+//	        	RateParamErrorUtils.put(ParamConstant.PARAM_OVERLOADPRICE + ParamConstant.PARAM_RECV, "新货车超载收费标准参数表缺失，请检查！");
+//	        	throw new MTCException("新货车超载收费标准参数表缺失，请检查！");
+	        	obj = getRecv2Obj(ParamConstant.PARAM_OVERLOADPRICE + ParamConstant.PARAM_RECV);
+	        	if(obj == null){
+	            	RateParamErrorUtils.put(ParamConstant.PARAM_OVERLOADPRICE + ParamConstant.PARAM_RECV, "新货车超载收费标准参数表缺失，请检查！");
+	            	throw new MTCException("新货车超载收费标准参数表缺失，请检查！");
+	        	}
+	        	else{
+	        		rateActualFileSize++;
+	        	}
+	        }
+	        
+	        if(rateRecvFileSize != rateActualFileSize && rateActualFileSize != 0){//新费率文件不相等，且新费率文件不为空
+	        	RateParamErrorUtils.put("RateSize", "新费率参数表不完整，请检查！");
+	        	throw new MTCException("新费率参数表不完整，请检查！");
+	        	
+	        }
+	        
+        }
+
+        
+        if(rateActualFileSize == 0){
+        	return false; //不存在新版本的费率
+        }else{
+        	return true; //存在新版本的费率，且通过版本校验
+        }
+    }
+    
+    /**
+     * 检查非费率表是否存在新的版本
+     *
+     * @return
+     * @throws MTCException
+     */
+    public Vector<String> isOtherRecvFileExists() throws MTCException {
+        Vector<String> param = new Vector<String>();
+
+        //检查操作员表是否更新
+        if(checkParamFileExists(ParamConstant.PARAM_OPERATOR + ParamConstant.PARAM_RECV)){
+        	param.add(ParamConstant.PARAM_OPERATOR);
+        }
+
+        //检查黑白灰表是否更新
+       if(checkParamFileExists(ParamConstant.PARAM_BWG_LIST + ParamConstant.PARAM_RECV)){
+    	   param.add(ParamConstant.PARAM_BWG_LIST);
+       }
+
+        //检查湘通卡黑名单增量基础是否更新
+        if(checkParamFileExists(ParamConstant.PARAM_XTCARD_BLACK_BASE_LIST + ParamConstant.PARAM_RECV)){
+        	param.add(ParamConstant.PARAM_XTCARD_BLACK_BASE_LIST);
+        }
+
+        //检查湘通卡黑名单增量表是否更新
+       if(checkParamFileExists(ParamConstant.PARAM_XTCARD_BLACK_DELTA_LIST + ParamConstant.PARAM_RECV)){
+    	   param.add(ParamConstant.PARAM_XTCARD_BLACK_DELTA_LIST);
+       }
+
+        return param;
+    }
+
+    /**
+     * 检查非费率表是否存在新的版本<br/>
+     * 而且需要判断是否到达启用时间的参数表
+     * @return
+     * @throws MTCException
+     */
+    public Vector<String> isOtherRecvFileExistsEnabled() throws MTCException {
+    	Vector<String> param = new Vector<String>();
+
+        //检查收费站是否更新
+        if(checkParamFileExists(ParamConstant.PARAM_STATION + ParamConstant.PARAM_RECV)){
+        	param.add(ParamConstant.PARAM_STATION);
+        }
+
+        //检查发行方名单是否更新
+        if(checkParamFileExists(ParamConstant.PARAM_ISSUER + ParamConstant.PARAM_RECV)){
+        	param.add(ParamConstant.PARAM_ISSUER);
+        }
+
+        //检查用户折扣表是否更新
+        if(checkParamFileExists(ParamConstant.PARAM_USERRATE + ParamConstant.PARAM_RECV)){
+        	param.add(ParamConstant.PARAM_USERRATE);
+        }
+        
+//     	//检查优惠信息表是否更新
+//        isExists = isExists || checkParamFileExists(ParamConstant.PARAM_TBL_DISCOUNTINFO + ParamConstant.PARAM_RECV);
+
+        //检查密钥信息表是否更新
+        if(checkParamFileExists(ParamConstant.PARAM_ENCRYPTIONKEY + ParamConstant.PARAM_RECV)){
+        	param.add(ParamConstant.PARAM_ENCRYPTIONKEY);
+        }
+
+        return param;
+    }
+
+    
+
+    /**
+     * 检查参数表是否到达启用时间了
+     *
+     * @param startTime
+     * @return
+     */
+    public boolean checkRecvStartTime(Object obj) {
+        boolean isVaild = false;
+        if (obj != null) {
+            Object startTimeObj = ReflectionUtils.invokeGetterMethod(obj, "startTime"); //获取对象里面的启用时间
+
+            Date startTime = null;
+
+            if (startTimeObj != null) {
+                startTime = (Date) startTimeObj;
+                Date nowDate = DateUtils.getCurrentDate();
+                if (nowDate.after(startTime) || nowDate.equals(startTime)) { //当前时间在启用时间之后，或者当前时间等于启用时间，表示参数表开始启用了。
+                    isVaild = true;
+                }
+            }
+        }
+        return isVaild;
+    }
+
+    
+
+    /**
+     * 更新费率数据转换成真实数据
+     *
+     * @throws IOException
+     * @throws MTCException
+     */
+    public synchronized void copyRecvToRealByPrice() throws IOException, MTCException {
+        if (laneType == 2) { // 只有车道类型等于出口的时候，才加载费率信息
+            //更新费率是否存在
+            for (Integer vehType : ParamCacheFileRead.vehRoutes) {
+                renameAndDeleteRecvFile(ParamConstant.PARAM_VEHROUTE + vehType);
+            }
+        }
+
+        //更新路段叠加收费表是否更新
+        renameAndDeleteRecvFile(ParamConstant.PARAM_ROADCHARGESTD);
+
+        //更新桥隧叠加收费是否更新
+        renameAndDeleteRecvFile(ParamConstant.PARAM_BRIDGE_EXTRA_CHARGE_STD);
+
+        //更新行车时间是否更新
+        renameAndDeleteRecvFile(ParamConstant.PARAM_TRAVELTIME);
+        
+        //更新货车超载收费标准是否更新
+        renameAndDeleteRecvFile(ParamConstant.PARAM_OVERLOADPRICE);
+    }
+
+    /**
+     * 更新数据转换成真实数据
+     * @throws IOException
+     * @throws MTCException
+     */
+    public synchronized void copyRecvToRealByOther(Vector<String> newParam) throws IOException, MTCException {
+
+    	boolean isReplace = false;
+        //更新操作员表
+    	if(newParam.contains(ParamConstant.PARAM_OPERATOR)){
+    		isReplace = renameAndDeleteRecvFile(ParamConstant.PARAM_OPERATOR);
+    		if(!isReplace){
+    			newParam.remove(ParamConstant.PARAM_OPERATOR);
+    		}
+    	}
+
+        //更新黑白灰表
+    	if(newParam.contains(ParamConstant.PARAM_BWG_LIST)){
+    		isReplace = renameAndDeleteRecvFile(ParamConstant.PARAM_BWG_LIST);
+    		if(!isReplace){
+    			newParam.remove(ParamConstant.PARAM_BWG_LIST);
+    		}
+    	}
+
+        //更新湘通卡黑名单增量基础
+    	if(newParam.contains(ParamConstant.PARAM_XTCARD_BLACK_BASE_LIST)){
+    		isReplace = renameAndDeleteRecvFile(ParamConstant.PARAM_XTCARD_BLACK_BASE_LIST);
+    		if(!isReplace){
+    			newParam.remove(ParamConstant.PARAM_XTCARD_BLACK_BASE_LIST);
+    		}
+    	}
+
+        //更新湘通卡黑名单增量表
+    	if(newParam.contains(ParamConstant.PARAM_XTCARD_BLACK_DELTA_LIST)){
+    		isReplace = renameAndDeleteRecvFile(ParamConstant.PARAM_XTCARD_BLACK_DELTA_LIST);
+    		if(!isReplace){
+    			newParam.remove(ParamConstant.PARAM_XTCARD_BLACK_DELTA_LIST);
+    		}
+    	}
+        
+    }
+    
+    /**
+     * 更新数据转换成真实数据需要判断是否到了启用时间
+     * @return 
+     * @return 
+     *
+     * @throws IOException
+     * @throws MTCException
+     */
+    public synchronized Vector<String> copyRecvToRealByOtherAndEnabled(Vector<String> newParam) throws IOException, MTCException {
+        Object obj = null; //解析后的对象
+        boolean isFileReplace = false;
+        Vector<String> returnParam = new Vector<String>();
+    	
+        if(newParam.contains(ParamConstant.PARAM_STATION)){
+        	//检查收费站是否更新
+            obj = getRecv2Obj(ParamConstant.PARAM_STATION + ParamConstant.PARAM_RECV);
+            if(obj == null){ //空文件，删除对应文件记录
+            	FileUtils.deleteFile(ParamCacheFileRead
+    					.getParamFilePath(ParamConstant.PARAM_STATION + ParamConstant.PARAM_RECV));
+            }
+            else{
+            	ParamVersionUtils.checkFutureParamVersion(obj, ParamConstant.PARAM_STATION); //加入未来版本
+                if(checkRecvStartTime(obj)){ //到启用时间之后，才进行加载
+                	isFileReplace = renameAndDeleteRecvFile(ParamConstant.PARAM_STATION);
+                	if(isFileReplace){
+                		returnParam.add(ParamConstant.PARAM_STATION);
+                	}
+                }
+            }
+        }
+        
+        if(newParam.contains(ParamConstant.PARAM_ISSUER)){
+        	//更新发行方名单
+            obj = getRecv2Obj(ParamConstant.PARAM_ISSUER + ParamConstant.PARAM_RECV);
+            if(obj == null){ //空文件，删除对应文件记录
+				FileUtils.deleteFile(ParamCacheFileRead
+						.getParamFilePath(ParamConstant.PARAM_ISSUER
+								+ ParamConstant.PARAM_RECV));
+            }else{
+            	ParamVersionUtils.checkFutureParamVersion(obj, ParamConstant.PARAM_ISSUER); //加入未来版本
+                if(checkRecvStartTime(obj)){//到启用时间之后，才进行加载
+                	isFileReplace = renameAndDeleteRecvFile(ParamConstant.PARAM_ISSUER);
+                	if(isFileReplace){
+                		returnParam.add(ParamConstant.PARAM_ISSUER);
+                	}
+                }
+            }
+        }
+        
+        if(newParam.contains(ParamConstant.PARAM_USERRATE)){
+        	//更新用户折扣表
+            obj = getRecv2Obj(ParamConstant.PARAM_USERRATE + ParamConstant.PARAM_RECV);
+            if(obj == null){ //空文件，删除对应文件记录
+				FileUtils.deleteFile(ParamCacheFileRead
+						.getParamFilePath(ParamConstant.PARAM_USERRATE
+								+ ParamConstant.PARAM_RECV));
+            }else{
+            	ParamVersionUtils.checkFutureParamVersion(obj, ParamConstant.PARAM_ISSUER); //加入未来版本
+                if(checkRecvStartTime(obj)){//到启用时间之后，才进行加载
+                	isFileReplace = renameAndDeleteRecvFile(ParamConstant.PARAM_USERRATE);
+                	if(isFileReplace){
+                		returnParam.add(ParamConstant.PARAM_USERRATE);
+                	}
+                }
+            }
+        }
+        
+        
+//        //更新优惠信息表
+//        obj = getRecv2Obj(ParamConstant.PARAM_TBL_DISCOUNTINFO + ParamConstant.PARAM_RECV);
+//        ParamVersionUtils.checkFutureParamVersion(obj, ParamConstant.PARAM_TBL_DISCOUNTINFO); //加入未来版本
+//        if(checkRecvStartTime(obj)){//到启用时间之后，才进行加载
+//        	isFileReplace = renameAndDeleteRecvFile(ParamConstant.PARAM_TBL_DISCOUNTINFO);
+//        	isReplace = isReplace || isFileReplace;
+//        }
+        
+        if(newParam.contains(ParamConstant.PARAM_ENCRYPTIONKEY)){
+        	//更新密钥信息表
+            obj = getRecv2Obj(ParamConstant.PARAM_ENCRYPTIONKEY + ParamConstant.PARAM_RECV);
+            if(obj == null){ //空文件，删除对应文件记录
+				FileUtils.deleteFile(ParamCacheFileRead
+						.getParamFilePath(ParamConstant.PARAM_ENCRYPTIONKEY
+								+ ParamConstant.PARAM_RECV));
+            }else{
+            	ParamVersionUtils.checkFutureParamVersion(obj, ParamConstant.PARAM_ENCRYPTIONKEY); //加入未来版本
+                if(checkRecvStartTime(obj)){//到启用时间之后，才进行加载
+                	isFileReplace = renameAndDeleteRecvFile(ParamConstant.PARAM_ENCRYPTIONKEY);
+                	if(isFileReplace){
+                		returnParam.add(ParamConstant.PARAM_ENCRYPTIONKEY);
+                	}
+                }
+            }
+            
+        }
+        return returnParam;
+    }
+
+    /**
+     * 将下发表转换成启用版本的表
+     *
+     * @param desFilePath 转换后的表名
+     * @throws MTCException
+     */
+    private boolean renameAndDeleteRecvFile(String desFilePath) throws MTCException {
+    	boolean isReplace = false; //是否替换成功
+        String tempPath = desFilePath + ParamConstant.PARAM_RECV; //Recv表
+        String line = null;
+        if (checkParamFileExists(tempPath)) {
+        	//判断文件内容是否存在
+        	line = checkRecvFile(tempPath);
+        	//只有车牌黑白灰名单、ETC卡黑名单表允许为空
+			if (StringUtils.isNotEmpty(line)
+					|| desFilePath
+							.equalsIgnoreCase(ParamConstant.PARAM_BWG_LIST)
+					|| desFilePath
+							.equalsIgnoreCase(ParamConstant.PARAM_XTCARD_BLACK_DELTA_LIST)) {
+				FileUtils.deleteFile(ParamCacheFileRead
+						.getParamFilePath(desFilePath));
+				FileUtils.rename(ParamCacheFileRead.getParamFilePath(tempPath),
+						ParamCacheFileRead.getParamFilePath(desFilePath));
+				isReplace = true;
+			}else{
+				FileUtils.deleteFile(ParamCacheFileRead.getParamFilePath(tempPath));// 删除空文件
+			}
+        }
+        return isReplace;
+    }
+    
+    /**
+     * 检查参数表是否存在
+     *
+     * @param fileName 表名
+     * @throws MTCException
+     */
+    private boolean checkParamFileExists(String fileName) throws MTCException {
+        if (StringUtils.isNotEmpty(fileName)) {
+            //找到工程根目录config下的路径
+            File file = new File(ParamCacheFileRead.getParamFilePath(fileName));
+            if (file.exists()) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * 以行为单位读取表，常用于读面向行的格式化表
+     *
+     * @param fileName 表名
+     * @throws MTCException
+     */
+	private String checkRecvFile(String fileName) throws MTCException {
+		String retStr = "";
+		List<String> tempList = new ArrayList<String>();
+		if (StringUtils.isNotEmpty(fileName)) {
+			// 找到工程根目录config下的路径
+			File file = new File(ParamCacheFileRead.getParamFilePath(fileName));
+			if (file.exists()) { // 如果文件存在
+				if (fileName.matches(XTCARDBLACK_FILENAME_REG)
+						&& FileUtils.dataEncodeMode.equals("0")) { // 湖南模式且数据是黑名单表，没有文件头，所以需要特殊处理
+					tempList.addAll(ReadFromFileUtils.readFileByLinesToList(
+							file, false, 1, FileUtils.encode()));
+				} else {
+					tempList.addAll(ReadFromFileUtils.readFileByLinesToList(
+							file, true, 2, FileUtils.encode()));
+				}
+
+				if (!tempList.isEmpty()) {
+					retStr = tempList.get(0);
+				}
+			} else { // 如果文件不存在
+				return null;
+			}
+		}
+		return retStr;
+	}
+    
+    /**
+     * 刷新费率表
+     * @return 刷新成功返回true，如果未刷新，则返回false
+     * @throws IOException
+     * @throws MTCException
+     */
+    public boolean refreshPrice() throws IOException, MTCException {
+    	boolean isRefresh = false;
+        if (checkPriceRecvFile()) { //如果存在新版本的费率表，则需要重新加载一下费率
+        	copyRecvToRealByPrice(); //更新费率表
+        	isRefresh = rcfr.cancelData(); //重新加载一次费率
+            LaneListUtils.genLaneParaVer();
+            ExtJFrame.appendTitle(""); //清空界面标题栏提示
+        }
+        return isRefresh;
+    }
+
+    /**
+     * 刷新其他非费率表
+     * @return 
+     *
+     * @throws IOException
+     * @throws MTCException
+     */
+    public Vector<String> refreshOther() throws IOException, MTCException {
+    	Vector<String> param = new Vector<String>();
+    	/**
+    	 * 判断如果存在新版本的非费率参数表
+    	 * 则需要重新加载一下费率
+    	 */
+    	Vector<String> otherRecvFileExists = isOtherRecvFileExists();
+        if (!otherRecvFileExists.isEmpty()) {
+        	copyRecvToRealByOther(otherRecvFileExists); //更新其他非费率参数表
+//        	boolean isReadNotCheckEnabledTimeData = rcfr.initNotCheckEnabledTimeData(otherRecvFileExists);
+//			isRead = isRead && isReadNotCheckEnabledTimeData;
+//        	boolean isReadIncrementData = rcfr.initIncrementData(otherRecvFileExists);
+//        	isRead = isRead && isReadIncrementData;
+//            LaneListUtils.genLaneParaVer();
+        	param.addAll(otherRecvFileExists);
+        }
+        /**
+         * 需要判断启用时间的参数表收费站、发行方名单、用户折扣表、密钥信息表
+         */
+        Vector<String> otherRecvFileExistsEnabled = isOtherRecvFileExistsEnabled();
+        if(!otherRecvFileExistsEnabled.isEmpty()){ //需要判断启用时间的参数表
+        	otherRecvFileExistsEnabled = copyRecvToRealByOtherAndEnabled(otherRecvFileExistsEnabled);
+//        	if(!otherRecvFileExistsEnabled.isEmpty()){ //判断是否替换过参数表，如果替换过才加载并生成参数版本表
+//        		boolean isReadCheckEnabledTimeData =  rcfr.initCheckEnabledTimeData(otherRecvFileExistsEnabled);
+//        		isRead = isRead && isReadCheckEnabledTimeData;
+//                LaneListUtils.genLaneParaVer();
+//        	}
+        	param.addAll(otherRecvFileExistsEnabled);
+        }
+        
+        return param;
+    }
+    
+    public boolean initNotCheckEnabledTimeData(Vector<String> newParam) {
+    	return rcfr.initNotCheckEnabledTimeData(newParam);
+    }
+    
+    public boolean initCheckEnabledTimeData(Vector<String> param) {
+    	return rcfr.initCheckEnabledTimeData(param);
+    }
+    
+    public boolean initIncrementData(Vector<String> newParam) {
+    	return rcfr.initIncrementData(newParam);
+    }
+    
+    /**
+     * 判断新费率是否有效
+     * @return
+     */
+    public boolean isNewRateVaild(){
+    	return rcfr.NEW_RATE_VALID;
+    }
+    
+    /**
+     * 设置新费率是否有效
+     * @param newRateVaild
+     * @return
+     */
+    public void setNewRateVaild(boolean newRateVaild){
+    	rcfr.NEW_RATE_VALID = newRateVaild;
+    }
+    
+	public boolean isLoadParam() {
+		return rcfr.isLoadParam();
+	}
+
+	public void setLoadParam(boolean isLoadParam) {
+		rcfr.setLoadParam(isLoadParam);
+	}
+}

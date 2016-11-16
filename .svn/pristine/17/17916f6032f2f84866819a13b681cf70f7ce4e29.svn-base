@@ -1,0 +1,123 @@
+package com.hgits.control;
+
+import com.hgits.util.MyPropertiesUtils;
+import com.hgits.vo.Constant;
+import com.hgits.vo.Staff;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import javax.swing.JOptionPane;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import ui.ExtJFrame;
+
+/**
+ * 日志记录
+ *
+ * @author Wang Guodong
+ */
+public class LogControl {
+
+    private static final Logger myLogger;
+    static String date;
+    static Staff staff;
+    static String roadid;
+    static String stationid;
+    static String laneid;
+    static final SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
+
+    public static void setStaff(Staff staff) {
+        LogControl.staff = staff;
+    }
+
+    static {
+        roadid = MyPropertiesUtils.getProperties(Constant.PROP_MTCCONFIG, "roadId", "000");
+        stationid = MyPropertiesUtils.getProperties(Constant.PROP_MTCCONFIG, "stationId", "000");
+        laneid = MyPropertiesUtils.getProperties(Constant.PROP_MTCCONFIG, "laneNo", "000");
+        date = sdf.format(new Date());
+
+        myLogger = Logger.getLogger("MyLogger");
+        myLogger.setLevel(Level.INFO);
+    }
+
+    /**
+     * 将指定信息记录到日志中
+     *
+     * @param info 信息
+     */
+    public static void logInfo(String info) {
+        logInfo(info, null);
+    }
+
+    /**
+     * 将指定的信息及异常记录到日志中
+     *
+     * @param info 制定信息
+     * @param t 异常
+     */
+    public static void logInfo(String info, Throwable t) {
+        try {
+            if (staff == null) {
+                staff = new Staff();
+                staff.setStaffId("000000");
+            }
+            if (t != null) {
+                myLogger.info(roadid + stationid + laneid + "\t" + sdf.format(new Date()) + "\t" + staff.getStaffId() + "\t" + info);
+                error(roadid + stationid + laneid + "\t" + sdf.format(new Date()) + "\t" + staff.getStaffId() + "\t" + info, t);
+            } else {
+                myLogger.info(roadid + stationid + laneid + "\t" + sdf.format(new Date()) + "\t" + staff.getStaffId() + "\t" + info);
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(ExtJFrame.getSingleInstance(), "日志记录异常：" + ex);
+        }
+    }
+
+    /**
+     * 记录异常
+     *
+     * @param info
+     * @param t
+     */
+    private static void error(String info, Throwable t) {
+        try {
+            myLogger.error(info, t);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(ExtJFrame.getSingleInstance(), "日志记录异常：" + ex);
+        }
+    }
+
+    /**
+     * 记录异常
+     *
+     * @param info
+     */
+    private static void error(String info) {
+        error(info, null);
+    }
+
+    /**
+     * 将指定的信息记录到warn文件
+     *
+     * @param info 信息
+     * @param t 异常
+     */
+    public static void warn(String info, Throwable t) {
+        try {
+            if (staff == null) {
+                staff = new Staff();
+                staff.setStaffId("000000");
+            }
+            myLogger.warn(roadid + stationid + laneid + "\t" + sdf.format(new Date()) + "\t" + staff.getStaffId() + "\t" + info, t);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(ExtJFrame.getSingleInstance(), "日志记录异常：" + ex);
+        }
+    }
+
+    /**
+     * 将指定的信息记录到warn文件
+     *
+     * @param info 信息
+     */
+    public static void warn(String info) {
+        warn(info, null);
+    }
+}

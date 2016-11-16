@@ -1,0 +1,142 @@
+/* 
+ * Copyright 2005 - 2009 Terracotta, Inc. 
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not 
+ * use this file except in compliance with the License. You may obtain a copy 
+ * of the License at 
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0 
+ *   
+ * Unless required by applicable law or agreed to in writing, software 
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT 
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
+ * License for the specific language governing permissions and limitations 
+ * under the License.
+ * 
+ */
+
+package com.hgits.cron;
+
+import java.util.Date;
+import java.util.Vector;
+
+import org.apache.log4j.Logger;
+import org.quartz.Job;
+import org.quartz.JobExecutionContext;
+import org.quartz.JobExecutionException;
+
+import ui.ExtJFrame;
+
+import com.hgits.control.FlowControl;
+import com.hgits.service.constant.MtcConstant;
+import com.hgits.util.LaneListUtils;
+import com.hgits.util.MyPropertiesUtils;
+import com.hgits.util.cache.RateParamErrorUtils;
+import com.hgits.util.cache.RecvParamUtils;
+import com.hgits.vo.Constant;
+
+/**
+ * 参数文件检查任务
+ * 
+ * @author wh
+ */
+public class CheckParamJob implements Job {
+
+	private static Logger _log = Logger.getLogger(CheckParamJob.class);
+	/**
+	 * 车道类型
+	 */
+	private static Integer laneType = Integer.valueOf(MyPropertiesUtils
+			.getProperties(Constant.PROP_MTCCONFIG,
+					MtcConstant.PROPERTIES_LANETYPE,
+					MtcConstant.MTC_LANE_TYPE_EN));
+
+	private RecvParamUtils rpu = new RecvParamUtils();
+
+	/**
+	 * Quartz requires a public empty constructor so that the scheduler can
+	 * instantiate the class whenever it needs.
+	 */
+	public CheckParamJob() {
+	}
+
+	/**
+	 * <p>
+	 * Called by the <code>{@link org.quartz.Scheduler}</code> when a
+	 * <code>{@link org.quartz.Trigger}</code> fires that is associated with the
+	 * <code>Job</code>.
+	 * </p>
+	 * 
+	 * @throws JobExecutionException
+	 *             if there is an exception while executing the job.
+	 */
+	public void execute(JobExecutionContext context)
+			throws JobExecutionException {
+
+		// This job simply prints out its job name and the
+		// date and time that it is running
+		_log.info("新版本参数文件读取检查 executing at " + new Date());
+		checkOtherFileTask();
+		checkPriceFileTask();
+	}
+
+	/**
+	 * 检查其他参数文件
+	 */
+	private void checkOtherFileTask() {
+		try {
+			Vector<String> param = rpu.checkRecvFileExists();
+			if (!param.isEmpty()) { // 检查除费率外其他参数文件是否更新
+				param = rpu.refreshOther(); // 直接更新
+				boolean readNotCheckEnabledTimeData = rpu.initNotCheckEnabledTimeData(param);
+				boolean readCheckEnabledTimeData = rpu.initCheckEnabledTimeData(param);
+				boolean readIncrement = rpu.initIncrementData(param);
+				rpu.setLoadParam(readNotCheckEnabledTimeData
+						&& readCheckEnabledTimeData && readIncrement);
+				LaneListUtils.genLaneParaVer();
+			}else{
+				rpu.setLoadParam(true);
+			}
+		} catch (Exception e) {
+			_log.error("检查其他参数文件异常，异常原因：" + e.getMessage(), e);
+			rpu.setLoadParam(Boolean.FALSE);
+		}
+	}
+
+	/**
+	 * 检查费率参数文件
+	 */
+	private void checkPriceFileTask() {
+		try {
+			// 只有出口才需要校验是否下发了新费率
+			ExtJFrame.appendTitle(""); //检查之前，先清空上一次检查的提示
+			RateParamErrorUtils.removeAll(); //检查之前，先清空上一次的异常结果
+			if (laneType == 2) {
+				if (rpu.checkPriceRecvFile()) { // 检查费率文件是否存在
+					rpu.setNewRateVaild(true); //费率满足条件
+					RateParamErrorUtils.removeAll(); //表示没有任何异常，则需要清空缓存中的异常信息
+					if(FlowControl.onduty){//上班状态的话，则提示用户进行上下班操作来实现数据更新
+						ExtJFrame.appendTitle("存在新费率版本，请上下班一次来进行费率版本更新");
+						rpu.setLoadParam(Boolean.TRUE);
+					}else{
+						//非上班状态下，则直接进行费率版本升级操作
+						boolean isRefresh = rpu.refreshPrice();
+						if(isRefresh){
+							ExtJFrame.appendTitle(""); //清空界面标题栏提示
+							rpu.setLoadParam(Boolean.TRUE);
+						}
+					}
+				}
+				else{
+					rpu.setLoadParam(true);
+				}
+			}
+		} catch (Exception e) {
+			rpu.setNewRateVaild(Boolean.FALSE); //费率不满足条件
+			rpu.setLoadParam(Boolean.FALSE);
+			ExtJFrame.appendTitle(e.getMessage());
+			_log.error("检查费率参数文件异常，异常原因：" + e.getMessage(), e);
+		}
+	}
+
+}

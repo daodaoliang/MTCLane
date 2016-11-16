@@ -1,0 +1,89 @@
+package com.hgits.control;
+
+import com.hgits.util.IntegerUtils;
+import com.hgits.util.MyPropertiesUtils;
+import com.hgits.vo.Constant;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
+
+/**
+ * 退出控制，该程序监控指定端口
+ *
+ * @author Wang Guodong
+ */
+public class ExitControl {
+
+    static final String EXIT_ORDER = "STOPMTCLANE";
+    private FlowControl fc;
+    private LaneServerControl lsc;
+    private ImgLaneServerControl ilsc;
+
+    public ExitControl(FlowControl fc, LaneServerControl lsc, ImgLaneServerControl ilsc) {
+        this.fc = fc;
+        this.lsc = lsc;
+        this.ilsc = ilsc;
+    }
+
+    public void run() {
+        ThreadPoolControl.getThreadPoolInstance().execute(new Runnable() {
+            @Override
+            public void run() {
+                while (true) {
+                    ServerSocket ss = null;
+                    Socket sc = null;
+                    InputStream is = null;
+
+                    try {
+                        String socket = MyPropertiesUtils.getProperties(Constant.PROP_SOCKET,"MTCLaneCloseSocket", "12345");
+                        ss = new ServerSocket(IntegerUtils.parseString(socket));
+                        sc = ss.accept();
+                        is = sc.getInputStream();
+                        byte[] buffer = new byte[1024];
+                        int n = is.read(buffer);
+                        String str = new String(buffer, 0, n, "utf-8");
+                        if (EXIT_ORDER.equalsIgnoreCase(str)) {
+                            LogControl.logInfo("收到关闭软件指令"+str);
+                            is.close();
+                            sc.close();
+                            ss.close();
+                            if(lsc!=null){
+                                lsc.stop();
+                            }
+                            if(ilsc!=null){
+                                ilsc.stop();
+                            }
+                            if(fc!=null){
+                                fc.exit();
+                            }
+                            return;
+                        } else {
+                            LogControl.logInfo("从软件关闭端口收到异常信息:" + str);
+                        }
+                    } catch (Exception ex) {
+                        LogControl.logInfo("关闭软件控制模块异常", ex);
+                    } finally {
+                        try {
+                            if (is != null) {
+                                is.close();
+                            }
+                            if (sc != null) {
+                                sc.close();
+                            }
+                            if (ss != null) {
+                                ss.close();
+                            }
+                        } catch (IOException ex) {
+                            LogControl.logInfo("关闭软件控制模块异常", ex);
+                        }
+                        try {
+                            Thread.sleep(1000);
+                        } catch (InterruptedException ex) {
+                        }
+                    }
+                }
+            }
+        });
+    }
+}

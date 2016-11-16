@@ -1,0 +1,674 @@
+package com.hgits.service;
+
+import com.hgits.control.TempControl;
+import java.io.UnsupportedEncodingException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import ui.ExtJFrame;
+import com.hgits.control.AlarmControl;
+import com.hgits.control.FlowControl;
+import com.hgits.control.FunctionControl;
+import com.hgits.control.TestControl;
+import com.hgits.control.LogControl;
+import com.hgits.hardware.CpuCardReader;
+import com.hgits.util.HexUtils;
+import com.hgits.util.IntegerUtils;
+import com.hgits.util.ParseUtil;
+import com.hgits.util.cache.ParamCacheQuery;
+import com.hgits.vo.Card;
+import com.hgits.vo.Constant;
+import com.hgits.vo.CpuCard;
+import com.hgits.vo.Issuer;
+import com.hgits.vo.Lane;
+import com.hgits.vo.UserRate;
+import com.hgits.vo.XTCardBlackList;
+
+/**
+ * 用于为ETC卡处理提供支持的服务类
+ *
+ * @author 王国栋
+ */
+public class CpuCardService {
+
+    ExtJFrame extJFrame;//收费界面
+    CpuCardReader ccReader;//ETC卡读卡器
+    MainService mainSvc;//主服务类
+
+    public CpuCardService(CpuCardReader ccReader, ExtJFrame extJFrame) {
+        this.ccReader = ccReader;
+        this.extJFrame = extJFrame;
+    }
+
+    public void setMainSvc(MainService mainSvc) {
+        this.mainSvc = mainSvc;
+    }
+
+    /**
+     * 检查发行方以及有效日期
+     *
+     * @deprecated 改为使用checkIssuer(String issuer, int netNo)方法
+     * @param issuer
+     * @return 0正常 1 发行方无效 2 已过期
+     */
+    public int checkIssuer(String issuer) {
+        try {
+            Issuer pci = ParamCacheQuery.queryIssuer(issuer.substring(0, 8));
+            if (pci == null) {
+                LogControl.logInfo("ETC卡发行方无效" + issuer);
+                return 1;
+            }
+            Date d1 = pci.getStartTime();//生效日期
+            Date d2 = pci.getEndTime();//过期日期
+            Date d3 = new Date();
+            if (d3.compareTo(d1) > 0 && d3.compareTo(d2) < 0) {//当前日期有效
+                LogControl.logInfo("ETC卡发行方有效" + issuer);
+                return 0;
+            } else {
+                LogControl.logInfo("ETC卡发行方已过期" + d1 + " " + d2);
+                return 2;
+            }
+        } catch (Exception ex) {
+            LogControl.logInfo("ETC卡发行方检测异常", ex);
+            return 1;
+        }
+    }
+
+    /**
+     * 根据用户类型，发行方等信息获取ETC通行卡折扣率
+     *
+     * @param userType 用户类型
+     * @param vehClass 车型
+     * @param issuer 发行方
+     * @return 折扣率
+     */
+    public double getETCDiscount(int userType, int vehClass, String issuer) {
+        if (TestControl.isETCDisActive()) {//折扣率标识，强制0.01折
+            return 0.01;
+        }
+        if (issuer == null || issuer.length() < 8) {//发行方不符合要求
+            return 1;
+        }
+        double rate = 1;
+        try {
+            List<UserRate> urList = ParamCacheQuery.querUserRate(vehClass, userType);//查询折扣率
+            if (urList != null && !urList.isEmpty()) {
+                for (UserRate ur : urList) {
+                    if (issuer.substring(0, 8).equalsIgnoreCase(ur.getProvinceBcdName())) {//省份国标编码
+                        Date date = ur.getStartTime();
+                        if (date.getTime() < System.currentTimeMillis()) {
+                            rate = ur.getRate();
+                            LogControl.logInfo("ETC卡折扣率:" + rate);
+                        }
+                        break;
+                    }
+                }
+            }
+            urList = ParamCacheQuery.querUserRate(vehClass, 99);//99为全用户类型，表示所有用户都打折
+            if (urList != null && !urList.isEmpty()) {
+                for (UserRate ur : urList) {
+                    if (issuer.substring(0, 8).equalsIgnoreCase(ur.getProvinceBcdName())) {//省份国标编码
+                        Date date = ur.getStartTime();
+                        if (date.getTime() < System.currentTimeMillis()) {
+                            rate = ur.getRate();
+                            LogControl.logInfo("ETC卡折扣率:" + rate);
+                        }
+                        break;
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            LogControl.logInfo("获取ETC卡折扣率异常：", ex);
+        }
+        return rate;
+    }
+
+    /**
+     * 检查发行方以及有效日期
+     *
+     * @param issuer 发行方
+     * @param netNo 卡片网络编号（0015文件11-12字节）
+     * @return 0正常 1 发行方无效 2 已过期
+     */
+    public int checkIssuer(String issuer, int netNo) {
+        try {
+            if (TestControl.isETCIssuerIgnored()) {//不判断发行方
+                LogControl.logInfo("issuerCode=0，不判断ETC卡发行方" + issuer);
+                return 0;
+            }
+            Issuer pci = ParamCacheQuery.queryIssuer(issuer.substring(0, 8), netNo);
+            if (pci == null) {
+                LogControl.logInfo("ETC卡发行方无效" + issuer);
+                return 1;
+            }
+            Date d1 = pci.getStartTime();//生效日期
+            Date d2 = pci.getEndTime();//过期日期
+            Date d3 = new Date();
+            if (d3.compareTo(d1) > 0 && d3.compareTo(d2) < 0) {//当前日期有效
+                LogControl.logInfo("ETC卡发行方有效" + issuer);
+                return 0;
+            } else {
+                LogControl.logInfo("ETC卡发行方已过期" + d1 + " " + d2);
+                return 2;
+            }
+        } catch (Exception ex) {
+            LogControl.logInfo("ETC卡发行方检测异常", ex);
+            return 1;
+        }
+    }
+
+    /**
+     * 检测ETC通行卡是否符合要求以及ETC通行卡内车牌与输入车牌是否一致 检测发行方，黑名单，车型差异，车牌差异，车牌颜色差异
+     *
+     * @param cpuCard 需要检测的ETC通行卡
+     * @param card 当前车道及当前车辆信息
+     * @return true正常 false异常
+     */
+    public boolean checkETCCard(CpuCard cpuCard, Card card) {
+        try {
+            String serial = cpuCard.getCardSerial();
+            if (serial == null || serial.length() < 20) {
+                return false;
+            }
+            int netNo = IntegerUtils.parseInteger(serial.substring(0, 4));//获取卡片网络号
+            switch (checkIssuer(cpuCard.getIssuer(), netNo)) {//检测相通卡卡片发行方
+                case 0:
+                    break;
+                case 1:
+                    LogControl.logInfo("ETC卡发行方无效");
+                    extJFrame.updateInfo("ETC卡发行方无效", "ETC卡发行方无效\n请出示有效ETC卡\n或\n通行卡");
+                    FlowControl.cardObserCode = "G";
+                    return false;
+                case 2:
+                    LogControl.logInfo("ETC卡发行方已过期");
+                    extJFrame.updateInfo("ETC卡发行方已过期", "ETC卡发行方已过期\n请出示有效ETC卡\n或\n通行卡");
+                    FlowControl.cardObserCode = "G";
+                    return false;
+            }
+            XTCardBlackList xtc = ParamCacheQuery.queryXTCardBlackList(cpuCard.getCardSerial());
+            if (xtc != null) {
+                Integer status = xtc.getStatus();
+                if (status != null) {
+                    switch (status) {                                                   //检测ETC卡状态是否在黑名单
+                        case 0:
+                            break;
+                        case 2:
+                            LogControl.logInfo("挂失ETC卡" + cpuCard.getCardSerial());
+                            extJFrame.updateInfo("挂失ETC卡", "挂失ETC卡\n请出示有效ETC卡\n或\n通行卡");
+                            FlowControl.cardObserCode = "H";
+                            return false;
+                        case 3:
+                            LogControl.logInfo("ETC卡余额不足" + cpuCard.getCardSerial());
+                            extJFrame.updateInfo("ETC卡余额不足", "ETC卡余额不足\n请出示有效ETC卡\n或\n通行卡");
+                            FlowControl.cardObserCode = "H";
+                            return false;
+                        case 4:
+                            LogControl.logInfo("透支ETC卡" + cpuCard.getCardSerial());
+                            extJFrame.updateInfo("透支ETC卡", "透支ETC卡\n请出示有效ETC卡\n或\n通行卡");
+                            FlowControl.cardObserCode = "H";
+                            return false;
+                        case 5:
+                            LogControl.logInfo("禁用ETC卡" + cpuCard.getCardSerial());
+                            extJFrame.updateInfo("禁用ETC卡", "禁用ETC卡\n请出示有效ETC卡\n或\n通行卡");
+                            FlowControl.cardObserCode = "H";
+                            return false;
+                    }
+                }
+            }
+            //部分省份发行有车牌全空（全0x00 ）的卡片，对于此部分卡片不必进行车卡绑定判断。
+            //此规则仅对外省用户有效，湖南省所发行卡片都需要车卡绑定判断。
+            if (cpuCard.getFullVehPlateNum().trim().equals("")) {//卡内车牌为空
+                if (!cpuCard.getIssuer().startsWith("BAFEC4CF")) {//非湖南省ETC卡
+                    return true;
+                }
+            }
+            if (!TestControl.isVehDiffIgnored()) {//首先确认当前情况下需要判断车型车牌差异
+                //检测ETC卡车型差异
+                String c1 = cpuCard.getVehClass();
+                String c2 = card.getVehClass();
+                int a = c1 == null ? 0 : IntegerUtils.parseString(c1);
+                int b = c2 == null ? 0 : IntegerUtils.parseString(c2);
+                if (a == 6 && b == 7) {//入口为6，出口为7表示正常情况
+                    LogControl.logInfo("入口6型车，出口7型车");
+                } else if (a != b) {//出入口车型不符
+                    if (cpuCard.getCardVersion().startsWith("4")) {//新国标ETC卡
+                        if (FunctionControl.isEtcClassDiffActive()) {
+                            LogControl.logInfo("车型差异");
+                            extJFrame.updateInfo("车型差异", "输入车型与ETC卡内记录车型不一致\n请出示有效ETC卡或输入正确车型");
+                            return false;
+                        }
+                    }
+                }
+                if (!cpuCard.getPlateColor().equals(card.getPlateColor())) {//判断车牌颜色
+                    try {
+                        LogControl.logInfo("车牌颜色差异");
+                        if (cpuCard.getIssuer().startsWith(HexUtils.encode("湖南".getBytes("gbk")))) {
+                            extJFrame.updateInfo("车牌颜色差异", "输入车牌颜色与ETC卡内记录车牌颜色不一致\n请出示有效ETC卡或输入正确车牌颜色");
+                            return false;
+                        } else {
+                            LogControl.logInfo("外省ETC卡，忽略车牌颜色差异");
+                        }
+                    } catch (UnsupportedEncodingException ex) {
+                        Logger.getLogger(CpuCardService.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                }
+                if (!cpuCard.getPlateInCard15().equals(card.getFullVehPlateNum())) {//判断车牌号码
+                    LogControl.logInfo("车牌差异");
+                    extJFrame.updateInfo("车牌差异", "输入车牌与ETC卡内记录车牌不一致\n请出示有效ETC卡或输入正确车牌号码");
+                    return false;
+                }
+            }
+        } catch (Exception ex) {
+            LogControl.logInfo("检测ETC卡时出现异常", ex);
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * 检测U型车以及超时情况
+     *
+     * @param cpuCard 读取ETC卡
+     * @param card 出口卡
+     * @return 入口确认后的CPU卡
+     */
+    public CpuCard checkUVehAndTripTime(CpuCard cpuCard, Card card) {
+        if (card.getLaneId().startsWith("E")) {//入口不需要进行车辆超时以及U型车特殊情况检测
+            return cpuCard;
+        }
+        long maxTripTime = mainSvc.getMaxTripTime(cpuCard.getRoadid(), cpuCard.getStationid(), card.getRoadid(), card.getStationid());
+        long minTripTime = mainSvc.getMinTripTime(cpuCard.getRoadid(), cpuCard.getStationid(), card.getRoadid(), card.getStationid());
+        //检测U型车
+        if ((cpuCard.getRoadid().equals(card.getRoadid()) && (cpuCard.getStationid().equals(card.getStationid())))) {//U型车(先判断U型车，再判断超时)
+            FlowControl.logout.setUturnC(FlowControl.logout.getUturnC() + 1);
+            FlowControl.cardObserCode = "C";
+            if (System.currentTimeMillis() - cpuCard.getDhm().getTime() > 2 * 60 * 60 * 1000) {
+                cpuCard.setObservationCode("7");//U型车行驶时间超过两小时
+            } else {
+                cpuCard.setObservationCode("6");//U型车行驶时间两小时之内
+            }
+            LogControl.logInfo("U型车，入口时间为：" + cpuCard.getDhm());
+            extJFrame.updateInfo("U型车", "U型车");
+            mainSvc.runShowEntryInfo(cpuCard);
+            if (System.currentTimeMillis() - cpuCard.getDhm().getTime() > 2 * 60 * 60 * 1000) {
+                cpuCard.setObservationCode("7");//U型车行驶时间超过两小时
+            } else {
+                cpuCard.setObservationCode("6");//U型车行驶时间两小时之内
+                cpuCard.setRoadid("99");
+                cpuCard.setStationid("98");
+            }
+//            mainSvc.waitForControlRoomConfirmEntry(cpuCard);
+            LogControl.logInfo("ETC卡状态检测结束");
+            return cpuCard;
+        }
+        //检测行驶时间
+        if ((System.currentTimeMillis() - cpuCard.getDhm().getTime()) < minTripTime) {//车辆小于最小行程时间检测
+            FlowControl.logout.setErTravelTimeC(FlowControl.logout.getErTravelTimeC() + 1);
+            FlowControl.logout.setLowMinC(FlowControl.logout.getLowMinC() + 1);
+            FlowControl.cardObserCode = "F";
+            cpuCard.setObservationCode("13");
+            LogControl.logInfo("车辆小于最小行程时间，入口时间为：" + cpuCard.getDhm());
+//            extJFrame.updateInfo("车辆小于最小行程时间", "车辆小于最小行程时间\n等待来自监控室管理员的确认");
+            extJFrame.updateInfo("车辆小于最小行程时间", "车辆小于最小行程时间");
+            mainSvc.runShowEntryInfo(cpuCard);
+//            mainSvc.waitForControlRoomConfirmEntry(cpuCard, card.getVehClass());
+            LogControl.logInfo("ETC卡状态检测结束");
+//            return cpuCard;
+
+        }
+        if ((System.currentTimeMillis() - cpuCard.getDhm().getTime()) > maxTripTime) {
+            FlowControl.logout.setOverTimeC(FlowControl.logout.getOverTimeC() + 1);//超时
+            FlowControl.logout.setErTravelTimeC(FlowControl.logout.getErTravelTimeC() + 1);//行程时间不符
+            FlowControl.logout.setOverMaxC(FlowControl.logout.getOverMaxC() + 1);//超过最大行程时间
+            FlowControl.cardObserCode = "D";
+            cpuCard.setObservationCode("2");
+            LogControl.logInfo("车辆超时");
+            extJFrame.updateInfo("车辆超时", "车辆超时\n等待来自监控室管理员的确认");
+            mainSvc.runShowEntryInfo(cpuCard);
+            mainSvc.waitForControlRoomConfirmEntry(cpuCard, card.getVehClass());
+            LogControl.logInfo("ETC卡状态检测结束");
+            return cpuCard;
+        }
+        //检测ETC卡车型差异
+        String c1 = cpuCard.getVehClass();
+        String c2 = card.getVehClass();
+        int a = c1 == null ? 0 : IntegerUtils.parseString(c1);
+        int b = c2 == null ? 0 : IntegerUtils.parseString(c2);
+        if (a != b) {
+            if (a == 6 && b == 7) {
+                LogControl.logInfo("入口6型车，出口7型车，按照正常处理");
+            } else {
+                FlowControl.cardObserCode = "J";
+                FlowControl.chargeObserCode = "2";
+                FlowControl.logout.setClassErrC(FlowControl.logout.getClassErrC() + 1);
+                cpuCard.setObservationCode("3");
+                if (Lane.getInstance().isEntry()) {//入口对ETC卡车型差异不做处理
+                    AlarmControl.generateAlarmInfo(Lane.getInstance(), FlowControl.staff.getStaffId(), (short) FlowControl.staff.getShiftId(), "51", (short) 1);
+                } else if (Lane.getInstance().isExit()) {//出口ETC卡车型差异需监控室确认
+                    AlarmControl.generateAlarmInfo(Lane.getInstance(), FlowControl.staff.getStaffId(), (short) FlowControl.staff.getShiftId(), "28", (short) 1);
+                    LogControl.logInfo("车型差异");
+                    extJFrame.updateInfo("车型差异", "输入车型与ETC卡内记录车型不一致\n等待监控室确认");
+                    mainSvc.runShowEntryInfo(cpuCard);
+                    mainSvc.waitForControlRoomConfirmEntry(cpuCard, card.getVehClass());
+                }
+            }
+
+        }
+        return cpuCard;
+    }
+
+//    /**
+//     * 检测U型车以及超时情况
+//     *
+//     * @param card1 读取卡
+//     * @param card2 出口卡
+//     * @return 入口确认后的卡
+//     */
+//    public Card checkUVehAndTripTime(Card card1, Card card2) {
+//        if (card2.getLaneId().startsWith("E")) {//入口不需要进行车辆超时以及U型车特殊情况检测
+//            return card1;
+//        }
+//        long maxTripTime = mainSvc.getMaxTripTime(card1.getRoadid(), card1.getStationid(), card2.getRoadid(), card2.getStationid());
+//        long minTripTime = mainSvc.getMinTripTime(card1.getRoadid(), card1.getStationid(), card2.getRoadid(), card2.getStationid());
+//        //检测U型车
+//        if ((card1.getRoadid().equals(card2.getRoadid()) && (card1.getStationid().equals(card2.getStationid())))) {//U型车(先判断U型车，再判断超时)
+//            FlowControl.logout.setUturnC(FlowControl.logout.getUturnC() + 1);
+//            FlowControl.cardObserCode = "C";
+//            if (System.currentTimeMillis() - card1.getDhm().getTime() > 2 * 60 * 60 * 1000) {
+//                card1.setObservationCode("7");//U型车行驶时间超过两小时
+//            } else {
+//                card1.setObservationCode("6");//U型车行驶时间两小时之内
+//            }
+//            LogControl.logInfo("U型车，入口时间为：" + card1.getDhm());
+//            extJFrame.updateInfo("U型车", "U型车");
+//            mainSvc.runShowEntryInfo(card1);
+//            if (System.currentTimeMillis() - card1.getDhm().getTime() > 2 * 60 * 60 * 1000) {
+//                card1.setObservationCode("7");//U型车行驶时间超过两小时
+//            } else {
+//                card1.setObservationCode("6");//U型车行驶时间两小时之内
+//                card1.setRoadid("99");
+//                card1.setStationid("98");
+//            }
+////            mainSvc.waitForControlRoomConfirmEntry(cpuCard);
+//            LogControl.logInfo("ETC卡状态检测结束");
+//            return card1;
+//        }
+//        //检测行驶时间
+//        if ((System.currentTimeMillis() - card1.getDhm().getTime()) < minTripTime) {//车辆小于最小行程时间检测
+//            FlowControl.logout.setErTravelTimeC(FlowControl.logout.getErTravelTimeC() + 1);
+//            FlowControl.logout.setLowMinC(FlowControl.logout.getLowMinC() + 1);
+//            FlowControl.cardObserCode = "F";
+//            card1.setObservationCode("13");
+//            LogControl.logInfo("车辆小于最小行程时间，入口时间为：" + card1.getDhm());
+//            extJFrame.updateInfo("车辆小于最小行程时间", "车辆小于最小行程时间\n等待来自监控室管理员的确认");
+//            mainSvc.runShowEntryInfo(card1);
+//            mainSvc.waitForControlRoomConfirmEntry(card1, card2.getVehClass());
+//            LogControl.logInfo("ETC卡状态检测结束");
+//            return card1;
+//
+//        }
+//        if ((System.currentTimeMillis() - card1.getDhm().getTime()) > maxTripTime) {
+//            FlowControl.logout.setOverTimeC(FlowControl.logout.getOverTimeC() + 1);//超时
+//            FlowControl.logout.setErTravelTimeC(FlowControl.logout.getErTravelTimeC() + 1);//行程时间不符
+//            FlowControl.logout.setOverMaxC(FlowControl.logout.getOverMaxC() + 1);//超过最大行程时间
+//            FlowControl.cardObserCode = "D";
+//            card1.setObservationCode("2");
+//            LogControl.logInfo("车辆超时");
+//            extJFrame.updateInfo("车辆超时", "车辆超时\n等待来自监控室管理员的确认");
+//            mainSvc.runShowEntryInfo(card1);
+//            mainSvc.waitForControlRoomConfirmEntry(card1, card2.getVehClass());
+//            LogControl.logInfo("ETC卡状态检测结束");
+//            return card1;
+//        }
+//        //检测ETC卡车型差异
+//        String c1 = card1.getVehClass();
+//        String c2 = card2.getVehClass();
+//        int a = c1 == null ? 0 : IntegerUtils.parseString(c1);
+//        int b = c2 == null ? 0 : IntegerUtils.parseString(c2);
+//        if (a != b) {
+//            FlowControl.cardObserCode = "J";
+//            FlowControl.chargeObserCode = "2";
+//            FlowControl.logout.setClassErrC(FlowControl.logout.getClassErrC() + 1);
+//            card1.setObservationCode("3");
+//            if (Lane.getInstance().isEntry()) {//入口对ETC卡车型差异不做处理
+//                AlarmControl.generateAlarmInfo(Lane.getInstance(), FlowControl.staff.getStaffId(), (short) FlowControl.staff.getShiftId(), "51", (short) 1);
+//            } else if (Lane.getInstance().isExit()) {//出口ETC卡车型差异需监控室确认
+//                AlarmControl.generateAlarmInfo(Lane.getInstance(), FlowControl.staff.getStaffId(), (short) FlowControl.staff.getShiftId(), "28", (short) 1);
+//                LogControl.logInfo("车型差异");
+//                extJFrame.updateInfo("车型差异", "输入车型与ETC卡内记录车型不一致\n等待监控室确认");
+//                mainSvc.runShowEntryInfo(card1);
+//                mainSvc.waitForControlRoomConfirmEntry(card1, card2.getVehClass());
+//            }
+//        }
+//        return card1;
+//    }
+
+    /**
+     * 读ETC卡
+     *
+     * @return 读取ETC卡信息，若无卡，返回null
+     */
+    public CpuCard getCpuCard() {
+        CpuCard tempCard = ccReader.getCpuCard();
+        if (tempCard != null) {
+            String type = tempCard.getType();
+            if (!Constant.CARD_TYPE_1.equals(type)) {//当前卡并非ETC卡
+                return null;
+            }
+            CpuCard card = new CpuCard(tempCard);
+            card.setFullVehPlateNum(card.getPlateInCard15());
+            return card;
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * 获取M1卡
+     *
+     * @return 读取到的M1卡信息，若无卡，返回null
+     */
+    public Card getM1Card() {
+        CpuCard tempCard = ccReader.getCpuCard();
+        if (tempCard != null) {
+            String type = tempCard.getType();
+            if (Constant.CARD_TYPE_1.equals(type)) {//当卡为ETC卡
+                return null;
+            }
+            CpuCard card = new CpuCard(tempCard);
+            return card;
+        }
+        Card card = ccReader.getM1Card();
+        return card;
+    }
+
+    /**
+     * 写卡
+     *
+     * @param cpuCard
+     * @return 写卡成功 true 写卡失败false
+     */
+    public boolean writeCpuCard(CpuCard cpuCard) {
+        LogControl.logInfo("ETC卡写卡:" + cpuCard);
+        if (getCpuCard() == null) {//无卡不写卡
+            LogControl.logInfo("ETC卡写卡时发现卡已拿开" + cpuCard);
+            return false;
+        }
+        CpuCard card = new CpuCard(cpuCard);
+        return ccReader.write(card) == 0;
+    }
+
+    /**
+     * 等待收费员将ETC卡从读卡器上拿开
+     */
+    public void waitForNoCpuCard() {
+        while (getCpuCard() != null) {
+            try {
+                Thread.sleep(200);
+            } catch (InterruptedException ex) {
+            }
+        }
+    }
+
+    /**
+     * 等待直至获取ETC卡
+     *
+     * @return 从ETC卡读卡器上获取的ETC卡
+     */
+    public CpuCard waitForCpuCard() {
+        CpuCard cc;
+        while (true) {
+            cc = getCpuCard();
+            if (cc != null) {
+                break;
+            }
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException ex) {
+            }
+        }
+        return cc;
+    }
+
+    /**
+     * 检测ETC卡有效日期
+     *
+     * @param cpuCard 需检测ETC卡
+     * @return 有效返回true否则返回false
+     */
+    public boolean checkValidDate(CpuCard cpuCard) {
+        try {
+            String str1 = cpuCard.getStartDate();
+            String str2 = cpuCard.getEndDate();
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+            Date date1 = sdf.parse(str1);
+            Date date2 = sdf.parse(str2);
+            Date date = new Date();
+            if (date.compareTo(date1) > 0 && date.compareTo(date2) < 0) {
+                return true;
+            } else {
+                FlowControl.cardObserCode = "H";
+                return false;
+            }
+        } catch (Exception ex) {
+            LogControl.logInfo("核对ETC卡有效时间时出现异常，启用时间:" + cpuCard.getStartDate() + " 到期时间:" + cpuCard.getEndDate());
+        }
+        return false;
+    }
+
+    /**
+     * 检测ETC卡有效日期
+     *
+     * @param cpuCard 需检测ETC卡
+     * @return -1未启用 0 正常 1 已过期
+     */
+    public int checkValidDate1(CpuCard cpuCard) {
+        try {
+            String str1 = cpuCard.getStartDate();
+            String str2 = cpuCard.getEndDate();
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+            Date date1 = sdf.parse(str1);
+            Date date2 = sdf.parse(str2);
+            Date date = new Date();
+            if (date.compareTo(date1) < 0) {
+                FlowControl.cardObserCode = "H";
+                return -1;
+            }
+            if (date.compareTo(date2) > 0) {
+                FlowControl.cardObserCode = "H";
+                return 1;
+            }
+            return 0;
+        } catch (Exception ex) {
+            LogControl.logInfo("核对ETC卡有效时间时出现异常，启用时间:" + cpuCard.getStartDate() + " 到期时间:" + cpuCard.getEndDate());
+        }
+        return 0;
+    }
+
+    /**
+     * 判断ETC卡状态（出口时，只接受入口的ETC卡）
+     *
+     * @param lane 当前车道
+     * @param card ETC通行卡
+     * @return 接受true 不接受false
+     */
+    public boolean checkETCCardStatus(Lane lane, CpuCard card) {
+        if (lane.isEntry()) {//MTC入口不需要判断ETC通行卡状态
+            return true;
+        } else if (lane.isExit()) {
+            String laneStatus = card.getLaneStatus();
+            if ("01".equals(laneStatus)) {//封闭式MTC入口
+                return true;
+            } else if ("03".equals(laneStatus)) {//封闭式ETC入口
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 判断ETC卡状态（出口时，只接受入口的ETC卡）
+     *
+     * @param lane 当前车道
+     * @param card ETC通行卡
+     * @return 接受true 不接受false
+     */
+    public boolean checkETCCardStatus1(Lane lane, CpuCard card) {
+        if (lane.isEntry()) {//MTC入口不需要判断ETC通行卡状态
+            return true;
+        } else if (lane.isExit()) {
+            String laneStatus = card.getLaneStatus();
+            if ("01".equals(laneStatus)) {//封闭式MTC入口
+                return true;
+            } else if ("03".equals(laneStatus)) {//封闭式ETC入口
+                return true;
+            } else if ("02".equals(laneStatus)) {//封闭式MTC出口
+                return check0019(card);
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 关闭ETC卡读写器
+     */
+    public void closeCpuCardReader() {
+
+        if (ccReader != null) {
+            ccReader.closeReader();
+        }
+    }
+
+    /**
+     * 检验0019信息,若当前卡片内记录的0019文件与临时文件中记录的0019文件相对应，替换当前卡片内的0019文件并且重新解析0019文件
+     *
+     * @param card 当前ETC卡
+     * @return true正常 false异常
+     */
+    private boolean check0019(CpuCard card) {
+        boolean flag;
+        TempControl tempSvc = TempControl.getSingleInstance();
+        String str = tempSvc.parseTempEtcInfo();//获取ETC临时信息
+        if (str == null) {//临时ETC信息为空
+            flag = false;
+        } else {
+            String[] buffer = str.split("\t");
+            if (buffer.length != 2) {//临时ETC信息格式错误
+                flag = false;
+            } else {
+                String info0019 = buffer[1];//获取所需验证的0019信息
+                flag = info0019.equalsIgnoreCase(card.getInfo19());//与当前卡片的0019信息比对
+                if (flag) {
+                    LogControl.logInfo("0019文件比对一致，将当前的0019文件" + info0019 + "替换为0019文件" + buffer[0]);
+                    card.setInfo19(buffer[0]);
+                    ParseUtil.pare19(card);
+                    LogControl.logInfo("重新解析0019文件后获取ETC卡信息" + card);
+                }
+            }
+        }
+        return flag;
+    }
+
+}

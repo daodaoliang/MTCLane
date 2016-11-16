@@ -1,0 +1,673 @@
+/**
+ *
+ */
+package com.hgits.util.rate;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.Vector;
+
+import org.apache.log4j.xml.DOMConfigurator;
+
+import com.hgits.service.constant.DateConstant;
+import com.hgits.util.DateUtils;
+import com.hgits.util.MyPropertiesUtils;
+import com.hgits.util.StringUtils;
+import com.hgits.vo.BridgeExtraChargeStd;
+import com.hgits.vo.Constant;
+import com.hgits.vo.DiscountInfo;
+import com.hgits.vo.EncryptionKey;
+import com.hgits.vo.Issuer;
+import com.hgits.vo.LaneParam;
+import com.hgits.vo.Operator;
+import com.hgits.vo.Price;
+import com.hgits.vo.Road;
+import com.hgits.vo.RoadChargeStd;
+import com.hgits.vo.Station;
+import com.hgits.vo.TravelTime;
+import com.hgits.vo.UserRate;
+import com.hgits.vo.VehPlateBWG;
+import com.hgits.vo.Version;
+import com.hgits.vo.XTCardBlackBaseListByte;
+import com.hgits.vo.XTCardBlackDeltaList;
+import com.hgits.vo.XTCardBlackDeltaListByte;
+import com.hgits.vo.XTCardBlackList;
+
+/**
+ * 缓存信息查询
+ *
+ * @author wh
+ *
+ */
+public class ParamCacheQuery {
+
+    /**
+     * 根据员工号获取员工密码 根据员工号获取员工姓名 根据员工号获取员工权限 根据路段号，收费站号获取收费站中文名称
+     * 根据路段号，收费站号获取收费站服务器IP 根据入口路段号，入口收费站号， 出口路段号，出口收费站号获取行驶距离（最低费额）
+     * 根据入口路段号，入口收费站号， 出口路段号，出口收费站号获取最大行驶时间 根据车牌号码获取黑白灰名单情况
+     * 根据ETC卡卡号获取ETC卡黑名单情况及其原因 根据ETC卡用户类型获取折扣率 获取ETC卡发行方及其有效日期
+     */
+    /**
+     * 根据工号获取操作员信息
+     *
+     * @param operatorNo 工号
+     * @return
+     */
+    public static Operator queryOperator(String operatorNo) {
+        Operator operator = null;
+        Vector<Operator> operators = ParamCache.getOperatorMap();
+        for (Operator entry : operators) {
+            if (entry.getOperatorNo().equalsIgnoreCase(operatorNo)) {
+                operator = entry;
+                break;
+            }
+        }
+        return operator;
+    }
+
+    /**
+     * 根据路段号，收费站号获取收费站信息
+     *
+     * @param roadId 路段号
+     * @param stationId 收费站号
+     * @return
+     */
+    public static Station queryStation(Integer roadId, Integer stationId) {
+        Station station = null;
+        Vector<Station> stations = ParamCache.getStationMap();
+        for (Station entry : stations) {
+            if ((entry.getStationId().equals(stationId))
+                    && (entry.getRoadId().equals(roadId))) {
+                station = entry;
+                break;
+            }
+        }
+        return station;
+    }
+
+    /**
+     * 根据入口路段号，入口收费站号， 出口路段号，出口收费站号获取行程时间信息
+     *
+     * @param enRoadId 入口路段
+     * @param enStationId 入口站
+     * @param exRoadId 出口路段
+     * @param exStationId 出口占
+     * @return
+     */
+    public static TravelTime queryTravelTime(Integer enRoadId,
+            Integer enStationId, Integer exRoadId, Integer exStationId) {
+        TravelTime travelTime = null;
+        List<TravelTime> travelTimes = ParamCache.getTravelTimes();
+        for (TravelTime entry : travelTimes) {
+            if ((entry.getEnRoadId().equals(enRoadId))
+                    && (entry.getEnStationId().equals(enStationId))
+                    && (entry.getExRoadId().equals(exRoadId))
+                    && (entry.getExStationId().equals(exStationId))) {
+                travelTime = entry;
+                break;
+            }
+        }
+        return travelTime;
+    }
+
+    /**
+     * 根据车牌号码获取黑白灰名单情况
+     *
+     * @param vehPlateNo 车牌号码
+     * @return
+     */
+    public static VehPlateBWG queryBWG(String vehPlateNo) {
+        VehPlateBWG vehPlateBWG = null;
+        Vector<VehPlateBWG> bwgs = ParamCache.getBwgListMap();
+        for (VehPlateBWG entry : bwgs) {
+            if (entry.getVehPlateNo().equalsIgnoreCase(vehPlateNo)) {
+                vehPlateBWG = entry;
+                break;
+            }
+        }
+        return vehPlateBWG;
+    }
+
+    /**
+     * 根据ETC卡卡号获取ETC卡黑名单情况
+     *
+     * @param xtCardNo ETC卡卡号
+     * @return
+     */
+    public static XTCardBlackList queryXTCardBlackList(String xtCardNo) {
+        XTCardBlackList xtCardBlackList = null;
+        XTCardBlackDeltaList xtCardBlackDeltaList = null;
+		// Map<String, List<byte[]>> xtCardBlacks = ParamCache
+        // .getXtCardBlackListMap(); // 全量表
+        boolean isFullExists = false;
+        byte[] searchXTCardNoByte = xtCardNo.getBytes();
+
+        if (XTCardBlackBaseListByte.getBuffer1() != null) {
+            xtCardBlackDeltaList = check(XTCardBlackBaseListByte.getBuffer1(),
+                    searchXTCardNoByte, true);
+        }
+
+        if (xtCardBlackDeltaList == null) {
+            if (XTCardBlackBaseListByte.getBuffer2() != null) {
+                xtCardBlackDeltaList = check(XTCardBlackBaseListByte.getBuffer2(),
+                        searchXTCardNoByte, true);
+            }
+        }
+        if (xtCardBlackDeltaList == null) {
+            if (XTCardBlackBaseListByte.getBuffer3() != null) {
+                xtCardBlackDeltaList = check(XTCardBlackBaseListByte.getBuffer3(),
+                        searchXTCardNoByte, true);
+            }
+        }
+        if (xtCardBlackDeltaList == null) {
+            if (XTCardBlackBaseListByte.getBuffer4() != null) {
+                xtCardBlackDeltaList = check(XTCardBlackBaseListByte.getBuffer4(),
+                        searchXTCardNoByte, true);
+            }
+        }
+        if (xtCardBlackDeltaList == null) {
+            if (XTCardBlackBaseListByte.getBuffer5() != null) {
+                xtCardBlackDeltaList = check(XTCardBlackBaseListByte.getBuffer5(),
+                        searchXTCardNoByte, true);
+            }
+        }
+        if (xtCardBlackDeltaList == null) {
+            if (XTCardBlackBaseListByte.getBuffer6() != null) {
+                xtCardBlackDeltaList = check(XTCardBlackBaseListByte.getBuffer6(),
+                        searchXTCardNoByte, true);
+            }
+        }
+        if (xtCardBlackDeltaList != null) { // 在全量表查到该条记录了
+            XTCardBlackDeltaList temp = queryXTCardBlackDeltaList(xtCardNo); // 去增量表查找到该条记录
+            if (temp == null) {
+                // 没有在增量表中查找到数据
+                xtCardBlackList = xtCardBlackDeltaList;
+
+            } else {
+                // 在增量表中查询到了该条记录，则需要比较一下黑名单增量表的有效标识
+                if (temp.getValidFlag() == 1) {// 表示黑名单已经失效了
+                    xtCardBlackList = null;
+                } else {
+                    xtCardBlackList = xtCardBlackDeltaList;
+                }
+            }
+            isFullExists = true; // 在全表中查询过黑名单了
+        }
+
+        if (!isFullExists) { // 在全量表中没有查询到，需要到增量表中去查询
+            xtCardBlackDeltaList = queryXTCardBlackDeltaList(xtCardNo);
+            if (xtCardBlackDeltaList != null) {
+                if (xtCardBlackDeltaList.getValidFlag() == 0) { // 表示黑名单还在有效
+                    xtCardBlackList = xtCardBlackDeltaList;
+                }
+            }
+        }
+
+        return xtCardBlackList;
+    }
+
+    /**
+     * 检测buffer1是否包含buffer2
+     *
+     * @param buffer
+     * @param searchXTCardNo 查找的ETC卡卡号
+     * @param isAll 是否为全量表
+     * @return
+     */
+    public static XTCardBlackDeltaList check(byte[] buffer,
+            byte[] searchXTCardNo, boolean isAll) {
+        XTCardBlackDeltaList xtCardBlackDeltaList = null;
+        byte[] cardBuffer = new byte[20]; // ETC卡卡号长度
+        if (isAll) { // 全量表查找
+            int length = XTCardBlackBaseListByte.lineLength;
+            byte[] record = new byte[length]; // ETC卡黑名单记录长度
+            int size = XTCardBlackBaseListByte.bufferSize;
+            for (int i = 0; i < size;) {
+                System.arraycopy(buffer, i, cardBuffer, 0, 20);
+                System.arraycopy(buffer, i, record, 0, length);
+				// if(Arrays.hashCode(record) == 443611423){ //没有数据了
+                // break;
+                // }
+                if (Arrays.equals(cardBuffer, searchXTCardNo)) {
+                    xtCardBlackDeltaList = new XTCardBlackDeltaList();
+                    xtCardBlackDeltaList.setXtCardNo(new String(Arrays
+                            .copyOfRange(record, 0, 20)));// 卡号
+                    xtCardBlackDeltaList.setXtCardType(Integer
+                            .valueOf(new String(Arrays.copyOfRange(record, 20,
+                                                    22))));// 卡类型
+                    xtCardBlackDeltaList.setStatus(Integer.valueOf(new String(
+                            Arrays.copyOfRange(record, 22, 23))));// 卡状态
+                    xtCardBlackDeltaList.setGenCau(Integer.valueOf(new String(
+                            Arrays.copyOfRange(record, 23, 24))));// 生成原因
+                    xtCardBlackDeltaList.setGenTime(DateUtils.parseDate(
+                            new String(Arrays.copyOfRange(record, 24, 38)),
+                            DateConstant.DATE_FORMAT_YYYYMMDDHHMMSS));// 生成日期
+                    xtCardBlackDeltaList.setVersion(Integer.valueOf(new String(
+                            Arrays.copyOfRange(record, 38, 41))));// 版本号
+                    xtCardBlackDeltaList.setStartTime(DateUtils.parseDate(
+                            new String(Arrays.copyOfRange(record, 41, 55)),
+                            DateConstant.DATE_FORMAT_YYYYMMDDHHMMSS));// 启用时间
+                    break;
+                } else {
+                    i += length;
+                }
+            }
+        } else { // 增量表查找
+            int length = XTCardBlackDeltaListByte.lineLenght;
+            byte[] record = new byte[length]; // ETC卡黑名单记录长度
+            int size = XTCardBlackDeltaListByte.bufferSize;
+            for (int i = 0; i < size;) {
+                System.arraycopy(buffer, i, cardBuffer, 0, 20);
+                System.arraycopy(buffer, i, record, 0, length);
+                if (Arrays.equals(cardBuffer, searchXTCardNo)) {
+                    xtCardBlackDeltaList = new XTCardBlackDeltaList();
+                    xtCardBlackDeltaList.setXtCardNo(new String(Arrays
+                            .copyOfRange(record, 0, 20)));// 卡号
+                    xtCardBlackDeltaList.setXtCardType(Integer
+                            .valueOf(new String(Arrays.copyOfRange(record, 20,
+                                                    22))));// 卡类型
+                    xtCardBlackDeltaList.setStatus(Integer.valueOf(new String(
+                            Arrays.copyOfRange(record, 22, 23))));// 卡状态
+                    xtCardBlackDeltaList.setGenCau(Integer.valueOf(new String(
+                            Arrays.copyOfRange(record, 23, 24))));// 生成原因
+                    xtCardBlackDeltaList.setGenTime(DateUtils.parseDate(
+                            new String(Arrays.copyOfRange(record, 24, 38)),
+                            DateConstant.DATE_FORMAT_YYYYMMDDHHMMSS));// 生成日期
+                    xtCardBlackDeltaList.setValidFlag(Integer
+                            .valueOf(new String(Arrays.copyOfRange(record, 38,
+                                                    39))));// 有效标识
+                    xtCardBlackDeltaList.setVersion(Integer.valueOf(new String(
+                            Arrays.copyOfRange(record, 39, 42))));// 版本号
+                    xtCardBlackDeltaList.setStartTime(DateUtils.parseDate(
+                            new String(Arrays.copyOfRange(record, 42, 56)),
+                            DateConstant.DATE_FORMAT_YYYYMMDDHHMMSS));// 启用时间
+                    break;
+                } else {
+                    i += length;
+                }
+            }
+        }
+        return xtCardBlackDeltaList;
+    }
+
+    /**
+     * 根据ETC卡卡号在黑名单增量表中查找增量黑名单情况
+     *
+     * @param xtCardNo ETC卡卡号
+     * @return
+     */
+    private static XTCardBlackDeltaList queryXTCardBlackDeltaList(
+            String xtCardNo) {
+        byte[] searchXTCardNoByte = xtCardNo.getBytes();
+
+        XTCardBlackDeltaList xtCardBlackDeltaList = null;
+
+        if (XTCardBlackDeltaListByte.getBuffer1() != null) {
+            xtCardBlackDeltaList = check(XTCardBlackDeltaListByte.getBuffer1(),
+                    searchXTCardNoByte, false);
+        }
+        if (xtCardBlackDeltaList == null) {
+            if (XTCardBlackDeltaListByte.getBuffer2() != null) {
+                xtCardBlackDeltaList = check(
+                        XTCardBlackDeltaListByte.getBuffer2(),
+                        searchXTCardNoByte, false);
+            }
+        }
+        if (xtCardBlackDeltaList == null) {
+            if (XTCardBlackDeltaListByte.getBuffer3() != null) {
+                xtCardBlackDeltaList = check(
+                        XTCardBlackDeltaListByte.getBuffer3(),
+                        searchXTCardNoByte, false);
+            }
+        }
+        if (xtCardBlackDeltaList == null) {
+            if (XTCardBlackDeltaListByte.getBuffer4() != null) {
+                xtCardBlackDeltaList = check(
+                        XTCardBlackDeltaListByte.getBuffer4(),
+                        searchXTCardNoByte, false);
+            }
+        }
+        if (xtCardBlackDeltaList == null) {
+            if (XTCardBlackDeltaListByte.getBuffer5() != null) {
+                xtCardBlackDeltaList = check(
+                        XTCardBlackDeltaListByte.getBuffer5(),
+                        searchXTCardNoByte, false);
+            }
+        }
+        if (xtCardBlackDeltaList == null) {
+            if (XTCardBlackDeltaListByte.getBuffer6() != null) {
+                xtCardBlackDeltaList = check(
+                        XTCardBlackDeltaListByte.getBuffer6(),
+                        searchXTCardNoByte, false);
+            }
+        }
+
+        return xtCardBlackDeltaList;
+    }
+
+    /**
+     * 根据ETC卡用户类型获取折扣率
+     *
+     * @param vehType 车型
+     *
+     * @param userType 用户类型
+     * @return
+     */
+    public static List<UserRate> querUserRate(Integer vehType, Integer userType) {
+        Vector<UserRate> users = new Vector<UserRate>();
+        Vector<UserRate> userRates = ParamCache.getUserRateMap();
+        for (UserRate entry : userRates) {
+            if (entry.getVehType().equals(vehType)) {
+                if (entry.getUserType().equals(userType)) {
+                    users.add(entry);
+                }
+            }
+        }
+        return users;
+    }
+
+//    /**
+//     * 获取ETC卡发行方及其有效日期
+//     *
+//     * @param issuer 发行方
+//     * @param type 发行方位数类型 1，表示8位，2表示16位
+//     * @return
+//     */
+//    public static PassCardIssuer queryPassCardIssuer(String issuer, int type) {
+//        PassCardIssuer passCardIssuer = null;
+//        Vector<PassCardIssuer> passCardIssuers = ParamCache
+//                .getPassCardIssuerMap();
+//
+//        switch (type) {
+//            case 1: // 8位数发行方校验
+//                for (PassCardIssuer entry : passCardIssuers) {
+//                    if (entry.getIssuer().substring(0, 8)
+//                            .equalsIgnoreCase(issuer)) {
+//                        passCardIssuer = entry;
+//                        break;
+//                    }
+//                }
+//                break;
+//            case 2: // 16位数发行方校验
+//                for (PassCardIssuer entry : passCardIssuers) {
+//                    if (entry.getIssuer().equalsIgnoreCase(issuer)) {
+//                        passCardIssuer = entry;
+//                        break;
+//                    }
+//                }
+//                break;
+//            default:
+//                break;
+//        }
+//
+//        return passCardIssuer;
+//    }
+
+    /**
+     * 获取发行方及其有效日期
+     *
+     * @param provinceBCDName 省份名称国标编码
+     * @return
+     */
+    public static Issuer queryIssuer(String provinceBCDName) {
+        Issuer issuer = null;
+        Vector<Issuer> issuers = ParamCache.getIssuerMap();
+
+        for (Issuer entry : issuers) {
+            if (entry.getProvinceBcdName().equalsIgnoreCase(provinceBCDName)) {
+                issuer = entry;
+                break;
+            }
+        }
+
+        return issuer;
+    }
+
+    /**
+     * 获取发行方及其有效日期
+     *
+     * @param provinceBCDName 省份名称国标编码
+     * @param netNo 卡片网络编号
+     * @return
+     */
+    public static Issuer queryIssuer(String provinceBCDName, int netNo) {
+        Issuer issuer = null;
+        Vector<Issuer> issuers = ParamCache.getIssuerMap();
+
+        for (Issuer entry : issuers) {
+            if (entry.getProvinceBcdName().equalsIgnoreCase(provinceBCDName) && entry.getNetNo() == netNo) {
+                issuer = entry;
+                break;
+            }
+        }
+        return issuer;
+    }
+
+    /**
+     * 根据车型获取车型路由版本号
+     *
+     * @param vehType 车型
+     * @return
+     */
+    public static Integer queryVehRouteVersion(int vehType) {
+        Integer version = null;
+        Map<Integer, Vector<Price>> priceMap = ParamCache.getValidPriceMap();
+        Vector<Price> prices = priceMap.get(vehType);
+        if (prices != null && !prices.isEmpty()) {
+            version = prices.get(0).getVersion();
+        }
+        return version;
+    }
+
+    /**
+     * 根据路段号和收费站号，确定路段唯一编码
+     *
+     * @param roadId 路段号
+     * @param stationId 收费站号
+     * @return
+     */
+    public static Integer queryRoadUniqueId(Integer roadId, Integer stationId) {
+        Integer roadUniqueId = null;
+        Vector<Station> stations = ParamCache.getStationMap();
+        for (Station station : stations) {
+            if (station.getRoadId().equals(roadId)
+                    && station.getStationId().equals(stationId)) {
+                roadUniqueId = station.getRoaduniqueId();
+                break;
+            }
+        }
+        return roadUniqueId;
+    }
+
+    /**
+     * 根据路段名称，确定路段唯一编码
+     *
+     * @param roadName 路段名称
+     * @return
+     */
+    public static Integer queryRoadUniqueId(String roadName) {
+        Integer roadUniqueId = null;
+        Vector<RoadChargeStd> rcs = ParamCache.getRoadChargeStdMap();
+        if(StringUtils.isNotEmpty(roadName)){
+        	roadName = roadName.trim();
+        	for (RoadChargeStd roadChargeStd : rcs) {
+                if (roadChargeStd.getRoadName().equals(roadName)) {
+                    roadUniqueId = roadChargeStd.getRoadUniqueId();
+                    break;
+                }
+            }
+        }
+        
+        return roadUniqueId;
+    }
+
+    /**
+     * 根据车道编码查询车道信息
+     *
+     * @param laneNo 车道编码
+     * @param stationId 站编码
+     * @param roadId 车道编码
+     * @return
+     */
+    public static LaneParam queryLane(String laneNo, Integer stationId,
+            Integer roadId) {
+        LaneParam l = null;
+        Vector<LaneParam> lanes = ParamCache.getLaneMap();
+        for (LaneParam lane : lanes) {
+            if (laneNo.equalsIgnoreCase(lane.getLaneNo())) {
+                if (lane.getStationId().equals(stationId)) {
+                    if (lane.getRoadId().equals(roadId)) {
+                        l = lane;
+                        break;
+                    }
+                }
+            }
+        }
+        return l;
+    }
+
+    /**
+     * 查询当前启用的费率版本号
+     *
+     * @return
+     */
+    public static String queryFareVer() {
+        String versionString = "0";
+        versionString = ParamCache.getFareVersion();
+        return versionString;
+    }
+
+    /**
+     * 根据桥隧名称，确定桥隧唯一编码
+     *
+     * @param bridgeOrTunnelName 桥隧名称
+     * @return
+     */
+    public static Integer queryBridgeOrTunnelId(String bridgeOrTunnelName) {
+        Integer bridgeId = null;
+        Vector<BridgeExtraChargeStd> bridgeTunnels = ParamCache.getBridgeExtraChargeStdMap();
+        for (BridgeExtraChargeStd bridgeExtraChargeStd : bridgeTunnels) {
+            if (bridgeExtraChargeStd.getBridgeName().indexOf(bridgeOrTunnelName) != -1) {
+                bridgeId = bridgeExtraChargeStd.getBridgeId();
+                break;
+            }
+        }
+        return bridgeId;
+    }
+    
+    /**
+     * 获取参数版本信息
+     *
+     * @return
+     */
+    public static Map<String, Version> queryParamVersion() {
+        return ParamCache.getDisplayVersionMap();
+    }
+    
+    /**
+     * 是否到达优惠时段
+     * @param vehType 车型
+     * @return true 属于优惠时段，false不属于优惠时段
+     */
+    public static boolean queryDiscountInfo(Integer vehType){
+    	boolean isDiscount = false;
+    	Date now = Calendar.getInstance().getTime();
+    	Vector<DiscountInfo> discountInfos = ParamCache.getDiscountInfos();
+    	for (DiscountInfo discountInfo : discountInfos) {
+			if(discountInfo.getDisType().equals(vehType)){
+				if(now.after(discountInfo.getStartDate())){
+					if(now.before(discountInfo.getEndDate())){
+						isDiscount = true;
+						break;
+					}
+				}
+			}
+		}
+    	return isDiscount;
+    }
+    
+    /**
+     * 获取密钥信息
+     * @return
+     */
+    public static Vector<EncryptionKey> queryEncryptionKey(){
+    	return ParamCache.getEncryptionKeys();
+    }
+
+    public static void main(String[] args) {
+		try {
+			DOMConfigurator
+					.configure("resource" + File.separator + "log4j.xml");
+
+			List<String> list = new ArrayList<String>();
+			list.add(Constant.PROP_MTCCONFIG);
+			list.add(Constant.PROP_MTCLANE);
+			list.add(Constant.PROP_MTCLANE_COMM);
+			list.add(Constant.PROP_MTCLANE_CONSTANT);
+			list.add(Constant.PROP_MTCLANE_ETC);
+			list.add(Constant.PROP_MTCLANE_FUNCTION);
+			list.add(Constant.PROP_MTCLANE_LPR);
+			list.add(Constant.PROP_MTCLANE_RTP);
+			list.add(Constant.PROP_MTCLANE_SERVER);
+			list.add(Constant.PROP_MTCLANE_TEST);
+			list.add(Constant.PROP_SOCKET);
+			MyPropertiesUtils.loadProperties(list);
+
+			ParamCacheFileRead pcfru = ParamCacheFileRead.getInstance();
+			pcfru.initData();
+
+			// System.out.println("版本信息:"+ParamCacheQuery.queryParamVersion());
+			// System.out.println("----------------------结束--------------------------");
+			// XTCardBlackList xTCardBlackList =
+			// ParamCacheQuery.queryXTCardBlackList("43010000000000499999");
+			// System.out.println(xTCardBlackList);
+			boolean isDiscount = ParamCacheQuery.queryDiscountInfo(1);
+//			System.out.println(isDiscount);
+
+			// Map<String, Vector<Version>> versions =
+			// ParamCache.getCurrentVersionMap();
+			//
+			// for (Entry<String, Vector<Version>> entry : versions.entrySet())
+			// {
+			// System.out.println(entry.getKey());
+			// for (Version v : entry.getValue()) {
+			// System.out
+			// .println(v.getVersion() + "\t" + v.getStartDate());
+			// }
+			// }
+			//
+			// String fareVersion = ParamCacheQuery.queryFareVer();
+			// System.out.println("当前启用费率版本号为：" + fareVersion);
+			// String queryRoadName = "长株";
+			// Integer roadUniqueId = queryRoadUniqueId(queryRoadName);
+			// System.out.println(queryRoadName+"的路段唯一编码为："+roadUniqueId);
+			//
+			// String bridgeName = "雪峰山隧道点";
+			// Integer bridgeId = queryBridgeOrTunnelId(bridgeName);
+			// System.out.println(bridgeName+"的桥隧唯一编码为："+bridgeId);
+		} catch (Exception e) {
+            e.printStackTrace();
+        }
+		// System.out
+        // .println(queryOperator("0000181200000000").getAuthorizeStationSerial());;
+        // String string = "0000181200000000";
+        // System.out.println(string.substring(0, 8));
+
+		// try {
+        // Date date = new Date();
+        // String s = "20140401123059156";
+        // SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmssSSS");
+        // Date setDate = sdf.parse(s);
+        // if (date.after(setDate) && setDate.before(date)) {
+        // System.out.println("符合条件");
+        // }
+        // } catch (ParseException e) {
+        // e.printStackTrace();
+        // }
+    }
+}

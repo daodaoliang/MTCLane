@@ -1,0 +1,321 @@
+package com.hgits.util.hardware;
+
+import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
+
+import com.hgits.control.LogControl;
+import com.hgits.util.StringUtils;
+
+/**
+ * 硬件配置通用帮助类
+ * @author zengzb
+ *
+ */
+public class HardwareHelper {
+	//设备类型列表
+	public final static String TFI = "TFI";//费显
+	public final static String CICM = "CICM";//卡机
+	public final static String CXP = "CXP";//卡机
+	public final static String Keyboard = "Keyboard";//收费键盘
+	public final static String IcReaderWriter = "IcReaderWriter";//M1读卡器
+	public final static String Printer = "Printer";//打印机
+	public final static String WeighSystem = "WeighSystem";//计重设备
+	public final static String LprService = "LprService";//车牌识别设备
+	public final static String CpuCardReader = "CpuCardReader";//ETC读卡器
+	public final static String VideoInstruction = "VideoInstruction";//视频卡
+	public final static String Video = "Video";//视频
+	
+	public final static Map<String,String> laneDeviceConfigMap = new HashMap<String,String>();
+	static{
+		/************************************************/
+		//配置车道设备编号与硬件版本号的对应关系，增加硬件版本需在此增加相应的配置
+		/************************************************/		
+		//TFI
+		laneDeviceConfigMap.put("01", "GeaTFI");
+		laneDeviceConfigMap.put("02", "AnFangTFI");
+		
+		//CICM
+		laneDeviceConfigMap.put("11", "GeaCICM");
+		laneDeviceConfigMap.put("12", "XasCICM");//西埃斯人工模拟自助发卡机
+		
+		//CXP
+		laneDeviceConfigMap.put("21", "GeaCXP");//gea长指令协议
+		laneDeviceConfigMap.put("22", "YhIOCTRL");//研化IO控制卡
+		laneDeviceConfigMap.put("23", "YiFengCXP");//gea协议且兼容意丰汇智cxp板
+		laneDeviceConfigMap.put("24", "Gea2CXP");//gea短指令协议
+		
+		//Keyboard
+		laneDeviceConfigMap.put("31", "GeaKeyboard");
+		
+		//IcReaderWriter
+		laneDeviceConfigMap.put("41", "GeaIcReaderWriter");
+        laneDeviceConfigMap.put("42", "Mifare014");
+		
+		//Printer
+		laneDeviceConfigMap.put("51", "GeaPrinter");
+		
+		//WeighSystem
+		laneDeviceConfigMap.put("61", "GeaWeighSystem");
+		
+		//LprService
+		laneDeviceConfigMap.put("71", "GeaLprService");
+		
+		//CpuCardReader
+		laneDeviceConfigMap.put("81", "GeaCpuCardReader");
+		laneDeviceConfigMap.put("82", "MyCpuCardReader");
+		//VideoInstruction
+		laneDeviceConfigMap.put("91", "GeaVideoInstruction");
+		//VideoInstruction
+		laneDeviceConfigMap.put("101", "GeaVideo");
+		laneDeviceConfigMap.put("102", "Vc400Video");
+	}
+	
+	//节点属性名称
+	public final static String CLASS_NAME = "className";
+	public final static String VERSION = "version";
+	public final static String NODE_NAME = "nodeName";
+	
+	//用于保存配置文件解析后的配置项列表
+	private static Map<String,ArrayList<HashMap<String,String>>> configMap = 
+				new HashMap<String,ArrayList<HashMap<String,String>>>();
+	
+	public HardwareHelper(){
+		init();
+	}
+	
+	/**
+	 * 初始化配置文件
+	 */
+	private void init(){
+		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+		try {
+			DocumentBuilder builder = dbf.newDocumentBuilder();
+			
+			Document document = null;
+			try {
+				document = builder.parse(new File("resource/hardware/hardware.xml"));
+			} catch (SAXException | IOException ex1) {
+				LogControl.logInfo("异常", ex1);
+				ex1.printStackTrace();
+			}
+			Element rootElement = document.getDocumentElement();
+			NodeList nodeList = rootElement.getChildNodes();
+			for(int n = 0; n < nodeList.getLength(); n++){
+				Node node = nodeList.item(n);
+				
+				//只输出节点类型为实际节点的记录
+				if(node.getNodeType() == Node.ELEMENT_NODE){
+					//获取当前节点的名称
+					String elementName = nodeList.item(n).getNodeName();
+					
+					//构造一个配置项的map对象
+					
+
+					//根据节点名称获取相应的子节点
+					NodeList subNodeList = node.getChildNodes();
+					
+					//遍历子节点列表，并取得子节点的所有配置项
+					ArrayList<HashMap<String,String>> configItemList = new ArrayList<HashMap<String,String>>();
+					for(int s = 0 ; s < subNodeList.getLength(); s++){
+						Node subNode = subNodeList.item(s);
+						if(subNode.getNodeType() == Node.ELEMENT_NODE){
+							HashMap<String,String> attrMap = new HashMap<String,String>();
+							//attrMap.put("nodeName", subNode.getNodeName());
+							attrMap.put("version", subNode.getAttributes().getNamedItem("version").getNodeValue());
+							attrMap.put("className", subNode.getAttributes().getNamedItem("className").getNodeValue());
+							//System.out.println("sub:"+subNode.getNodeName());
+							//System.out.println("version="+subNode.getAttributes().getNamedItem("version").getNodeValue());
+							//System.out.println("className="+subNode.getAttributes().getNamedItem("className").getNodeValue());
+							configItemList.add(attrMap);
+						}
+					}
+					configMap.put(elementName, configItemList);
+				}
+				
+			}
+		} catch (ParserConfigurationException ex2) {
+			LogControl.logInfo("异常", ex2);
+			ex2.printStackTrace();
+		}		
+	}
+	
+	/**
+	 * 根据设备类型获取已配置的所有参数
+	 * @param elementName
+	 * @return
+	 */
+	public List<HashMap<String,String>> getConfigItems(String elementName){
+		return configMap.get(elementName) == null ? null : configMap.get(elementName);
+	}
+	
+	/**
+	 * 获取某一项配置的className参数
+	 * @param elementName
+	 * @param version
+	 * @return
+	 */
+	public String getConfigItemClass(String elementName,String version){
+		if(StringUtils.isBlank(elementName) || StringUtils.isBlank(version)){
+			return null;
+		}
+		
+		
+		List<HashMap<String,String>> list = getConfigItems(elementName);
+		for(HashMap<String,String> map : list){
+			if(version.equals(map.get("version"))){
+				return map.get(this.CLASS_NAME);
+			}
+		}
+		return null;	
+	}
+	
+	/**
+	 * 获取某一项配置的所有参数项集合
+	 * @param elementName
+	 * @param version
+	 * @return
+	 */
+	public Map<String,String> getConfigItem(String elementName,String version){
+		if(StringUtils.isBlank(elementName) || StringUtils.isBlank(version)){
+			return null;
+		}
+		
+		
+		List<HashMap<String,String>> list = getConfigItems(elementName);
+		for(HashMap<String,String> map : list){
+			if(version.equals(map.get("version"))){
+				return map;
+			}
+		}
+		return null;	
+	}
+	
+    /**
+     * 根据指定的方法实例化相应的对象
+     * @param helper
+     * @throws Exception
+     */
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    public static <T> T initHardware(Class<T> objClazz,HardwareHelper helper,String methodeName) throws Exception{
+    	//LogControl.logInfo("设备类型编码>>>>>>>>>>> "+objClazz.getSimpleName());
+    	
+		//根据类型从配置文件中获取对应的设备编码
+    	String deviceNo = LaneConfigUtils.getProperty(objClazz.getSimpleName());
+    	//LogControl.logInfo("获取配置的设备编号为>>>>>>>>>>"+deviceNo);
+    	
+    	//根据设备编码获取对应设备版本号
+    	String version = HardwareHelper.laneDeviceConfigMap.get(deviceNo);
+    	
+    	//根据设备类型及设备版本号获取对应的设备实现类路径
+    	String clazz = helper.getConfigItemClass(objClazz.getSimpleName(),version);
+    	
+    	T t =  null;
+    	if(StringUtils.isNotBlank(clazz)){
+	        Class clz = Class.forName(clazz);
+	        Method m = clz.getDeclaredMethod(methodeName,null);
+	       
+	        Object obj = null;
+	        Constructor[] constructs = clz.getDeclaredConstructors();
+	        for(Constructor c : constructs){
+	        	c.setAccessible(true);
+	        	obj = c.newInstance();
+	        }
+	        t = (T)m.invoke(obj,null);//实例化接口实现类的对象
+    	}else{
+    		LogControl.logInfo("设备初始化失败", new Exception("根据设备版本号["+version+"]获取对应的类路径失败!"));
+    	}
+        return t;
+    }
+
+    /**
+     * 根据带有参数的构造函数实例化相应的对象
+     * @param helper
+     * @throws Exception
+     */
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    public static <T> T initHardware(Class<T> objClazz,HardwareHelper helper,Class[] types,Object[] params) throws Exception{
+    	LogControl.logInfo("设备类型编码>>>>>>>>>>> "+objClazz.getSimpleName());
+    	
+		//根据类型从配置文件中获取对应的设备编码
+    	String deviceNo = LaneConfigUtils.getProperty(objClazz.getSimpleName());
+    	LogControl.logInfo("获取配置的设备编号为>>>>>>>>>>"+deviceNo);
+    	
+    	//根据设备编码获取对应设备版本号
+    	String version = HardwareHelper.laneDeviceConfigMap.get(deviceNo);
+    	
+    	//根据设备类型及设备版本号获取对应的设备实现类路径
+    	String clazz = helper.getConfigItemClass(objClazz.getSimpleName(),version);
+    	
+    	T obj = null;
+    	if(StringUtils.isNotBlank(clazz)){
+	        Class clz = Class.forName(clazz);
+	        Constructor constr = clz.getConstructor(types);
+	        obj = (T)constr.newInstance(params);//通过构造函数实例化接口实现类的对象
+    	}else{
+    		LogControl.logInfo("设备初始化失败", new Exception("根据设备版本号["+version+"]获取对应的类路径失败!"));
+    	}    	
+    	return obj;
+    }
+    
+    /**
+     * 通过无参构造函数方式构造相应对象
+     * @param objClazz
+     * @param helper
+     * @return <T> T
+     * @throws Exception
+     */
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    public static <T> T initHardware(Class<T> objClazz,HardwareHelper helper) throws Exception{
+    	LogControl.logInfo("设备类型编码>>>>>>>>>>> "+objClazz.getSimpleName());
+    	
+		//根据类型从配置文件中获取对应的设备编码
+    	String deviceNo = LaneConfigUtils.getProperty(objClazz.getSimpleName());
+    	LogControl.logInfo("获取配置的设备编号为>>>>>>>>>>"+deviceNo);
+    	
+    	//根据设备编码获取对应设备版本号
+    	String version = HardwareHelper.laneDeviceConfigMap.get(deviceNo);
+    	
+    	//根据设备类型及设备版本号获取对应的设备实现类路径
+    	String clazz = helper.getConfigItemClass(objClazz.getSimpleName(),version);
+    	
+    	T obj = null;
+    	if(StringUtils.isNotBlank(clazz)){
+	        Class clz = Class.forName(clazz);
+	        Constructor constr = clz.getConstructor();
+	        obj = (T)constr.newInstance();//通过构造函数实例化接口实现类的对象
+    	}else{
+    		LogControl.logInfo("设备初始化失败", new Exception("根据设备版本号["+version+"]获取对应的类路径失败!"));
+    	}    	
+    	return obj;
+    }
+
+	public static void main(String[] args) {
+		HardwareHelper helper = new HardwareHelper();
+		List<HashMap<String, String>> list = helper.getConfigItems(HardwareHelper.TFI);
+		for (HashMap<String, String> hashMap : list) {
+//			System.out.println("map=== "+hashMap.toString());
+		}
+		
+//		System.out.println("==="+helper.getConfigItem(HardwareHelper.TFI,"MINGHUA10").toString());
+		
+//		System.out.println("==="+helper.getConfigItemClass(HardwareHelper.TFI,"MINGHUA10").toString());
+	}
+	
+	
+}

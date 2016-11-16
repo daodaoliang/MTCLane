@@ -1,0 +1,329 @@
+package com.hgits.tool.driver;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.util.Arrays;
+import java.util.Properties;
+
+import org.apache.log4j.Logger;
+
+import com.hgits.control.LogControl;
+import com.hgits.util.IntegerUtils;
+import com.hgits.util.MyPropertiesUtils;
+import com.hgits.vo.Constant;
+
+/**
+ * 对于车牌识别的接口的方法进行具体的实现，方便更好地使用
+ *
+ * @author lq
+ */
+public class HvLPR {
+
+    private HvInterface hvdll;
+    private int nPort;
+    private String message = "";
+    Logger logger = Logger.getLogger(HvLPR.class.getName());
+    public static String lprDLL = "resource/dll/lpr/signalway/LPR_Signalway.dll";//车牌识别动态链接库名称，默认为信路威
+    public static String lprFile = "resource/HN_CONFIG.ini";//车牌识别动态库配置文件。 注： 川大智胜厂家识别config.ini命名的配置文件
+    private boolean isWiseSoftLPR = false;
+
+    public HvLPR() {
+        File file = new File(Constant.PROP_MTCLANE_LPR);
+        if (file.exists() && file.isFile()) {
+            FileInputStream fis = null;
+            try {
+                Properties prop = new Properties();
+                fis = new FileInputStream(file);
+                prop.load(fis);
+
+                //by zengzb ： 根据LPR.properties文件中useDllKey配置的key进行读取相应的动态库路径
+                String useDllKey = prop.getProperty("useDllKey", "lprDLL");
+                if (null != useDllKey) {
+                    lprDLL = prop.getProperty(useDllKey, lprDLL);
+                    /**
+                     * 判断是否启用了北京川大智胜厂家的车牌识别设备。
+                     * 北京川大智胜的车牌识别设备调用的配置文件与其他厂家的不一致，故作区分。 modify by yili
+                     * 2016/8/9
+                     */
+                    if (lprDLL.contains("WiseSoft_LPR.dll")) {
+                        isWiseSoftLPR = true;
+                        lprFile = "resource/config.ini";
+                    }
+
+                }
+            } catch (Exception ex) {
+                logger.error("加载车牌识别动态库配置文件异常", ex);
+            } finally {
+                try {
+                    if (fis != null) {
+                        fis.close();
+                    }
+                } catch (IOException ex) {
+                    logger.error("关闭流异常", ex);
+                }
+            }
+        }
+
+    }
+
+    /**
+     * 打开通信端口并初始化车牌识别器
+     *
+     * @return 返回的值为Int型的 当返回值〉0时，成功初始化，当〈返回值=0 时，初始化失败（当为-1时有可能是IO异常）
+     */
+    public int initHvLPR() {
+        FileInputStream input = null;
+        try {
+            File file = new File(lprFile);
+            String path = file.getAbsolutePath();
+            /**
+             * 对HN_CONFIG.ini文件和config.ini文件分别进行解析，兼容川大智胜车牌识别设备 modify by yili
+             * 2016/8/9
+             */
+            String port = null;
+            if (!isWiseSoftLPR) {
+                input = new FileInputStream(path);
+                Properties pro = new Properties();
+                pro.load(input);
+                port = (String) pro.propertyNames().nextElement();//厂家配置文件解析
+            } else {
+                String str = new String("相机ID".getBytes("gbk"), "utf-8");
+                port = MyPropertiesUtils.getProperties(lprFile, str, "66");
+            }
+
+            nPort = IntegerUtils.parseString(port);
+            hvdll = HvInterface.INSTANCE;
+            int i = hvdll.LPR_InitPortComm(nPort, path);
+            if (i <= 0) {
+                message = "车牌识别设备通信异常";
+            }
+            return i;
+        } catch (Exception ex) {
+            message = "初始化车牌识别器失败，请检查配置文件是否正确，设备是否连接正常。";
+            logger.error("车牌识别初始化异常", ex);
+            return -1;
+        } finally {
+            if (input != null) {
+                try {
+                    input.close();
+                } catch (IOException ex) {
+                }
+            }
+        }
+
+        /*   
+         * 修改之前的流程。
+         FileInputStream input = null;
+         try {
+         File file = new File(lprFile);
+         String path = file.getAbsolutePath();
+         input = new FileInputStream(path);
+         Properties pro = new Properties();
+         pro.load(input);
+         String port = (String) pro.propertyNames().nextElement();//厂家配置文件解析
+         nPort = IntegerUtils.parseString(port);
+         hvdll = HvInterface.INSTANCE;
+         int i = hvdll.LPR_InitPortComm(nPort, path);
+         if(i<=0){
+         message="车牌识别设备通信异常";
+         }
+         return i;
+         } catch (Exception ex) {
+         message = "初始化车牌识别器失败，请检查配置文件是否正确，设备是否连接正常。";
+         logger.error("车牌识别初始化异常",ex);
+         return -1;
+         } finally {
+         if (input != null) {
+         try {
+         input.close();
+         } catch (IOException ex) {
+         }
+         }
+         }*/
+    }
+
+    /**
+     * 关闭已打开的车牌识别器的通信端口
+     *
+     * @return 返回的值为Int型的 当返回值〉0时，成功关闭，当〈返回值=0 时，关闭失败
+     */
+    public  int closeHvLPR() {
+        if (hvdll == null) {
+            return -1;
+        }
+        int i = hvdll.LPR_ClosePortComm(nPort);
+        if (i < 0 || i == 0) {
+            message = "车牌识别器关闭失败，设备是否连接正常。";
+        } else {
+            message = "";
+        }
+        return i;
+    }
+
+    /**
+     * 在系统完成初始化后或在任一时刻检查识别器是否处于准备工作状态，连接是否正确。
+     *
+     * @return 返回值大于0 车牌识别设备处于准备工作状态且连接正确 返回值=0 车牌识别设备仍处于初始化状态(功能不可用) 返回值〈0
+     * 车牌识别设备不能运行
+     */
+    public  int lprIsReady() {
+        if (hvdll == null) {
+            return -1;
+        }
+        int i = hvdll.LPR_IsReady(nPort);
+        return i;
+    }
+
+    /**
+     * 发送一个触发命令以抓拍一张图像并对其进行处理
+     *
+     * @return 返回值〉0 抓拍成功 ；返回值=0 系统忙碌 ；返回值〈0 其他错误
+     */
+    public int captuerImage() {
+        int i = hvdll.LPR_CaptureImage(nPort);
+        return i;
+    }
+
+    /**
+     * 获取最后一次图像处理结束的时刻
+     *
+     * @return 返回值大于0 获取最后一次图像处理结束的时刻(“time_t”为自1/1/1970 本地时间累计秒数)  返回值=0
+     * 没有执行图像处理, 无捕捉图像  返回值〈0 其它错误
+     */
+    public long getLastTimePlate() {
+        long i = hvdll.LPR_LastTimePlate(nPort);
+        return i;
+    }
+
+    /**
+     * 获取可用的车牌号
+     *
+     * @return 返回值大于0 被识别的字符数  返回值=0 没有进行处理或没有捕捉到图像或车牌照长度为0  返回值〈0 其它错误
+     */
+    public String getPlate() {
+        //因为车牌号一般是1个中文 + 6个字母或数字组成 如湘A12121，一般占16个字节，但是警车车牌后面多了个'警'，所以接收的字节数组长度为20。
+        String str = "";
+        byte[] lprPlateNum = new byte[20];
+        int i = hvdll.LPR_GetPlate(nPort, lprPlateNum, lprPlateNum.length);
+        if (i > 0) {
+            try {
+                str = new String(lprPlateNum, "gbk");
+            } catch (UnsupportedEncodingException ex) {
+                str = "";
+                logger.error("异常", ex);
+            }
+        } else {
+            if (i == 0) {
+//                message = "没有获取到可用的车牌。";
+            } else {
+//                message = "车牌识别器未正常执行指令，连接可能存在异常。";
+            }
+            str = null;
+        }
+        return str;
+    }
+
+    /**
+     * 获得最新的一张图像,当返回的结果小于或者等于0时，用于接收图像的字节数组被赋值为null
+     *
+     * @return 返回值大于0 图像尺寸  返回值=0 无图像可采用  返回值〈0 其它错误
+     */
+    public byte[] getPicture() {
+        byte[] byteimg;
+        byte[] info = new byte[50 * 1024];                          //先将传入的接收车图片的字节数组初始化为50K大小
+        int[] j = new int[1];
+        int i = hvdll.LPR_GetPicture(nPort, info, info.length, j);
+        if (i == 0) {
+            byteimg = null;
+//            message = "车牌识别器未获取到最新的一张图像。";
+        } else if (i < 0) {
+            byteimg = null;
+//            message = "车牌识别器获取到最新的一张图像时可能存在其他错误。";
+        } else if (i > 0) {
+
+//            byteimg = info;
+            byteimg = Arrays.copyOf(info, j[0]);
+        } else {
+            byteimg = null;
+        }
+        return byteimg;
+    }
+
+    /**
+     * 获取车牌的颜色
+     *
+     * @return str 接收车牌颜色的字符串，接收的结果是转换 内部处理的的结果 返回值大于0 识别出车牌颜色  返回值=0
+     * 没有进行识别/没有抓拍图片/没有识别出车牌颜色  返回值小于0 其他错误
+     * @throws java.io.UnsupportedEncodingException 编码格式异常
+     */
+    public String getPlateColor() throws UnsupportedEncodingException {
+        String str = "";
+        byte[] info = new byte[1];
+        int i = hvdll.LPR_GetPlateColor(nPort, info);
+        if (i > 0) {
+            str = new String(info, "gbk");
+        } else if (i == 0 || i < 0) {
+            str = null;
+        }
+        return str;
+    }
+
+    /**
+     * 获取可用的车牌号和图像
+     *
+     * @param lpr 用于接收车牌号
+     * @return byteimg 车牌的图像字节数组 返回值大于0	处理成功: =1 只有车牌照号可用 =2 只有图像可用 =3
+     * 车牌照号和图像均可用 返回值=0 获取失败（车牌照号和图像均不可用） 返回值〈0 其他错误
+     * @throws UnsupportedEncodingException 编码格式异常
+     */
+    public byte[] getPlatePicture(StringBuffer lpr) throws UnsupportedEncodingException {
+        byte[] byteimg = new byte[50 * 1024];
+        byte[] infoPlate = new byte[20];
+        byte[] infoImg = new byte[50 * 1024];
+        int[] lpPlateLength = new int[1];
+        int[] lpImgLength = new int[1];
+        String str;
+        int i = hvdll.LPR_GetPlatePicture(nPort, infoPlate, infoPlate.length, lpPlateLength, infoImg, infoImg.length, lpImgLength);
+        if (i > 0) {
+            if (i == 1) {
+                str = new String(infoPlate, "gbk");
+                lpr.append(i).append(",").append(str);
+                byteimg = null;
+            } else if (i == 2) {
+                str = "";
+                lpr.append(i).append(",").append(str);
+                byteimg = Arrays.copyOf(infoImg, lpImgLength[0]);
+            } else if (i == 3) {
+                str = new String(infoPlate, "gbk");
+                lpr.append(i).append(",").append(str);
+                byteimg = Arrays.copyOf(infoImg, lpImgLength[0]);
+            } else {
+                str = new String(infoPlate, "gbk");
+                lpr.append(i).append(",").append(str);
+                byteimg = Arrays.copyOf(infoImg, lpImgLength[0]);
+            }
+        } else if (i < 0 || i == 0) {
+            str = "";
+            lpr.append(i).append(",").append(str);
+            byteimg = null;
+        }
+        return byteimg;
+    }
+
+    /**
+     * 获取车牌识别器的信息
+     *
+     * @return 车牌识别器的信息
+     */
+    public String getErrorMsg() {
+        String error = "";
+        if (message.equals("")) {
+            error = null;
+        } else {
+            error = message;
+        }
+        return error;
+    }
+}

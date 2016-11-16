@@ -1,0 +1,578 @@
+package com.hgits.service.impl;
+
+import com.hgits.service.TempServiceInterface;
+import com.hgits.vo.ColList;
+import com.hgits.vo.LaneEnList;
+import com.hgits.vo.LaneExList;
+import com.hgits.vo.LaneLogout;
+import com.hgits.vo.LaneShift;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import net.sf.json.JSONObject;
+
+/**
+ * 用于产生临时流水的服务类
+ *
+ * @author Wang Guodong
+ */
+public class TempServiceOld  implements TempServiceInterface{
+
+    private static TempServiceOld instance;//唯一实例化对象
+
+    /**
+     * 获取唯一实例化对象
+     *
+     * @return 唯一实例化对象
+     */
+    public static synchronized TempServiceOld getSingleInstance() {
+        if (instance == null) {
+            instance = new TempServiceOld();
+        }
+        return instance;
+    }
+
+    private void init() {
+        File file = new File("temp");
+        if (!file.exists() || !file.isDirectory()) {
+            file.mkdirs();
+        }
+    }
+
+    private TempServiceOld() {
+        init();
+    }
+
+    /**
+     * 生成下班临时文件
+     *
+     * @param logout 下班记录
+     */
+    public void generateTempLogout(LaneLogout logout) {
+        JSONObject jo = JSONObject.fromObject(logout);
+        String str = jo.toString();
+        generateTemp(str, TEMP_LOGOUT_PATH);
+    }
+
+    /**
+     * 生成临时工班记录文件
+     *
+     * @param shift 工班记录
+     */
+    public void generateTempShift(LaneShift shift) {
+        JSONObject jo = JSONObject.fromObject(shift);
+        String str = jo.toString();
+        generateTemp(str, TEMP_SHIFT_PATH);
+    }
+
+    /**
+     * 生成临时出口流水记录文件
+     *
+     * @param list 出口流水记录
+     */
+    public void generateTempExList(LaneExList list) {
+        JSONObject jo = JSONObject.fromObject(list);
+        String str = jo.toString();
+        generateTemp(str, TEMP_EXLIST_PATH);
+    }
+
+    /**
+     * 生成临时入口流水记录文件
+     *
+     * @param list 入口流水记录
+     */
+    public void generateTempEnList(LaneEnList list) {
+        JSONObject jo = JSONObject.fromObject(list);
+        String str = jo.toString();
+        generateTemp(str, TEMP_ENLIST_PATH);
+    }
+
+    /**
+     * 生成代收流水临时记录文件
+     *
+     * @param list 代收流水文件
+     */
+    public void generateTempColList(ColList list) {
+        JSONObject jo = JSONObject.fromObject(list);
+        String str = jo.toString();
+        generateTemp(str, TEMP_COLLIST_PATH);
+    }
+
+    /**
+     * 生成剩余离线倒计时时间文件
+     *
+     * @param str 剩余离线倒计时时间
+     */
+    public void generateTempOffLine(String str) {
+        generateTemp(str, TEMP_BALANCE_OFFLINE_PATH);
+    }
+
+    /**
+     * 生成记录ETC卡信息的临时文件
+     *
+     * @param etcInfo
+     */
+    public void generateTempEtcInfo(String etcInfo) {
+        generateTemp(etcInfo, TEMP_ETCINFO);
+    }
+
+    /**
+     * 生成临时文件
+     *
+     * @param str 临时文件内容
+     * @param path 临时文件路径(包含文件名)
+     */
+    private void generateTemp(String str, String path) {
+        File file = new File(path);
+        if (!file.getParentFile().exists()) {
+            file.getParentFile().mkdirs();
+        }
+        if (!file.exists()) {
+            try {
+                file.createNewFile();
+            } catch (IOException ex) {
+                logger.error("创建临时文件" + path + str + "异常", ex);
+            }
+        }
+        FileOutputStream fos = null;
+        FileChannel fc = null;
+        try {
+            fos = new FileOutputStream(file);
+            fc = fos.getChannel();
+            fc.write(ByteBuffer.wrap(str.getBytes()));
+            fc.force(true);
+        } catch (Exception ex) {
+            logger.error("创建临时文件" + path + str + "异常", ex);
+        } finally {
+            try {
+                if (fc != null) {
+                    fc.close();
+                }
+                if (fos != null) {
+                    fos.close();
+                }
+            } catch (IOException ex) {
+                logger.error("创建临时文件" + path + str + "异常", ex);
+            }
+        }
+    }
+
+    /**
+     * 解析离线倒计时文件，获取剩余离线倒计时时间
+     *
+     * @return 剩余离线倒计时时间
+     */
+    public String parseTempOffLine() {
+        String str = null;
+        FileInputStream fis = null;
+        InputStreamReader isr = null;
+        BufferedReader br = null;
+        try {
+            File file = new File(TEMP_BALANCE_OFFLINE_PATH);
+            if (!file.exists()) {//文件不存在
+                return null;
+            }
+            fis = new FileInputStream(TEMP_BALANCE_OFFLINE_PATH);
+            isr = new InputStreamReader(fis);
+            br = new BufferedReader(isr);
+            str = br.readLine();
+        } catch (Exception ex) {
+            logger.error("处理离线倒计时文件异常", ex);
+        } finally {
+            try {
+                if (fis != null) {
+                    fis.close();
+                }
+                if (isr != null) {
+                    isr.close();
+                }
+                if (br != null) {
+                    br.close();
+                }
+            } catch (IOException ex) {
+                logger.error("处理离线倒计时文件异常", ex);
+            }
+        }
+        return str;
+    }
+
+    /**
+     * 解析下班临时文件，获取下班信息
+     *
+     * @return 下班信息
+     */
+    public LaneLogout parseTempLogout() {
+        FileInputStream fis = null;
+        InputStreamReader isr = null;
+        BufferedReader br = null;
+        try {
+            File file = new File(TEMP_LOGOUT_PATH);
+            if (!file.exists() || !file.isFile()) {
+                return null;
+            }
+            fis = new FileInputStream(file);
+            isr = new InputStreamReader(fis);
+            br = new BufferedReader(isr);
+            String str = br.readLine();
+            if (str != null) {
+                JSONObject ob = JSONObject.fromObject(str);
+                LaneLogout logout = (LaneLogout) JSONObject.toBean(ob, LaneLogout.class);
+                return logout;
+            } else {
+                return null;
+            }
+        } catch (Exception ex) {
+            logger.error("处理下班临时文件异常", ex);
+            return null;
+        } finally {
+            try {
+                if (fis != null) {
+                    fis.close();
+                }
+                if (isr != null) {
+                    isr.close();
+                }
+                if (br != null) {
+                    br.close();
+                }
+            } catch (IOException ex) {
+                logger.error("处理下班临时文件异常", ex);
+            }
+        }
+    }
+
+    /**
+     * 解析工班临时文件，获取工班信息
+     *
+     * @return 工班信息
+     */
+    public LaneShift parseTempShift() {
+        FileInputStream fis = null;
+        InputStreamReader isr = null;
+        BufferedReader br = null;
+        try {
+            File file = new File(TEMP_SHIFT_PATH);
+            if (!file.exists() || !file.isFile()) {
+                return null;
+            }
+            fis = new FileInputStream(file);
+            isr = new InputStreamReader(fis);
+            br = new BufferedReader(isr);
+            String str = br.readLine();
+            if (str != null) {
+                JSONObject ob = JSONObject.fromObject(str);
+                LaneShift shift = (LaneShift) JSONObject.toBean(ob, LaneShift.class);
+                return shift;
+            } else {
+                return null;
+            }
+        } catch (Exception ex) {
+            logger.error("处理工班临时文件异常", ex);
+            return null;
+        } finally {
+            try {
+                if (fis != null) {
+                    fis.close();
+                }
+                if (isr != null) {
+                    isr.close();
+                }
+                if (br != null) {
+                    br.close();
+                }
+            } catch (IOException ex) {
+                logger.error("处理工班临时文件异常", ex);
+            }
+        }
+    }
+
+    /**
+     * 解析出口流水临时文件，获取出口流水信息
+     *
+     * @return 出口流水信息
+     */
+    public LaneExList parseTempExList() {
+        FileInputStream fis = null;
+        InputStreamReader isr = null;
+        BufferedReader br = null;
+        try {
+            File file = new File(TEMP_EXLIST_PATH);
+            if (!file.exists() || !file.isFile()) {
+                return null;
+            }
+            fis = new FileInputStream(file);
+            isr = new InputStreamReader(fis);
+            br = new BufferedReader(isr);
+            String str = br.readLine();
+            if (str != null) {
+                JSONObject ob = JSONObject.fromObject(str);
+                LaneExList list = (LaneExList) JSONObject.toBean(ob, LaneExList.class);
+                return list;
+            } else {
+                return null;
+            }
+        } catch (Exception ex) {
+            logger.error("处理出口流水临时文件异常", ex);
+            return null;
+        } finally {
+            try {
+                if (fis != null) {
+                    fis.close();
+                }
+                if (isr != null) {
+                    isr.close();
+                }
+                if (br != null) {
+                    br.close();
+                }
+            } catch (IOException ex) {
+                logger.error("处理出口流水临时文件异常", ex);
+            }
+        }
+    }
+
+    /**
+     * 解析入口流水临时文件，获取入口流水信息
+     *
+     * @return 入口流水信息
+     */
+    public LaneEnList parseTempEnList() {
+        FileInputStream fis = null;
+        InputStreamReader isr = null;
+        BufferedReader br = null;
+        try {
+            File file = new File(TEMP_ENLIST_PATH);
+            if (!file.exists() || !file.isFile()) {
+                return null;
+            }
+            fis = new FileInputStream(file);
+            isr = new InputStreamReader(fis);
+            br = new BufferedReader(isr);
+            String str = br.readLine();
+            if (str != null) {
+                JSONObject ob = JSONObject.fromObject(str);
+                LaneEnList list = (LaneEnList) JSONObject.toBean(ob, LaneEnList.class);
+                return list;
+            } else {
+                return null;
+            }
+        } catch (Exception ex) {
+            logger.error("处理出口流水临时文件异常", ex);
+            return null;
+        } finally {
+            try {
+                if (fis != null) {
+                    fis.close();
+                }
+                if (isr != null) {
+                    isr.close();
+                }
+                if (br != null) {
+                    br.close();
+                }
+            } catch (IOException ex) {
+                logger.error("处理出口流水临时文件异常", ex);
+            }
+        }
+    }
+
+    /**
+     * 解析代收流水临时文件，获取代收流水信息
+     *
+     * @return 代收流水信息
+     */
+    public ColList parseTempColList() {
+        FileInputStream fis = null;
+        InputStreamReader isr = null;
+        BufferedReader br = null;
+        try {
+            File file = new File(TEMP_COLLIST_PATH);
+            if (!file.exists() || !file.isFile()) {
+                return null;
+            }
+            fis = new FileInputStream(file);
+            isr = new InputStreamReader(fis);
+            br = new BufferedReader(isr);
+            String str = br.readLine();
+            if (str != null) {
+                JSONObject ob = JSONObject.fromObject(str);
+                ColList list = (ColList) JSONObject.toBean(ob, ColList.class);
+                return list;
+            } else {
+                return null;
+            }
+        } catch (Exception ex) {
+            logger.error("处理出口流水临时文件异常", ex);
+            return null;
+        } finally {
+            try {
+                if (fis != null) {
+                    fis.close();
+                }
+                if (isr != null) {
+                    isr.close();
+                }
+                if (br != null) {
+                    br.close();
+                }
+            } catch (IOException ex) {
+                logger.error("处理出口流水临时文件异常", ex);
+            }
+        }
+    }
+
+    /**
+     * 解析并获取ETC临时文件信息
+     *
+     * @return 解析后的信息
+     */
+    public String parseTempEtcInfo() {
+        FileInputStream fis = null;
+        InputStreamReader isr = null;
+        BufferedReader br = null;
+        try {
+            File file = new File(TEMP_ETCINFO);
+            if (!file.exists() || !file.isFile()) {
+                return null;
+            }
+            fis = new FileInputStream(file);
+            isr = new InputStreamReader(fis);
+            br = new BufferedReader(isr);
+            String str = br.readLine();
+            return str;
+        } catch (Exception ex) {
+            logger.error("处理出口流水临时文件异常", ex);
+            return null;
+        } finally {
+            try {
+                if (fis != null) {
+                    fis.close();
+                }
+                if (isr != null) {
+                    isr.close();
+                }
+                if (br != null) {
+                    br.close();
+                }
+            } catch (IOException ex) {
+                logger.error("处理出口流水临时文件异常", ex);
+            }
+        }
+    }
+
+    /**
+     * 清空临时下班流水文件
+     */
+    public void deleteTempLogout() {
+        File file = new File(TEMP_LOGOUT_PATH);
+        if (file.exists() && file.isFile()) {
+            truncateFile(file);
+        }
+    }
+
+    /**
+     * 清空临时工班流水文件
+     */
+    public void deleteTempShift() {
+        File file = new File(TEMP_SHIFT_PATH);
+        if (file.exists() && file.isFile()) {
+            truncateFile(file);
+        }
+    }
+
+    /**
+     * 清空临时出口流水文件
+     */
+    public void deleteTempExlist() {
+        File file = new File(TEMP_EXLIST_PATH);
+        if (file.exists() && file.isFile()) {
+            truncateFile(file);
+        }
+    }
+
+    /**
+     * 清空临时入口流水文件
+     */
+    public void deleteTempEnlist() {
+        File file = new File(TEMP_ENLIST_PATH);
+        if (file.exists() && file.isFile()) {
+            truncateFile(file);
+        }
+    }
+
+    /**
+     * 清空临时代收流水文件
+     */
+    public void deleteTempCollist() {
+        File file = new File(TEMP_COLLIST_PATH);
+        if (file.exists() && file.isFile()) {
+            truncateFile(file);
+        }
+    }
+
+    /**
+     * 清空倒计时剩余时间文件
+     */
+    public void deleteTempOffLine() {
+        File file = new File(TEMP_BALANCE_OFFLINE_PATH);
+        if (file.exists() && file.isFile()) {
+            truncateFile(file);
+        }
+    }
+
+    /**
+     * 清空ETC临时文件
+     */
+    public void deleteTempEtcInfo() {
+        File file = new File(TEMP_ETCINFO);
+        if (file.exists() && file.isFile()) {
+            truncateFile(file);
+        }
+    }
+
+    /**
+     * 使用NIO清空指定文件(确保系统崩溃时文件内容能够顺利清空)
+     */
+    private void truncateFile(File file) {
+        if (file.exists() && file.isFile()) {
+            FileOutputStream fos = null;
+            FileChannel fc = null;
+            try {
+                fos = new FileOutputStream(file);
+                fc = fos.getChannel();
+                fc.truncate(0);
+                fc.force(true);
+            } catch (Exception ex) {
+                logger.error("清空文件" + file + "异常", ex);
+            } finally {
+                try {
+                    if (fos != null) {
+                        fos.close();
+                    }
+                    if (fc != null) {
+                        fc.close();
+                    }
+                } catch (IOException ex) {
+                    logger.error("清空文件" + file + "异常", ex);
+                }
+            }
+        }
+    }
+
+    /**
+     * 临时文件中记录版本号信息
+     *
+     * @param fileName 版本号文件名称
+     * @param version 版本号
+     */
+    public void generateTempVersion(String fileName, String version) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("temp").append(File.separator).append(fileName);
+        generateTemp(version, sb.toString());
+    }
+}

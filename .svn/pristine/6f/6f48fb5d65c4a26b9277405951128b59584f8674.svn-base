@@ -1,0 +1,136 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE log4j:configuration SYSTEM "log4j.dtd">
+<log4j:configuration xmlns:log4j='http://jakarta.apache.org/log4j/'
+                     debug="false">
+
+    <appender name="stdout" class="org.apache.log4j.ConsoleAppender">
+        <param name="Encoding" value="utf-8" />
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern"
+                   value="%n %m%n" />
+        </layout>
+    </appender>
+
+    <!-- INFO 级别的日志 -->
+    <appender name="infoFile" class="org.apache.log4j.DailyRollingFileAppender">
+        <param name="Threshold" value="INFO" />
+        <param name="datePattern" value="'_'yyyy-MM-dd'.log'" />
+        <param name="file" value="logs/info.log" />
+        <param name="append" value="true" />
+        <param name="Encoding" value="UTF-8" />  
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern"
+                   value="%m%n" />
+        </layout>
+        <filter class="org.apache.log4j.varia.LevelMatchFilter">
+            <param name="LevelToMatch" value="info" />
+            <param name="AcceptOnMatch" value="true"/>
+        </filter>
+        <filter class="org.apache.log4j.varia.DenyAllFilter" />
+    </appender>
+    <!-- debug 级别的日志 -->
+    <appender name="debugFile" class="org.apache.log4j.DailyRollingFileAppender">
+        <param name="Threshold" value="DEBUG" />
+        <param name="datePattern" value="'_'yyyy-MM-dd'.log'" />
+        <param name="file" value="logs/debug.log" />
+        <param name="append" value="true" />
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern"
+                   value="%-d{yyyy-MM-dd HH:mm:ss SSS} %m%n" />
+        </layout>
+    </appender>
+    <!-- warn 级别的日志 -->
+    <appender name="warnFile" class="org.apache.log4j.DailyRollingFileAppender">
+        <param name="Threshold" value="WARN" />
+        <param name="datePattern" value="'_'yyyy-MM-dd'.log'" />
+        <param name="file" value="logs/warn.log" />
+        <param name="append" value="true" />
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern"
+                   value="%-d{yyyy-MM-dd HH:mm:ss SSS} %m%n" />
+        </layout>
+        <filter class="org.apache.log4j.varia.LevelMatchFilter">
+            <param name="LevelToMatch" value="warn" />
+            <param name="AcceptOnMatch" value="true"/>
+        </filter>
+        <filter class="org.apache.log4j.varia.DenyAllFilter" />
+    </appender>
+
+    <!-- error 级别的日志 -->
+    <appender name="errorFile" class="org.apache.log4j.DailyRollingFileAppender">
+        <param name="Threshold" value="ERROR" />
+        <param name="datePattern" value="'_'yyyy-MM-dd'.log'" />
+        <param name="File" value="logs/error.log" />
+        <param name="append" value="true" />
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern"
+                   value="%-d{yyyy-MM-dd HH:mm:ss SSS} %m%n" />
+        </layout>
+        <filter class="org.apache.log4j.varia.LevelMatchFilter">
+            <param name="LevelToMatch" value="error" />
+            <param name="AcceptOnMatch" value="true"/>
+        </filter>
+        <filter class="org.apache.log4j.varia.DenyAllFilter" />
+    </appender>
+
+    <appender name="driveFile" class="org.apache.log4j.DailyRollingFileAppender">
+        <param name="datePattern" value="'_'yyyy-MM-dd'.log'" />
+        <param name="File" value="logs/drive.log" />
+        <param name="append" value="true" />
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern"
+                   value="%-d{yyyy-MM-dd HH:mm:ss SSS} %m%n" />
+        </layout>
+        <filter class="com.hgits.common.log.MTCLogFilter">  
+            <param name="levelMin" value="15000" />  
+            <param name="levelMax" value="15000" />  
+            <param name="AcceptOnMatch" value="true" />  
+        </filter>
+    </appender>
+    <appender name="AvcFile" class="org.apache.log4j.DailyRollingFileAppender">
+        <param name="datePattern" value="'_'yyyy-MM-dd'.log'" />
+        <param name="File" value="logs/Avc.log" />
+        <param name="append" value="true" />
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern"
+                   value="%-d{yyyy-MM-dd HH:mm:ss SSS} %m%n" />
+        </layout>
+        <filter class="common.log.AvcLogFilter">  
+            <param name="levelMin" value="17000" />  
+            <param name="levelMax" value="17000" />  
+            <param name="AcceptOnMatch" value="true" />  
+        </filter>
+    </appender>
+    <appender name="AcmFile" class="org.apache.log4j.DailyRollingFileAppender">
+        <param name="datePattern" value="'_'yyyy-MM-dd'.log'" />
+        <param name="File" value="logs/Acm.log" />
+        <param name="append" value="true" />
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern"
+                   value="%-d{yyyy-MM-dd HH:mm:ss SSS} %m%n" />
+        </layout>
+        <filter class="common.log.AcmLogFilter">  
+            <param name="levelMin" value="16000" />  
+            <param name="levelMax" value="16000" />  
+            <param name="AcceptOnMatch" value="true" />  
+        </filter>
+    </appender>
+        
+    <!-- 取消org.apache.commons.beanutils的日志 -->
+    <logger name="org.apache.commons.beanutils" additivity="false">
+        <level value="ERROR" />
+    </logger>
+
+
+    <root>
+        <appender-ref ref="stdout" />
+        <appender-ref ref="infoFile" />
+        <appender-ref ref="debugFile" />
+        <appender-ref ref="warnFile" />
+        <appender-ref ref="errorFile" />
+        <appender-ref ref="driveFile" />
+        <appender-ref ref="AvcFile" />
+        <appender-ref ref="AcmFile" />
+        
+    </root>
+</log4j:configuration>
