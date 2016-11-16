@@ -36,6 +36,7 @@ public class GeaLprService implements Runnable, LprService {
     //车牌识别抓拍车牌模式，默认0
     //0-交易开始后循环抓拍，无结果自动重新抓拍
     //1-车辆到达线圈后或车型确认后开始抓拍，无结果需要手动重新输入车型或按【00】键手动抓拍
+    //2-车辆到达线圈后或车型确认后开始判断车牌识别结果，但不进行抓拍，按【00】键手动抓拍
     private int lprPlateMode;
     private final Object obj = new Object();
     //默认的车牌号码的正则表达式
@@ -205,9 +206,13 @@ public class GeaLprService implements Runnable, LprService {
                     }
 //                    Thread.sleep(lprsleepinterval);
                 } catch (Exception ex) {
+                    MTCLog.log(ex, ex);
                 }
                 if (!captureFlag) {//不进行车牌识别
                     continue;
+                }
+                if(lprPlateMode==1){//定点抓拍，只抓拍一次
+                    captureFlag = false;
                 }
                 lpr.captuerImage();
                 long start = System.currentTimeMillis();
